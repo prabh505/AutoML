@@ -7,11 +7,14 @@ import math
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pytest
 
+from tabpilot import cli
 from tabpilot.cli import RunArgs, execute, main, parse
 from tabpilot.schemas import ExecutionProfileName, ModelName, RunEvent, Task
 from tabpilot.schemas.experiment import EvaluationResult, ExperimentConfig, LeaderboardEntry
+from tabpilot.splitting.guard import HoldoutSealed
 from tabpilot.tracking import RECORD_FILES
 
 FIX = Path(__file__).resolve().parents[2] / "fixtures" / "datasets"
@@ -127,3 +130,96 @@ def test_parse_options() -> None:
                            budget_s=300, seed=7, profile=ExecutionProfileName.HOSTED,
                            tuning_mode="trials", trials=3,
                            models=(ModelName.LINEAR, ModelName.LIGHTGBM))  # fmt: skip
+
+
+@pytest.mark.e2e
+def test_guard_exists_from_split_and_refuses_before_freeze(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """I-1 / L-2 at run level: the guard is built at split time; an access attempt during
+    selection is refused; the finalizer opens it exactly once after the freeze (T-LEAK-03).
+    """
+    guards: list[Any] = []
+    real_make_guard, real_select = cli.make_guard, cli.select
+
+    def spy_make_guard(*a: Any, **kw: Any) -> Any:
+        guards.append(real_make_guard(*a, **kw))
+        return guards[-1]
+
+    def probing_select(entries: Any, freeze: Any) -> Any:
+        assert len(guards) == 1  # built before training, at the split stage
+        with pytest.raises(HoldoutSealed):
+            guards[0].open("probe.before_freeze")
+        return real_select(entries, freeze)
+
+    monkeypatch.setattr(cli, "make_guard", spy_make_guard)
+    monkeypatch.setattr(cli, "select", probing_select)
+    summary = run(tmp_path, "binary_basic.csv", "churn")
+    guard = guards[0]
+    assert [e.caller for e in guard.access_log] == ["evaluation.holdout"]
+    assert [e.caller for e in guard.refused_log] == ["probe.before_freeze"]
+    evaluated = next(ev for ev in events(summary.run_dir) if ev.type.value == "holdout_evaluated")
+    assert (evaluated.data["accesses"], evaluated.data["refused"]) == (1, 1)
+
+
+@pytest.mark.e2e
+def test_infeasible_job_is_rejected_before_training(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """FR-ING-05: a rejected feasibility estimate stops the run before any training."""
+
+    class TinyRam:
+        total = 64 * 2**20  # 64 MB machine → local soft limit ≈ 45 MB
+
+    monkeypatch.setattr(cli.psutil, "virtual_memory", TinyRam)
+    out = tmp_path / "run"
+    code = main(["run", str(FIX / "binary_small.csv"), "--target", "target", "--out", str(out)])
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "exceeds the" in err
+    assert "even after simplifications" in err
+    kinds = [ev.type.value for ev in events(out)]
+    assert "candidate_started" not in kinds
+    assert "trial_completed" not in kinds
+    assert not (out / "records" / "trials.jsonl").read_text()
+
+
+@pytest.mark.e2e
+def test_soft_memory_limit_stops_extra_trials(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """§29.6: above the soft RSS limit, no further tuning trials run; the run still finishes."""
+    real = cli.ResourceMonitor
+
+    def over_soft(soft: float, hard: float, **kw: Any) -> Any:
+        return real(soft, hard, rss_fn=lambda: (soft + hard) / 2, **kw)
+
+    monkeypatch.setattr(cli, "ResourceMonitor", over_soft)
+    args = RunArgs(file=FIX / "binary_small.csv", target="target", out=tmp_path / "run",
+                   tuning_mode="trials", trials=4, models=(ModelName.LINEAR, ModelName.LIGHTGBM))  # fmt: skip
+    summary = execute(args)
+    trials = (summary.run_dir / "records" / "trials.jsonl").read_text().splitlines()
+    assert len(trials) == 2  # trial 0 (defaults) per model, no extra trials
+    assert "resource_warning" in [ev.type.value for ev in events(summary.run_dir)]
+
+
+@pytest.mark.e2e
+def test_winner_oof_saved_and_binary_thresholds_recorded(tmp_path: Path) -> None:
+    """FR-TRN-01: the selected candidate's OOF is on disk; §10.2: binary accuracy/F1 at 0.5 and
+    at the F1-optimal threshold chosen on OOF.
+    """
+    summary = run(tmp_path, "binary_basic.csv", "churn")
+    experiment = json.loads((summary.run_dir / "records" / "experiment.json").read_text())
+    oof = np.load(summary.run_dir / experiment["lineage"]["winner_oof"])
+    assert oof.dtype == np.float32
+    assert oof.shape == (2000, 2)
+    thresholds = experiment["thresholds"]
+    assert set(thresholds) == {e.entry_id for e in summary.entries}
+    report = thresholds[summary.winner]
+    assert report["threshold_0_5"]["threshold"] == 0.5
+    assert 0.0 < report["f1_optimal"]["threshold"] < 1.0
+    assert report["f1_optimal"]["f1"] >= report["threshold_0_5"]["f1"]
+    assert experiment["feasibility"]["status"] in {"ok", "simplified"}
+    regression = run(tmp_path / "r", "regression_basic.csv", "price")
+    reg = json.loads((regression.run_dir / "records" / "experiment.json").read_text())
+    assert reg["thresholds"] == {}

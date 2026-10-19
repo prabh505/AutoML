@@ -81,6 +81,10 @@ class PipelineSchema:
     distinct: dict[str, int] = field(default_factory=dict)
     missing_rate: dict[str, float] = field(default_factory=dict)
     n_rows: int = 0
+    # §29.5 step 5 (CAP_ONEHOT): one-hot capped at 8 categories, or replaced by frequency
+    # encoding, for linear models
+    onehot_max_categories: int = MID_CARD_MAX_CATEGORIES
+    linear_onehot: bool = True
 
 
 def schema_from(metadata: DatasetMetadata, summary: ProfileSummary) -> PipelineSchema:
@@ -205,8 +209,8 @@ def _high_card(candidate: CandidateSpec, task: Task, seed: int) -> Any:
     return TargetEncoder(target_type=target_type, smooth="auto", cv=cv)
 
 
-def _transformers(
-    candidate: CandidateSpec, b: _Branches, task: Task, seed: int
+def _transformers(  # noqa: PLR0912 - one branch per §15.2 family/encoding row
+    candidate: CandidateSpec, schema: PipelineSchema, b: _Branches, task: Task, seed: int
 ) -> list[tuple[str, Any, list[str]]]:
     model = candidate.model.name
     linear = model == ModelName.LINEAR
@@ -229,10 +233,15 @@ def _transformers(
         steps.append(("cat", SimpleImputer(strategy="constant", fill_value=MISSING),
                       b.low + b.mid + b.high))  # fmt: skip
         return steps
-    if linear and candidate.encoding.low_cardinality == "onehot":
+    capped = schema.onehot_max_categories < MID_CARD_MAX_CATEGORIES
+    if linear and not schema.linear_onehot:
+        for name, cols in (("lowcat", b.low), ("midcat", b.mid)):
+            steps.append((name, Pipeline([("encode", FrequencyEncoder()),
+                                          ("scale", StandardScaler())]), cols))  # fmt: skip
+    elif linear and candidate.encoding.low_cardinality == "onehot":
         for name, cols, cap in (
-            ("lowcat", b.low, None),
-            ("midcat", b.mid, MID_CARD_MAX_CATEGORIES),
+            ("lowcat", b.low, schema.onehot_max_categories if capped else None),
+            ("midcat", b.mid, schema.onehot_max_categories),
         ):
             onehot = OneHotEncoder(
                 handle_unknown="infrequent_if_exist",
@@ -284,7 +293,7 @@ def build_pipeline(
     column_map.update({col: col for col in types if col not in column_map.values()})
     preprocess = ColumnTransformer(
         [(name, step, _selector(cols)) for name, step, cols in
-         _transformers(candidate, branches, task, seed) if cols],
+         _transformers(candidate, schema, branches, task, seed) if cols],
         remainder="drop",
     )  # fmt: skip
     model = TabularModel(

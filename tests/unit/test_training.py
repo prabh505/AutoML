@@ -356,23 +356,66 @@ def test_T_LEAK_07_every_stateful_step_fits_on_training_rows_only(
 
 
 # ---------------------------------------------------------------- T-LEAK-08 canary
+CANARY_LEVELS = 90  # > 50 → target encoding; ≈ 22 rows/level survive rare grouping (DEC-032)
+CANARY_ROWS = 2500  # 20% holdout → n_dev = 2,000 (PI-08)
+
+
+def canary(seed: int) -> tuple[pd.DataFrame, np.ndarray, Any, PipelineSchema, CandidateSpec]:
+    """Pure-noise binary target, one 90-level categorical, 3 noise numerics (PI-08, DEC-032)."""
+    rng = np.random.default_rng(100 + seed)
+    n = CANARY_ROWS
+    frame = pd.DataFrame({
+        "code": pd.Categorical(rng.choice([f"k{i}" for i in range(CANARY_LEVELS)], n)),
+        "u": rng.normal(size=n), "v": rng.normal(size=n), "w": rng.normal(size=n),
+    })  # fmt: skip
+    y = rng.integers(0, 2, n).astype(np.int64)
+    split = build_split(pd.Series(y), Task.BINARY, seed_root=seed).spec
+    schema = PipelineSchema({"code": SemanticType.CATEGORICAL, "u": SemanticType.NUMERIC,
+                             "v": SemanticType.NUMERIC, "w": SemanticType.NUMERIC},
+                            distinct={"code": CANARY_LEVELS}, n_rows=len(split.dev_indices))  # fmt: skip
+    cand = candidate(ModelName.LIGHTGBM, Task.BINARY, params={},
+                     encoding=Encoding(high_cardinality="target"))  # fmt: skip
+    return frame, y, split, schema, cand
+
+
+def canary_auc(frame: pd.DataFrame, y: np.ndarray, split: Any, schema: PipelineSchema,
+               cand: CandidateSpec) -> float:  # fmt: skip
+    run = run_cv(cand, DevData(frame, y, Problem(Task.BINARY, ("0", "1"), 1)), split,
+                 schema=schema, registry=REG, metric=MetricName.ROC_AUC)  # fmt: skip
+    assert run.result.status == "ok", run.result.error
+    return float(np.mean(run.result.fold_scores))
+
+
 @pytest.mark.unit
 @pytest.mark.parametrize("seed", range(5))
 def test_T_LEAK_08_canary_noise_with_target_encoding(seed: int) -> None:
-    """Pure-noise target, high-cardinality categorical with target encoding: CV AUC ≤ 0.55."""
-    rng = np.random.default_rng(100 + seed)
-    n = 3000
-    frame = pd.DataFrame({"code": pd.Categorical(rng.choice([f"k{i}" for i in range(60)], n)),
-                          "u": rng.normal(size=n), "v": rng.normal(size=n)})  # fmt: skip
-    y = rng.integers(0, 2, n).astype(np.int64)
-    schema = PipelineSchema({"code": SemanticType.CATEGORICAL, "u": SemanticType.NUMERIC,
-                             "v": SemanticType.NUMERIC}, distinct={"code": 60}, n_rows=n)  # fmt: skip
-    split = build_split(pd.Series(y), Task.BINARY, seed_root=seed).spec
-    cand = candidate(ModelName.LIGHTGBM, Task.BINARY, encoding=Encoding(high_cardinality="target"))
-    run = run_cv(cand, DevData(frame, y, Problem(Task.BINARY, ("0", "1"), 1)), split,
-                 schema=schema, registry=REG, metric=MetricName.ROC_AUC)  # fmt: skip
-    assert run.result.status == "ok"
-    assert np.mean(run.result.fold_scores) <= 0.55
+    """Pure-noise target, high-cardinality categorical, forced target encoding: the pipeline's
+    CV ROC-AUC stays ≤ 0.55 for each seed (PI-08).
+    """
+    frame, y, split, schema, cand = canary(seed)
+    assert len(split.dev_indices) == 2000
+    # the target encoder is genuinely exercised: > 50 real levels reach it on a training fold
+    _, _, train, _ = next(iter_folds(split))
+    pipe = build_pipeline(cand, schema, REG).fit(frame.iloc[train], y[train])
+    assert len(pipe.named_steps["baseline_features"].rare_.keep_["code"]) > 50
+    encoder = pipe.named_steps["preprocess"].named_transformers_["highcat"]
+    assert type(encoder).__name__ == "TargetEncoder"
+    assert canary_auc(frame, y, split, schema, cand) <= 0.55
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("seed", range(5))
+def test_T_LEAK_08_positive_control_detects_a_leaky_encoder(seed: int) -> None:
+    """The same data with a target-mean encoding fitted on all of DEV (outside the folds, so
+    validation rows see their own target) must score > 0.55: the canary can fail (PI-08).
+    """
+    frame, y, split, schema, cand = canary(seed)
+    dev = np.asarray(split.dev_indices)
+    means = pd.Series(y[dev]).groupby(frame["code"].iloc[dev].astype(str).to_numpy()).mean()
+    leaky = frame.assign(leak=frame["code"].astype(str).map(means).astype(float))
+    leaky_schema = PipelineSchema({**schema.columns, "leak": SemanticType.NUMERIC},
+                                  distinct=schema.distinct, n_rows=schema.n_rows)  # fmt: skip
+    assert canary_auc(leaky, y, split, leaky_schema, cand) > 0.55
 
 
 # ---------------------------------------------------------------- budgets, cancel, holdout

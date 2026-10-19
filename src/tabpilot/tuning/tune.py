@@ -112,7 +112,7 @@ def _with_params(candidate: CandidateSpec, params: dict[str, Any]) -> CandidateS
     return candidate.model_copy(update={"model": model})
 
 
-def tune(  # noqa: PLR0915 - the §17.4 loop
+def tune(  # noqa: PLR0912, PLR0915 - the §17.4 loop
     candidate: CandidateSpec,
     dev: DevData,
     split: SplitSpec,
@@ -126,12 +126,17 @@ def tune(  # noqa: PLR0915 - the §17.4 loop
     profile: ExecutionProfileName,
     cancel: CancelToken | None = None,
     extra_hook: Callable[[], None] | None = None,
+    stop: Callable[[], bool] | None = None,
     on_trial: Callable[[TrialRecord], None] | None = None,
     clock: Callable[[], float] = time.monotonic,
 ) -> TuningResult:
     """Tune `candidate.model` within `allocation_s` (§17.4). Trial 0 = library defaults; the best
     completed trial wins (ties: earlier trial). Without a completed trial the default-config CV
-    result is used (§17.5).
+    result is used (§17.5). `stop()` ends the study before any further trial once trial 0 ran.
+
+    Time limits are cooperative: they are checked between folds, so a single slow fold can
+    overrun the allocation by up to one fold's fit time. The hard wall-clock kill is the worker's
+    job (P15, §13.7); DEC-032.
     """
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     study = optuna.create_study(
@@ -152,6 +157,9 @@ def tune(  # noqa: PLR0915 - the §17.4 loop
             break
         if timed and clock() >= deadline:
             stopped = "allocation"
+            break
+        if stop is not None and stop() and records:
+            stopped = "resources"  # e.g. RSS above the soft limit: no extra trials (§29.6)
             break
         if failures >= MAX_CONSECUTIVE_FAILURES:
             stopped = "consecutive_failures"
@@ -203,9 +211,16 @@ def tune(  # noqa: PLR0915 - the §17.4 loop
     best_number = _best_trial(records)
     if best_number is None:
         log.warning("tuning_no_completed_trial", model=name.value)
-        best = run_cv(candidate.model_copy(update={"model": candidate.model.model_copy(
-            update={"params": {}})}), dev, split, schema=schema, registry=registry, metric=metric,
-            cancel=cancel, budget_hook=extra_hook, profile=profile)  # fmt: skip
+
+        def bounded() -> None:  # the default-config run still respects the allocation
+            if extra_hook is not None:
+                extra_hook()
+            if timed and clock() > deadline:
+                raise BudgetExceeded
+
+        best = run_cv(_with_params(candidate, {}), dev, split, schema=schema,
+                      registry=registry, metric=metric, cancel=cancel, budget_hook=bounded,
+                      profile=profile)  # fmt: skip
         params = {}
     else:
         params = next(r.params for r in records if r.number == best_number)

@@ -23,6 +23,7 @@ from tabpilot.schemas.experiment import ModelConfig
 from tabpilot.splitting import build_split, iter_folds
 from tabpilot.training import DevData, run_cv
 from tabpilot.tuning import SPACES, TuningLimits, limits_for, tune
+from tabpilot_runtime import TabularModel
 
 REG = ModelRegistry(load_settings({}))
 LOCAL, HOSTED = ExecutionProfileName.LOCAL, ExecutionProfileName.HOSTED
@@ -193,3 +194,39 @@ def test_every_search_space_produces_trainable_params(name: ModelName) -> None:
     assert est is not None
     if name == ModelName.RANDOM_FOREST:
         assert trial.distributions["max_depth"].choices == (6, 10, 16, 20)
+
+
+@pytest.mark.unit
+def test_stop_callback_ends_study_after_trial_zero() -> None:
+    """RSS above the soft limit → no extra trials (§29.6); trial 0 still gives a result."""
+    result = run_tune(TuningLimits(max_trials=8, per_trial_timeout_s=1.0, mode="trials"),
+                      name=ModelName.LINEAR, stop=lambda: True)  # fmt: skip
+    assert result.stopped == "resources"
+    assert len(result.trials) == 1
+    assert result.trials[0].params == {}
+    assert result.best.result.status == "ok"
+
+
+@pytest.mark.unit
+def test_slow_fold_overrun_is_bounded_to_one_fold(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Limits are cooperative at fold boundaries (DEC-032): with every fit taking 0.4 s and a 1 s
+    allocation, the study (including the default-config fallback) stops within one extra fold
+    per run, well inside T-TUN-01 (allocation × 1.1 + 15 s).
+    """
+    fit = TabularModel.fit
+    fold_s = 0.4
+
+    def slow_fit(self: TabularModel, X: Any, y: Any) -> TabularModel:
+        time.sleep(fold_s)
+        return fit(self, X, y)
+
+    monkeypatch.setattr(TabularModel, "fit", slow_fit)
+    allocation = 1.0
+    start = time.monotonic()
+    result = run_tune(TuningLimits(max_trials=50, per_trial_timeout_s=100.0, mode="time"),
+                      name=ModelName.LINEAR, allocation_s=allocation)  # fmt: skip
+    elapsed = time.monotonic() - start
+    assert result.stopped == "allocation"
+    assert result.best.result.status == "skipped_budget"  # fallback did not run unbounded
+    assert elapsed <= allocation + 2 * fold_s + 2.0
+    assert elapsed <= allocation * 1.1 + 15

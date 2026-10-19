@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import sysconfig
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -27,12 +28,14 @@ from tabpilot.schemas import (
     FEATURE_SPEC_ADAPTER,
     CandidateSpec,
     ExecutionProfileName,
+    MetricName,
     ModelName,
     TargetTransform,
     Task,
 )
 from tabpilot.schemas.experiment import ModelConfig
 from tabpilot.schemas.plan import ColumnDecision, Encoding, Imputation
+from tabpilot.training import run_cv
 from tabpilot_runtime import PredictionSchemaError, TabularModel
 
 SRC = Path(__file__).resolve().parents[2] / "src"
@@ -100,8 +103,26 @@ def test_T_PRE_01_log1p_wraps_whole_pipeline() -> None:
     y = np.exp(frame["z"].to_numpy())
     model.fit(frame, y)
     pred = model.predict(frame)
-    assert np.all(pred > 0)  # predictions are back on the original scale (I-4)
+    # the inner pipeline learns log1p(y); predict() returns expm1 of it, on the scale of y (I-4)
+    inner = inner_pipeline(model).predict(frame)
+    np.testing.assert_allclose(pred, np.expm1(inner), rtol=1e-6)
+    np.testing.assert_allclose(np.median(pred), np.median(y), rtol=0.25)
+    assert pd.Series(pred).corr(pd.Series(y), method="spearman") > 0.9  # rank fit
     assert tuple(inner_pipeline(model).named_steps) == STEP_NAMES
+
+
+@pytest.mark.unit
+def test_log1p_cv_scores_on_the_original_scale() -> None:
+    """CV with `log1p` on the skewed fixture: OOF predictions and RMSE are in target units (I-4)."""
+    prep = prepared("regression_skewed.csv")
+    cand = candidate(ModelName.LIGHTGBM, Task.REGRESSION, target_transform=TargetTransform.LOG1P)
+    run = run_cv(cand, prep.dev, prep.split, schema=prep.schema, registry=prep.registry,
+                 metric=MetricName.RMSE)  # fmt: skip
+    assert run.result.status == "ok"
+    y_dev = prep.dev.y[prep.split.dev_indices]
+    assert run.oof is not None
+    np.testing.assert_allclose(np.median(run.oof[:, 0]), np.median(y_dev), rtol=0.5)
+    assert np.mean(run.result.fold_scores) < np.std(y_dev)  # better than predicting the mean
 
 
 @pytest.mark.unit
@@ -325,3 +346,21 @@ def test_hosted_profile_builds_capped_random_forest() -> None:
     pipe = build_pipeline(candidate(ModelName.RANDOM_FOREST), schema, REG,
                           profile=ExecutionProfileName.HOSTED)  # fmt: skip
     assert pipe.named_steps["model"].estimator.max_depth == 20
+
+
+@pytest.mark.unit
+def test_cap_onehot_simplification_limits_linear_columns() -> None:
+    """§29.5 step 5: one-hot capped at 8 categories, or frequency encoding for linear models."""
+    frame, y, schema = synthetic()
+    capped = build_pipeline(candidate(ModelName.LINEAR), replace(schema, onehot_max_categories=8),
+                            REG).fit(frame, y)  # fmt: skip
+    out = capped[:-1].transform(frame)
+    assert len([c for c in out.columns if c.startswith("midcat__")]) <= 8
+    assert len([c for c in out.columns if c.startswith("lowcat__")]) <= 8
+    freq = build_pipeline(candidate(ModelName.LINEAR), replace(schema, linear_onehot=False),
+                          REG).fit(frame, y)  # fmt: skip
+    cols = freq[:-1].transform(frame).columns
+    assert {"lowcat__low", "midcat__mid"} <= set(cols)  # one column each: frequency-encoded
+    lgbm = build_pipeline(candidate(ModelName.LIGHTGBM), replace(schema, onehot_max_categories=8),
+                          REG).fit(frame, y)  # fmt: skip
+    assert "midcat__mid" in lgbm[:-1].transform(frame).columns  # trees keep ordinal codes

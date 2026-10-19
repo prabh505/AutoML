@@ -14,7 +14,13 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from tabpilot.evaluation.metrics import SECONDARY, Problem, score
+from tabpilot.evaluation.metrics import (
+    SECONDARY,
+    Problem,
+    f1_optimal_threshold,
+    score,
+    threshold_metrics,
+)
 from tabpilot.evaluation.metrics import spec as metric_spec
 from tabpilot.schemas import MetricName, ModelName, SplitSpec, Task
 from tabpilot.schemas.experiment import LeaderboardEntry, TrainingResult, fold_statistics
@@ -51,6 +57,24 @@ def secondary_metrics(
             continue
         if all(math.isfinite(v) for v in values):
             out[name] = float(np.mean(values))
+    return out
+
+
+def threshold_report(
+    oof: NDArray[np.float32] | None, y: NDArray[Any], split: SplitSpec, problem: Problem
+) -> dict[str, dict[str, float]]:
+    """Binary only: accuracy and F1 at 0.5 and at the F1-optimal threshold chosen on the DEV
+    OOF predictions (§10.2). Empty for other tasks.
+    """
+    if oof is None or problem.task != Task.BINARY:
+        return {}
+    rows = np.asarray(split.dev_indices)
+    truth, proba = y[rows], oof.astype(np.float64)
+    best = f1_optimal_threshold(truth, proba, problem)
+    out = {}
+    for name, threshold in (("threshold_0_5", 0.5), ("f1_optimal", best)):
+        accuracy, f1 = threshold_metrics(truth, proba, problem, threshold)
+        out[name] = {"threshold": threshold, "accuracy": accuracy, "f1": f1}
     return out
 
 

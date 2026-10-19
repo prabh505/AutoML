@@ -13,7 +13,7 @@ import os
 import sys
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
@@ -24,7 +24,12 @@ from ulid import ULID
 from tabpilot import __version__
 from tabpilot.config import Settings, load_settings
 from tabpilot.evaluation.holdout import evaluate_holdout, make_guard
-from tabpilot.evaluation.leaderboard import make_entry, not_comparable, secondary_metrics
+from tabpilot.evaluation.leaderboard import (
+    make_entry,
+    not_comparable,
+    secondary_metrics,
+    threshold_report,
+)
 from tabpilot.evaluation.metrics import Problem, default_primary, selection_score
 from tabpilot.evaluation.metrics import spec as metric_spec
 from tabpilot.evaluation.selection import SelectionFreeze, select
@@ -32,16 +37,25 @@ from tabpilot.ingestion import apply_target, load_dataset, validate_target
 from tabpilot.ingestion.task import detect_task, positive_label
 from tabpilot.models import ModelRegistry
 from tabpilot.planning import rule_based_plan
-from tabpilot.preprocessing import schema_from
+from tabpilot.preprocessing import PipelineSchema, schema_from
 from tabpilot.profiling import apply_leakage_exclusions, profile
 from tabpilot.resources import ResourceMonitor, TimeBudget
+from tabpilot.resources.estimator import (
+    ONEHOT_CAP_SIMPLIFIED,
+    SUBSAMPLE_ROWS,
+    estimate_feasibility,
+    raise_if_infeasible,
+)
 from tabpilot.schemas import (
     CandidateSpec,
     EventType,
     ExecutionProfileName,
+    FeasibilityReport,
     MetricName,
     ModelName,
     PlannerOutput,
+    RunConfig,
+    Simplification,
     Stage,
     TabPilotError,
     Task,
@@ -57,18 +71,20 @@ from tabpilot.schemas.experiment import (
     SplitSummary,
     TrainingResult,
 )
+from tabpilot.schemas.run import MIN_TIME_BUDGET_S
 from tabpilot.splitting import build_split
 from tabpilot.tracking import RunRecorder, dumps
 from tabpilot.training import (
     BudgetExceeded,
     CVRun,
     DevData,
+    OOFStore,
     baseline_candidate,
     refit_final,
     refit_params,
     rf_resource_guard,
 )
-from tabpilot.tuning import TuningMode, limits_for, tune
+from tabpilot.tuning import TuningLimits, TuningMode, limits_for, tune
 
 LIBRARIES = ("scikit-learn", "lightgbm", "optuna", "pandas", "numpy", "xgboost", "catboost")
 
@@ -137,9 +153,10 @@ class _Run:
         self.dir = args.out
         self.recorder = RunRecorder(self.dir, self.run_id)
         total = args.budget_s or self.limits.time_budget_default_s
-        if total > self.limits.time_budget_max_s:
-            raise ValueError(f"--budget-s {total} exceeds the {args.profile.value} maximum "
-                             f"{self.limits.time_budget_max_s}")  # fmt: skip
+        if not MIN_TIME_BUDGET_S <= total <= self.limits.time_budget_max_s:
+            raise ValueError(f"--budget-s {total} is outside {MIN_TIME_BUDGET_S}–"
+                             f"{self.limits.time_budget_max_s} s, the {args.profile.value} "
+                             "range (maximum)")  # fmt: skip
         self.budget = TimeBudget(float(total), self.limits.max_trials_per_run)
         soft, hard = self.limits.rss_limits_mb(psutil.virtual_memory().total / 2**20)
         self.monitor = ResourceMonitor(soft, hard)
@@ -147,6 +164,10 @@ class _Run:
         self.seeds = Seeds.derive(args.seed)
         self.n_jobs = self.limits.resolved_n_jobs(psutil.cpu_count(logical=False) or 1)
         self.runs: dict[str, CVRun] = {}
+        self.freeze = SelectionFreeze()
+        self.guard: Any = None  # HoldoutGuard, built at split time (L-2, I-1)
+        self.simplifications: set[Simplification] = set()
+        self.soft_warned = False
 
     @contextmanager
     def stage(self, stage: Stage) -> Iterator[None]:
@@ -212,15 +233,18 @@ def _train(
             run.recorder.event(Stage.TRAIN_CANDIDATES, EventType.CANDIDATE_FAILED,
                                model=name.value, status=status)  # fmt: skip
             continue
-        max_trials = run.args.trials if share > 0 else 1
-        limits = limits_for(profile_name, alloc, len(split.dev_indices),
-                            max(1, run.budget.trials_left()), mode=run.args.tuning_mode,
-                            max_trials=max_trials)  # fmt: skip
+        if run.monitor.soft_exceeded and not run.soft_warned:
+            run.soft_warned = True
+            run.recorder.event(Stage.TRAIN_CANDIDATES, EventType.RESOURCE_WARNING,
+                               level="soft", action="no extra tuning trials")  # fmt: skip
+        extra = share > 0 and not run.monitor.soft_exceeded
+        limits = _limits(run, alloc, len(split.dev_indices), run.args.trials if extra else 1)
         run.recorder.event(Stage.TRAIN_CANDIDATES, EventType.CANDIDATE_STARTED, model=name.value,
                            allocation_s=round(alloc, 1), max_trials=limits.max_trials)  # fmt: skip
         tuned = tune(cand, dev, split, schema=schema, registry=run.registry, metric=metric,
                      allocation_s=alloc, limits=limits, seed=run.seeds.optuna,
                      profile=profile_name, extra_hook=run.train_hook(),
+                     stop=lambda: run.monitor.soft_exceeded,
                      on_trial=lambda r: run.recorder.trial(dataclasses.asdict(r)))  # fmt: skip
         run.budget.use_trials(len(tuned.trials))
         best = tuned.best
@@ -233,6 +257,43 @@ def _train(
                            entry_id=best.result.entry_id, status=best.result.status,
                            trials=len(tuned.trials), stopped=tuned.stopped)  # fmt: skip
     return entries
+
+
+def _limits(run: _Run, alloc: float, n_dev: int, max_trials: int | None) -> TuningLimits:
+    """§17.3 limits with the §29.5 simplifications chosen by the feasibility check."""
+    limits = limits_for(run.args.profile, alloc, n_dev, max(1, run.budget.trials_left()),
+                        mode=run.args.tuning_mode, max_trials=max_trials)  # fmt: skip
+    if Simplification.REDUCE_TUNING_TRIALS in run.simplifications:
+        limits = replace(limits, max_trials=max(1, limits.max_trials // 2))
+    if Simplification.WITHIN_FOLD_SUBSAMPLE in run.simplifications and n_dev > SUBSAMPLE_ROWS:
+        limits = replace(limits, train_row_cap=SUBSAMPLE_ROWS)
+    return limits
+
+
+def _feasibility(
+    run: _Run, loaded: Any, target: str, task: Task, positive: str | None
+) -> FeasibilityReport:
+    """FR-ING-05: estimate peak memory before any training; reject, or record the §29.5
+    simplifications that this run then applies.
+    """
+    config = RunConfig(run_id=run.run_id, target=target, task=task, positive_label=positive,
+                       primary_metric=default_primary(task), time_budget_s=int(run.budget.total_s),
+                       seed_root=run.args.seed, llm_mode="off", enable_ensemble=False,
+                       execution_profile=run.args.profile)  # fmt: skip
+    report = estimate_feasibility(loaded.metadata, config, run.settings,
+                                  psutil.virtual_memory().total / 2**20)  # fmt: skip
+    raise_if_infeasible(report)
+    run.simplifications = set(report.simplifications)
+    if report.simplifications:
+        run.recorder.event(Stage.INGEST, EventType.WARNING_RAISED, code="feasibility_simplified",
+                           simplifications=[s.value for s in report.simplifications])  # fmt: skip
+    return report
+
+
+def _simplified_schema(run: _Run, schema: PipelineSchema) -> PipelineSchema:
+    if Simplification.CAP_ONEHOT in run.simplifications:
+        return replace(schema, onehot_max_categories=ONEHOT_CAP_SIMPLIFIED)
+    return schema
 
 
 def _entry(
@@ -274,10 +335,15 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
             loaded = apply_target(loaded, validate_target(loaded, target, task))
             positive = (detected.positive_label or positive_label(loaded.frame[target].dropna())
                         if task == Task.BINARY else None)  # fmt: skip
+            feasibility = _feasibility(run, loaded, target, task, positive)
         with run.stage(Stage.SPLIT):
-            split_result = build_split(loaded.frame[target], task, args.seed,
-                                       features=loaded.frame.drop(columns=[target]))  # fmt: skip
+            k = 3 if Simplification.REDUCE_FOLDS in run.simplifications else 5
+            features = loaded.frame.drop(columns=[target])
+            split_result = build_split(loaded.frame[target], task, args.seed, features=features,
+                                       k=k)  # fmt: skip
             split = split_result.spec
+            if split.holdout_present:  # HOLD is sealed from here until selection is frozen
+                run.guard = make_guard(split, run.freeze.is_frozen)
             for code in split_result.warnings:
                 run.recorder.event(Stage.SPLIT, EventType.WARNING_RAISED, code=str(code))
         with run.stage(Stage.PROFILE):
@@ -292,19 +358,20 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
                 if unknown:
                     raise ValueError(f"models not available on {args.profile.value}: {unknown}")
                 available = [m for m in available if m in args.models]
+            if Simplification.DISABLE_RANDOM_FOREST in run.simplifications:
+                available = [m for m in available if m != ModelName.RANDOM_FOREST]
             plan = rule_based_plan(summary, task, available)
             run.recorder.event(Stage.PLAN, EventType.PLAN_RECEIVED, source="rule_based",
                                models=[m.name.value for m in plan.models])  # fmt: skip
         problem = _problem(loaded.frame, target, task, positive)
         dev = DevData.from_frame(loaded.frame, target, problem)
-        schema = schema_from(metadata, summary)
+        schema = _simplified_schema(run, schema_from(metadata, summary))
         metric = default_primary(task, summary.target.positive_share)
         with run.stage(Stage.TRAIN_CANDIDATES):
             entries = _train(run, plan=plan, candidates=_candidates(plan, task, run), dev=dev,
                              split=split, schema=schema, metric=metric)  # fmt: skip
         with run.stage(Stage.EVALUATE):
-            freeze = SelectionFreeze()
-            selection = select(entries, freeze)
+            selection = select(entries, run.freeze)
             if not_comparable(entries):
                 run.recorder.event(Stage.EVALUATE, EventType.WARNING_RAISED, code="not_comparable")
             run.recorder.event(Stage.EVALUATE, EventType.LEADERBOARD_UPDATED, n=len(entries),
@@ -317,15 +384,20 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
             base = baseline_candidate(available, best.candidate.model)
             baseline_model = refit_final(base, [], dev, split, schema=schema,
                                          registry=run.registry, profile=args.profile)  # fmt: skip
-            freeze.freeze()
+            run.freeze.freeze()
             run.recorder.event(Stage.FINALIZE, EventType.SELECTION_FROZEN, winner=selection.winner)
-            guard = make_guard(split, freeze.is_frozen) if split.holdout_present else None
+            guard = run.guard
             holdout = evaluate_holdout(guard, final_model, baseline_model, frame=loaded.frame,
                                        y=dev.y, problem=problem, metric=metric,
                                        seed=run.seeds.root)  # fmt: skip
             run.recorder.event(Stage.FINALIZE, EventType.HOLDOUT_EVALUATED,
                                present=holdout.present,
-                               accesses=len(guard.access_log) if guard else 0)  # fmt: skip
+                               accesses=len(guard.access_log) if guard else 0,
+                               refused=len(guard.refused_log) if guard else 0)  # fmt: skip
+            store = OOFStore(run.dir / "oof")
+            assert best.oof is not None  # noqa: S101 - an ok winner always has OOF
+            store.put(selection.winner, best.oof)
+            oof_path = Path(store.persist(selection.winner)).relative_to(run.dir).as_posix()
     finally:
         run.monitor.stop()
     evaluation = EvaluationResult(entries=entries, selection=selection, holdout=holdout)
@@ -353,9 +425,13 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
     )
     lineage = {"winner": selection.winner, "refit_params": refit_params(best.candidate,
                best.best_iterations), "cv_best_iterations": best.best_iterations,
-               "baseline_model": base.model.name.value, "plan_source": "rule_based"}  # fmt: skip
+               "baseline_model": base.model.name.value, "plan_source": "rule_based",
+               "winner_oof": oof_path}  # fmt: skip
+    thresholds = {eid: report for eid, cv in run.runs.items()
+                  if (report := threshold_report(cv.oof, dev.y, split, problem))}  # fmt: skip
     run.recorder.experiment({"config": config, "plan": plan, "evaluation": evaluation,
-                             "budget": run.budget.ledger(), "lineage": lineage})  # fmt: skip
+                             "budget": run.budget.ledger(), "lineage": lineage,
+                             "feasibility": feasibility, "thresholds": thresholds})  # fmt: skip
     for name, payload in (("leaderboard.json", entries), ("selection.json", selection),
                           ("holdout.json", holdout)):  # fmt: skip
         (run.dir / name).write_text(dumps(payload, indent=2) + "\n", encoding="utf-8")

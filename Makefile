@@ -3,7 +3,7 @@
 UV ?= uv
 RUN := $(UV) run --frozen
 
-.PHONY: setup lint format format-check type contracts test test-all check schemas schemas-check fixtures fixtures-check requirements requirements-check
+.PHONY: setup lint format format-check type contracts clean-pyc test test-all check schemas schemas-check fixtures fixtures-check requirements requirements-check
 
 setup:
 	$(UV) sync --all-extras --frozen
@@ -24,12 +24,17 @@ type:
 contracts:
 	$(RUN) lint-imports
 
+# Stale bytecode can survive an edit + revert within the same second (same mtime and size),
+# so tests always start from freshly compiled sources (KI-004).
+clean-pyc:
+	find src tests fixtures scripts -name __pycache__ -prune -exec rm -rf {} +
+
 # Default selection excludes perf, live and slow (pyproject addopts).
-test:
+test: clean-pyc
 	$(RUN) pytest --cov --cov-report=term-missing
 
 # Everything except live provider calls.
-test-all:
+test-all: clean-pyc
 	$(RUN) pytest --cov --cov-report=term-missing -m "not live"
 
 check: lint format-check type contracts test

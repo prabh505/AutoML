@@ -170,10 +170,11 @@ layers = [
 ]
 
 # PRD §25.4 rule 2 (PI-13): only the finalizer path may reach the holdout guard.
-# evaluation (P09 narrows it to evaluation.holdout) and orchestration (finalize node and the run
-# context that constructs the guard) are the allowed importers.
+# evaluation.holdout, orchestration (finalize node and the run context that constructs the guard)
+# and the P09 CLI run context (PI-13's named construction site) are the allowed importers. Every
+# other evaluation module is listed as a source, so only evaluation.holdout may reach the guard.
 [[tool.importlinter.contracts]]
-name = "R2 holdout guard: only evaluation and orchestration may import splitting.guard"
+name = "R2 holdout guard: only evaluation.holdout, orchestration and the run context may import splitting.guard"
 type = "forbidden"
 source_modules = [
     "tabpilot.ui", "tabpilot.runtime", "tabpilot.ingestion", "tabpilot.profiling",
@@ -182,6 +183,8 @@ source_modules = [
     "tabpilot.ensembling", "tabpilot.explain", "tabpilot.reporting", "tabpilot.export",
     "tabpilot.resources", "tabpilot.tracking", "tabpilot.schemas", "tabpilot.config",
     "tabpilot.logging", "tabpilot.splitting.strategy", "tabpilot_runtime",
+    "tabpilot.evaluation.metrics", "tabpilot.evaluation.predict", "tabpilot.evaluation.leaderboard",
+    "tabpilot.evaluation.selection",
 ]
 forbidden_modules = ["tabpilot.splitting.guard"]
 
