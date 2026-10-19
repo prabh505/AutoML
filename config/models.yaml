@@ -1,0 +1,41 @@
+# Model zoo availability per execution profile (PRD §16.1).
+# Missing optional libraries are detected at startup and removed from available_models.
+schema_version: "models/1.0"
+models:
+  linear:
+    library: scikit-learn
+    estimators: {classification: LogisticRegression, regression: Ridge}
+    tasks: [binary, multiclass, regression]
+    profiles: [hosted, local]
+    defaults: {solver: lbfgs, max_iter: 2000}
+  random_forest:
+    library: scikit-learn
+    estimators: {classification: RandomForestClassifier, regression: RandomForestRegressor}
+    tasks: [binary, multiclass, regression]
+    profiles: [hosted, local]
+    defaults: {n_estimators: 200}
+    hosted_max_depth_cap: 20
+  lightgbm:
+    library: lightgbm
+    estimators: {classification: LGBMClassifier, regression: LGBMRegressor}
+    tasks: [binary, multiclass, regression]
+    profiles: [hosted, local]
+    defaults: {deterministic: true, force_row_wise: true}
+  xgboost:
+    library: xgboost
+    estimators: {classification: XGBClassifier, regression: XGBRegressor}
+    tasks: [binary, multiclass, regression]
+    profiles: [local]
+    defaults: {tree_method: hist}
+  catboost:
+    library: catboost
+    estimators: {classification: CatBoostClassifier, regression: CatBoostRegressor}
+    tasks: [binary, multiclass, regression]
+    profiles: [local]
+    defaults: {allow_writing_files: false}
+  hist_gb:
+    library: scikit-learn
+    estimators: {classification: HistGradientBoostingClassifier, regression: HistGradientBoostingRegressor}
+    tasks: [binary, multiclass, regression]
+    profiles: [hosted, local]
+    fallback_only: true          # used only if LightGBM import fails

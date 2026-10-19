@@ -1,2 +1,26 @@
 .DS_Store
 .env
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.import_linter_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+# Run data and generated artifacts (never committed)
+runs/
+data/
+mlruns/
+*.joblib
+fixtures/datasets/hosted_limit.csv
+benchmark/results/**/tmp/

@@ -1,0 +1,38 @@
+# Execution profiles (PRD §29.1; time budgets per amendment A-004 / ADR-0003).
+# Hosted limits are initial design values for a ~1 GB host (D-01); raising them needs
+# benchmark evidence (NFR-PERF-04). Estimator coefficients are calibrated in P18 (§29.4).
+schema_version: "profiles/1.0"
+profiles:
+  hosted:
+    max_file_mb: 20
+    max_rows: 100000
+    max_columns: 200
+    rss_soft_mb: 600
+    rss_hard_mb: 750
+    n_jobs: 2
+    time_budget_default_s: 960   # A-004 (PRD 480)
+    time_budget_max_s: 1800      # A-004 (PRD 900)
+    max_concurrent_runs: 1
+    max_trials_per_run: 60
+    llm_calls_per_run: 12
+    max_bundle_mb: 100
+    models_enabled: [linear, random_forest, lightgbm]
+  local:
+    max_file_mb: 50
+    max_rows: 500000
+    max_columns: 500
+    rss_soft_fraction_of_ram: 0.70
+    rss_hard_fraction_of_ram: 0.85
+    n_jobs: auto                 # min(physical cores, n_jobs_cap)
+    n_jobs_cap: 8
+    time_budget_default_s: 1200  # A-004 (PRD 600)
+    time_budget_max_s: 7200      # A-004 (PRD 3600)
+    max_concurrent_runs: 1
+    max_trials_per_run: 300
+    llm_calls_per_run: 12
+    llm_calls_max: 25
+    max_bundle_mb: 500
+    models_enabled: all_available
+estimator:
+  safety: 1.5                    # until calibration (§29.4)
+  process_base_mb: 250

@@ -1,0 +1,24 @@
+# LLM providers (PRD §23.3). No quotas are hardcoded. Model ids come from environment
+# variables; verify current model ids and terms before deployment (D-03).
+# Placeholders are quoted: the unquoted PRD §23.3 form is not valid YAML (PI-40).
+schema_version: "providers/1.0"
+order_hosted: [groq, gemini, openrouter]
+order_local: [ollama, groq, gemini, openrouter]
+providers:
+  groq:
+    base_url: https://api.groq.com/openai/v1
+    model_id: "${TABPILOT_GROQ_MODEL}"
+    api_key_env: GROQ_API_KEY
+    json_mode: true
+    max_context_tokens: "${TABPILOT_GROQ_CTX}"
+  gemini:
+    model_id: "${TABPILOT_GEMINI_MODEL}"
+    api_key_env: GEMINI_API_KEY
+    json_mode: true
+  openrouter:
+    base_url: https://openrouter.ai/api/v1
+    model_ids: ["${TABPILOT_OR_MODEL_1}", "${TABPILOT_OR_MODEL_2}"]
+    api_key_env: OPENROUTER_API_KEY
+  ollama:
+    base_url: http://localhost:11434/v1
+    model_id: "${TABPILOT_OLLAMA_MODEL}"
