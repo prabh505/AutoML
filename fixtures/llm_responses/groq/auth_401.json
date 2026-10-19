@@ -1,0 +1,11 @@
+{
+  "provider": "groq",
+  "scenario": "auth_401",
+  "synthetic": true,
+  "steps": [
+    {
+      "kind": "http_error",
+      "status": 401
+    }
+  ]
+}

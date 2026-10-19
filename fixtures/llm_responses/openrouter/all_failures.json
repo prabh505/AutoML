@@ -1,0 +1,24 @@
+{
+  "provider": "openrouter",
+  "scenario": "all_failures",
+  "synthetic": true,
+  "steps": [
+    {
+      "kind": "http_error",
+      "status": 429,
+      "retry_after": null
+    },
+    {
+      "kind": "http_error",
+      "status": 500
+    },
+    {
+      "kind": "http_error",
+      "status": 500
+    },
+    {
+      "kind": "http_error",
+      "status": 500
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "long_300_chars": "quarterly_customer_export_quarterly_customer_export_quarterly_customer_export_quarterly_customer_export_quarterly_customer_export_quarterly_customer_export_quarterly_customer_export_quarterly_customer_export_quarterly_customer_export_quarterly_customer_export_quarterly_customer_export_quarterly_.csv",
+  "path_traversal": "../../etc/passwd.csv",
+  "windows_traversal": "..\\..\\windows\\system32\\x.csv",
+  "control_chars": "bad\u0000\u0007name.csv",
+  "absolute": "/etc/shadow.csv",
+  "html": "<b>report</b>.csv"
+}

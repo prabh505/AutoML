@@ -1,0 +1,31 @@
+{
+  "provider": "gemini",
+  "scenario": "malformed_json",
+  "synthetic": true,
+  "steps": [
+    {
+      "kind": "response",
+      "body": {
+        "id": "chatcmpl-gemini-0001",
+        "object": "chat.completion",
+        "created": 1760000000,
+        "model": "scripted-model",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {
+              "role": "assistant",
+              "content": "{\"models\": ["
+            }
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 3100,
+          "completion_tokens": 420,
+          "total_tokens": 3520
+        }
+      }
+    }
+  ]
+}

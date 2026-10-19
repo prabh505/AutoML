@@ -1,0 +1,35 @@
+{
+  "provider": "ollama",
+  "scenario": "server_error_then_success",
+  "synthetic": true,
+  "steps": [
+    {
+      "kind": "http_error",
+      "status": 500
+    },
+    {
+      "kind": "response",
+      "body": {
+        "id": "chatcmpl-ollama-0001",
+        "object": "chat.completion",
+        "created": 1760000000,
+        "model": "scripted-model",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {
+              "role": "assistant",
+              "content": "{\"schema_version\": \"plan/1.0\", \"column_decisions\": [{\"column\": \"num_support_calls\", \"action\": \"treat_as_categorical\", \"reason\": \"Few distinct integer values.\"}], \"imputation\": {\"numeric\": \"median\", \"categorical\": \"most_frequent\", \"add_missing_indicators\": true}, \"encoding\": {\"low_cardinality\": \"onehot\", \"high_cardinality\": \"frequency\"}, \"features\": [{\"id\": \"f01\", \"name\": \"charges_per_month_tenure\", \"op\": \"ratio\", \"inputs\": [\"monthly_charges\", \"tenure_months\"], \"params\": {\"eps\": 1e-06}, \"rationale\": \"Spend relative to tenure.\"}, {\"id\": \"f02\", \"name\": \"contract_mean_charges\", \"op\": \"group_mean\", \"inputs\": [\"contract\", \"monthly_charges\"], \"rationale\": \"Contract pricing.\"}], \"models\": [{\"name\": \"lightgbm\", \"priority\": 1, \"class_weight\": \"balanced\"}, {\"name\": \"linear\", \"priority\": 2, \"class_weight\": \"none\"}], \"tuning_allocation\": {\"lightgbm\": 0.7, \"linear\": 0.3}, \"target_transform\": \"none\", \"cv_folds\": 5, \"metric_recommendation\": \"roc_auc\", \"rationale\": \"Contract and tenure dominate churn.\"}"
+            }
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 3100,
+          "completion_tokens": 420,
+          "total_tokens": 3520
+        }
+      }
+    }
+  ]
+}

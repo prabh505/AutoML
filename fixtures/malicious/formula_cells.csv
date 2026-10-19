@@ -1,0 +1,81 @@
+segment,value,y
+"=HYPERLINK(""http://evil.example"",""x"")",0,0
++cmd|' /C calc'!A0,1,1
+-2+3,2,0
+@SUM(A1:A2),3,1
+	TAB,4,0
+"CR",5,1
+plain,6,0
+normal,7,1
+"=HYPERLINK(""http://evil.example"",""x"")",8,0
++cmd|' /C calc'!A0,9,1
+-2+3,10,0
+@SUM(A1:A2),11,1
+	TAB,12,0
+"CR",13,1
+plain,14,0
+normal,15,1
+"=HYPERLINK(""http://evil.example"",""x"")",16,0
++cmd|' /C calc'!A0,17,1
+-2+3,18,0
+@SUM(A1:A2),19,1
+	TAB,20,0
+"CR",21,1
+plain,22,0
+normal,23,1
+"=HYPERLINK(""http://evil.example"",""x"")",24,0
++cmd|' /C calc'!A0,25,1
+-2+3,26,0
+@SUM(A1:A2),27,1
+	TAB,28,0
+"CR",29,1
+plain,30,0
+normal,31,1
+"=HYPERLINK(""http://evil.example"",""x"")",32,0
++cmd|' /C calc'!A0,33,1
+-2+3,34,0
+@SUM(A1:A2),35,1
+	TAB,36,0
+"CR",37,1
+plain,38,0
+normal,39,1
+"=HYPERLINK(""http://evil.example"",""x"")",40,0
++cmd|' /C calc'!A0,41,1
+-2+3,42,0
+@SUM(A1:A2),43,1
+	TAB,44,0
+"CR",45,1
+plain,46,0
+normal,47,1
+"=HYPERLINK(""http://evil.example"",""x"")",48,0
++cmd|' /C calc'!A0,49,1
+-2+3,50,0
+@SUM(A1:A2),51,1
+	TAB,52,0
+"CR",53,1
+plain,54,0
+normal,55,1
+"=HYPERLINK(""http://evil.example"",""x"")",56,0
++cmd|' /C calc'!A0,57,1
+-2+3,58,0
+@SUM(A1:A2),59,1
+	TAB,60,0
+"CR",61,1
+plain,62,0
+normal,63,1
+"=HYPERLINK(""http://evil.example"",""x"")",64,0
++cmd|' /C calc'!A0,65,1
+-2+3,66,0
+@SUM(A1:A2),67,1
+	TAB,68,0
+"CR",69,1
+plain,70,0
+normal,71,1
+"=HYPERLINK(""http://evil.example"",""x"")",72,0
++cmd|' /C calc'!A0,73,1
+-2+3,74,0
+@SUM(A1:A2),75,1
+	TAB,76,0
+"CR",77,1
+plain,78,0
+normal,79,1

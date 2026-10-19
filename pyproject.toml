@@ -76,10 +76,13 @@ ignore = [
     "PLR0913",  # pipeline factories take many explicit arguments by design
     "PLR2004",  # PRD thresholds are written inline with § references
     "RUF001", "RUF002", "RUF003",  # PRD notation (–, ≥, →, ×) in strings, docstrings, comments
+    "N803", "N806",  # scikit-learn convention: X, y, W for matrices
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "PLR2004", "S603", "S607"]
+"tests/**" = ["S101", "PLR2004", "S603", "S607", "E501", "N818", "RUF012", "PLW0108"]
+# Fixture generator: ML naming (X, W) and literal data tables.
+"fixtures/**" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -110,6 +113,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = [
     "-ra",
     "--strict-markers",

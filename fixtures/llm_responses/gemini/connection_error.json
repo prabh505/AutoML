@@ -1,0 +1,16 @@
+{
+  "provider": "gemini",
+  "scenario": "connection_error",
+  "synthetic": true,
+  "steps": [
+    {
+      "kind": "connection_error"
+    },
+    {
+      "kind": "connection_error"
+    },
+    {
+      "kind": "connection_error"
+    }
+  ]
+}

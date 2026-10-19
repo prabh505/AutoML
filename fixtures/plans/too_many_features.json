@@ -1,0 +1,158 @@
+{
+  "schema_version": "plan/1.0",
+  "column_decisions": [
+    {
+      "column": "num_support_calls",
+      "action": "treat_as_categorical",
+      "reason": "Few distinct integer values."
+    }
+  ],
+  "imputation": {
+    "numeric": "median",
+    "categorical": "most_frequent",
+    "add_missing_indicators": true
+  },
+  "encoding": {
+    "low_cardinality": "onehot",
+    "high_cardinality": "frequency"
+  },
+  "features": [
+    {
+      "id": "f01",
+      "name": "feat_1",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f02",
+      "name": "feat_2",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f03",
+      "name": "feat_3",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f04",
+      "name": "feat_4",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f05",
+      "name": "feat_5",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f06",
+      "name": "feat_6",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f07",
+      "name": "feat_7",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f08",
+      "name": "feat_8",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f09",
+      "name": "feat_9",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f10",
+      "name": "feat_10",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f11",
+      "name": "feat_11",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f12",
+      "name": "feat_12",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    },
+    {
+      "id": "f13",
+      "name": "feat_13",
+      "op": "add",
+      "inputs": [
+        "age",
+        "income"
+      ]
+    }
+  ],
+  "models": [
+    {
+      "name": "lightgbm",
+      "priority": 1,
+      "class_weight": "balanced"
+    },
+    {
+      "name": "linear",
+      "priority": 2,
+      "class_weight": "none"
+    }
+  ],
+  "tuning_allocation": {
+    "lightgbm": 0.7,
+    "linear": 0.3
+  },
+  "target_transform": "none",
+  "cv_folds": 5,
+  "metric_recommendation": "roc_auc",
+  "rationale": "Contract and tenure dominate churn."
+}

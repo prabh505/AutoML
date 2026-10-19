@@ -3,7 +3,7 @@
 UV ?= uv
 RUN := $(UV) run --frozen
 
-.PHONY: setup lint format format-check type contracts test test-all check schemas schemas-check requirements requirements-check
+.PHONY: setup lint format format-check type contracts test test-all check schemas schemas-check fixtures fixtures-check requirements requirements-check
 
 setup:
 	$(UV) sync --all-extras --frozen
@@ -41,6 +41,13 @@ schemas:
 # without a schema_version bump.
 schemas-check:
 	$(RUN) python scripts/export_schemas.py --check $(if $(SCHEMA_BASE),--base $(SCHEMA_BASE))
+
+# Deterministic fixtures (P03): regenerate, or verify byte-identical regeneration.
+fixtures:
+	$(RUN) python fixtures/make_fixtures.py
+
+fixtures-check:
+	$(RUN) python fixtures/make_fixtures.py --check
 
 requirements:
 	scripts/export_requirements.sh

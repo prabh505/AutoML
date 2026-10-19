@@ -1,0 +1,11 @@
+{
+  "provider": "gemini",
+  "scenario": "bad_request_400",
+  "synthetic": true,
+  "steps": [
+    {
+      "kind": "http_error",
+      "status": 400
+    }
+  ]
+}

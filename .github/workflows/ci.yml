@@ -27,5 +27,7 @@ jobs:
         run: make check
       - name: requirements.txt matches uv.lock
         run: make requirements-check
+      - name: Fixtures regenerate byte-identically
+        run: make fixtures-check
       - name: JSON schemas current and versioned
         run: make schemas-check SCHEMA_BASE=HEAD^

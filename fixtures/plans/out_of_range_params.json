@@ -1,0 +1,53 @@
+{
+  "schema_version": "plan/1.0",
+  "column_decisions": [
+    {
+      "column": "num_support_calls",
+      "action": "treat_as_categorical",
+      "reason": "Few distinct integer values."
+    }
+  ],
+  "imputation": {
+    "numeric": "median",
+    "categorical": "most_frequent",
+    "add_missing_indicators": true
+  },
+  "encoding": {
+    "low_cardinality": "onehot",
+    "high_cardinality": "frequency"
+  },
+  "features": [
+    {
+      "id": "f01",
+      "name": "clipped",
+      "op": "clip",
+      "inputs": [
+        "income"
+      ],
+      "params": {
+        "lower_q": 0.05,
+        "upper_q": 0.5
+      }
+    }
+  ],
+  "models": [
+    {
+      "name": "lightgbm",
+      "priority": 1,
+      "class_weight": "balanced"
+    },
+    {
+      "name": "linear",
+      "priority": 2,
+      "class_weight": "none"
+    }
+  ],
+  "tuning_allocation": {
+    "lightgbm": 0.7,
+    "linear": 0.3
+  },
+  "target_transform": "none",
+  "cv_folds": 5,
+  "metric_recommendation": "roc_auc",
+  "rationale": "Contract and tenure dominate churn."
+}

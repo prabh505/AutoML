@@ -1,0 +1,12 @@
+{
+  "provider": "openrouter",
+  "scenario": "rate_limit_long",
+  "synthetic": true,
+  "steps": [
+    {
+      "kind": "http_error",
+      "status": 429,
+      "retry_after": 60
+    }
+  ]
+}
