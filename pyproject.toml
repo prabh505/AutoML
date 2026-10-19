@@ -166,19 +166,21 @@ layers = [
     "schemas",
 ]
 
-# PRD §25.4 rule 2 (as clarified by PI-13): only the finalizer path may reach the holdout guard.
+# PRD §25.4 rule 2 (PI-13): only the finalizer path may reach the holdout guard.
+# evaluation (P09 narrows it to evaluation.holdout) and orchestration (finalize node and the run
+# context that constructs the guard) are the allowed importers.
 [[tool.importlinter.contracts]]
-name = "R2 holdout guard: only evaluation and orchestration may import tabpilot.splitting (P05 narrows this to splitting.guard)"
+name = "R2 holdout guard: only evaluation and orchestration may import splitting.guard"
 type = "forbidden"
 source_modules = [
     "tabpilot.ui", "tabpilot.runtime", "tabpilot.ingestion", "tabpilot.profiling",
     "tabpilot.planning", "tabpilot.llm", "tabpilot.features", "tabpilot.preprocessing",
     "tabpilot.models", "tabpilot.training", "tabpilot.tuning", "tabpilot.reflection",
     "tabpilot.ensembling", "tabpilot.explain", "tabpilot.reporting", "tabpilot.export",
-    "tabpilot.resources", "tabpilot.tracking", "tabpilot.schemas", "tabpilot_runtime",
+    "tabpilot.resources", "tabpilot.tracking", "tabpilot.schemas", "tabpilot.config",
+    "tabpilot.logging", "tabpilot.splitting.strategy", "tabpilot_runtime",
 ]
-forbidden_modules = ["tabpilot.splitting"]
-allow_indirect_imports = true
+forbidden_modules = ["tabpilot.splitting.guard"]
 
 # PRD §25.4 rule 3.
 [[tool.importlinter.contracts]]

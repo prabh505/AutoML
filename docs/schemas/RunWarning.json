@@ -43,14 +43,16 @@
         "W-TARGET-MISSING",
         "W-NO-HOLDOUT",
         "W-NEAR-CONSTANT",
-        "W-HIGH-CARDINALITY"
+        "W-HIGH-CARDINALITY",
+        "W-GROUP-HOLDOUT-FALLBACK",
+        "W-NO-REPEATED-CV"
       ],
       "title": "WarningCode",
       "type": "string"
     }
   },
   "additionalProperties": false,
-  "description": "A structured warning (`warning/1.1`: + W-NEAR-CONSTANT, W-HIGH-CARDINALITY, PI-42).\n\nNamed `RunWarning` to avoid the builtin (PI-25).",
+  "description": "A structured warning (`warning/1.2`: + PI-42 codes, + split notes of P05).\n\nNamed `RunWarning` to avoid the builtin (PI-25).",
   "properties": {
     "code": {
       "$ref": "#/$defs/WarningCode"
@@ -88,8 +90,8 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "warning/1.1",
-      "default": "warning/1.1",
+      "const": "warning/1.2",
+      "default": "warning/1.2",
       "title": "Schema Version",
       "type": "string"
     },
@@ -111,5 +113,5 @@
   ],
   "title": "RunWarning",
   "type": "object",
-  "x-schema-version": "warning/1.1"
+  "x-schema-version": "warning/1.2"
 }

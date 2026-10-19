@@ -140,7 +140,7 @@ def test_schema_version_literal(name: str) -> None:
     model = CONTRACTS[name]
     version = model.model_fields["schema_version"].default
     assert isinstance(version, str)
-    assert version.endswith(("/1.0", "/1.1"))
+    assert version.endswith(("/1.0", "/1.1", "/1.2"))
     with pytest.raises(ValidationError):
         model.model_validate({**fixture(name), "schema_version": "x/9.9"})
 

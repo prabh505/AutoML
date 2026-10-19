@@ -163,3 +163,5 @@ class WarningCode(StrEnum):
     NO_HOLDOUT = "W-NO-HOLDOUT"
     NEAR_CONSTANT = "W-NEAR-CONSTANT"  # PI-42 (§8.6 near-constant)
     HIGH_CARDINALITY = "W-HIGH-CARDINALITY"  # PI-42 (§8.6 very high cardinality)
+    GROUP_HOLDOUT_FALLBACK = "W-GROUP-HOLDOUT-FALLBACK"  # §11.3: group holdout lost a class
+    NO_REPEATED_CV = "W-NO-REPEATED-CV"  # small data + group column: single grouped K-fold
