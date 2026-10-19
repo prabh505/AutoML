@@ -75,6 +75,11 @@ def _n_outputs(meta: DatasetMetadata) -> int:
     return max(len(meta.target.class_counts or {}), 2)
 
 
+def rf_model_mb(train_rows: float, n_estimators: int = RF_TREES) -> float:
+    """Random-forest model size: trees × leaf nodes (≈ rows / 2) × 32 B (§29.4, PI-46)."""
+    return n_estimators * max(1.0, train_rows / 2) * RF_NODE_BYTES / 1e6
+
+
 def estimate_peak_mb(meta: DatasetMetadata, plan: Plan, settings: Settings) -> float:
     """Estimated peak worker RSS in MB (§29.4)."""
     rows = meta.n_rows_valid
@@ -87,12 +92,11 @@ def estimate_peak_mb(meta: DatasetMetadata, plan: Plan, settings: Settings) -> f
         encoded_linear = base
     fold = encoded * (plan.k - 1) / plan.k
     train_rows = min(rows, plan.train_rows_cap) if plan.train_rows_cap else rows
-    leaves = max(1.0, train_rows * (plan.k - 1) / plan.k / 2)
     per_model = {
         ModelName.LINEAR: 2.5 * encoded_linear,
         ModelName.LIGHTGBM: 1.5 * encoded + 50,
         ModelName.HIST_GB: 1.5 * encoded + 50,
-        ModelName.RANDOM_FOREST: RF_TREES * leaves * RF_NODE_BYTES / 1e6,
+        ModelName.RANDOM_FOREST: rf_model_mb(train_rows * (plan.k - 1) / plan.k),
         ModelName.XGBOOST: 2.0 * encoded + 80,
         ModelName.CATBOOST: 2.5 * encoded + 120,
     }

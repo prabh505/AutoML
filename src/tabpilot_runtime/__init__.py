@@ -6,6 +6,14 @@ Shipped inside export bundles; imports only numpy, pandas, scikit-learn and mode
 Must not: Importing tabpilot (import contract R5).
 """
 
+from tabpilot_runtime.columns import (
+    BooleanEncoder,
+    ColumnNameMapper,
+    ColumnSelector,
+    PredictionSchemaError,
+    TypeCaster,
+)
+from tabpilot_runtime.estimators import TabularModel
 from tabpilot_runtime.transformers import (
     BaselineFeatureTransformer,
     DSLFeatureTransformer,
@@ -15,7 +23,13 @@ from tabpilot_runtime.transformers import (
 
 __all__ = [
     "BaselineFeatureTransformer",
+    "BooleanEncoder",
+    "ColumnNameMapper",
+    "ColumnSelector",
     "DSLFeatureTransformer",
     "FrequencyEncoder",
+    "PredictionSchemaError",
     "RareCategoryGrouper",
+    "TabularModel",
+    "TypeCaster",
 ]

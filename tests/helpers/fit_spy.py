@@ -71,3 +71,9 @@ class FitSpy(TransformerMixin, BaseEstimator):  # type: ignore[misc]
     @property
     def classes_(self) -> Any:
         return self.inner_.classes_
+
+    def __getattr__(self, name: str) -> Any:
+        """Expose the wrapped step's fitted attributes (`failed_features_`, `best_iteration_`…)."""
+        if name.endswith("_") and not name.startswith("_") and "inner_" in self.__dict__:
+            return getattr(self.__dict__["inner_"], name)
+        raise AttributeError(name)

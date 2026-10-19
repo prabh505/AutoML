@@ -45,11 +45,11 @@
 
 | Field | Value |
 | --- | --- |
-| Last completed prompt | **P07** Feature engine: baseline + DSL + runtime package |
-| Next prompt | **P08** Preprocessing pipelines, model zoo, CV runner |
+| Last completed prompt | **P08** Preprocessing pipelines, model zoo, CV runner |
+| Next prompt | **P09** Tuning, evaluation, selection, holdout, budgets, rule-based CLI (**Gate A**) |
 | Current milestone | Milestone 1 — Deterministic AutoML core (M0 complete) |
-| Test suite | `make check` green: ruff, format, mypy, import-linter 5/5, pytest 559 passed, coverage 95.52% (features 97–100%, tabpilot_runtime 99%); `make schemas-check` and `make fixtures-check` green |
-| Last green commit | P07 commit (`git log --grep '^P07:'`) |
+| Test suite | `make check` green: ruff, format, mypy, import-linter 5/5, pytest 656 passed, coverage 95.73% (training 97%, preprocessing 94%, models 99%, tabpilot_runtime 95–100%); `make schemas-check` and `make fixtures-check` green |
+| Last green commit | P08 commit (`git log --grep '^P08:'`) |
 | Blockers | None. Owner answered Q-04…Q-16 (ADR-0003) |
 
 ---
@@ -68,7 +68,7 @@ Status values: `pending` · `in_progress` · `complete` · `complete_with_issues
 | P05 | Task detection, metrics, splitting, holdout guard | §10, §11.1–11.6 | M1 | complete | see `git log --grep '^P05:'` | 2026-10-19 |
 | P06 | Profiling, leakage scan, compact profile | §9, §11.7 | M1 | complete | see `git log --grep '^P06:'` | 2026-10-19 |
 | P07 | Feature engine: baseline + DSL + runtime package | §14.1–14.6 | M1 | complete | see `git log --grep '^P07:'` | 2026-10-19 |
-| P08 | Preprocessing, model zoo, CV runner | §15, §16, §11.4, §11.8 | M1 | pending | | |
+| P08 | Preprocessing, model zoo, CV runner | §15, §16, §11.4, §11.8 | M1 | complete | see `git log --grep '^P08:'` | 2026-10-19 |
 | P09 | Tuning, evaluation, selection, holdout, budgets, rule-based CLI | §17, §18, §11.10, §12.8, §29.3, §29.6, §30.1 | **Gate A** | pending | | |
 | P10 | LLM provider router | §23, §6.4, §24.5 | M2 | pending | | |
 | P11 | LLM planner and plan validator | §12 | M2 | pending | | |
@@ -118,7 +118,7 @@ Utility prompts (run any time): U1 Independent audit · U2 Course correction · 
 | `tabpilot.splitting` | P05 | complete | `build_split`, `iter_folds`, `average_repeats`, `HoldoutGuard` (single open); task detection in `tabpilot.ingestion.task` |
 | `tabpilot.profiling` | P06 | complete | `profile` (DEV only), leakage scan + `apply_leakage_exclusions`, `build_compact_profile`, `canonical_json` |
 | `tabpilot.features` + `tabpilot_runtime` | P07 | complete | `validate_specs`/`canonical_form`, `catalog_for_planner`, provenance builders; runtime `DSLFeatureTransformer`, `BaselineFeatureTransformer`, `RareCategoryGrouper`, `FrequencyEncoder`, `dsl_ops.OPS` |
-| `tabpilot.preprocessing`, `tabpilot.models`, `tabpilot.training` | P08 | not started | |
+| `tabpilot.preprocessing`, `tabpilot.models`, `tabpilot.training` | P08 | complete | `build_pipeline`/`schema_from`/`inner_pipeline`; `ModelRegistry` (`available`, `make_estimator`, class weights); `run_cv` → `CVRun` (`.result` = `TrainingResult`), `DevData`, `OOFStore`, `rf_resource_guard`; runtime `ColumnNameMapper`, `TypeCaster`, `ColumnSelector`, `BooleanEncoder`, `TabularModel`, `PredictionSchemaError` |
 | `tabpilot.tuning`, `tabpilot.evaluation`, `tabpilot.tracking`, `planning.fallback` | P09 | not started | |
 | `tabpilot.llm` | P10 | not started | |
 | `tabpilot.planning` | P11 | not started | |
@@ -206,6 +206,7 @@ Format: `ID | Date | Prompt | Decision | Rationale | Status (proposed/accepted/s
 | DEC-027 | 2026-10-19 | P05 | Split/metric details. (1) Task detection lives in `tabpilot.ingestion.task`. (2) Metric conventions: classification `y_true` = class indices in `Problem.classes` order; predictions = an (n, k) probability matrix; binary metrics use the `positive_index` column. Log loss is computed manually with clipping + row renormalization over all classes. OvR macro AUC averages the classes present in the fold. RMSLE clips predictions at 0. (3) `HoldoutGuard`: one granted `open()` per run (PI-14); granted calls go to `access_log`, refused calls (pre-freeze or second open) to `refused_log`; returned indices are read-only. (4) Duplicate grouping hashes feature rows (target excluded) and triggers when duplicates exceed 1% of rows (§11.6). (5) Small data + a group column → one stratified/plain group K-fold (no repeated-group splitter) with W-NO-REPEATED-CV. A group holdout tries 20 seeded `GroupShuffleSplit`s to keep every class on both sides, then falls back to one `StratifiedGroupKFold` fold with W-GROUP-HOLDOUT-FALLBACK (both codes added: `warning/1.2` cascade). (6) Import contract R2 now forbids only `tabpilot.splitting.guard` (PI-13), so stage modules may use `iter_folds`. An AST test (`tests/security/test_holdout_access.py`) fails if code outside the finalizer path reads `.holdout_indices` | Enforces L-2/I-1 beyond the import contract; no behavior change | accepted | `src/tabpilot/splitting/` |
 | DEC-028 | 2026-10-19 | P06 | Profiling details. (1) `profile(frame, split, …)` selects DEV rows itself via `split.dev_indices`; it is proven HOLD-free with `GuardedFrame`. (2) Classification association is the direction-free AUC max(a, 1 − a) (mean over classes for multiclass); regression uses Spearman ρ; categoricals use MI on the top 50 categories + "other". Ranking strength = 2·\|AUC − 0.5\| or \|ρ\| / MI. (3) Leakage scan per §11.7 + A-002, with frequency encoding fitted inside each CV fold. Near-deterministic columns are excluded by `apply_leakage_exclusions` (reason `leakage_near_deterministic`); a `ColumnOverride(role=feature)` re-includes them. Excluded columns are left out of the compact profile, which carries only the W-code. (4) Compact profile: values rounded to 6 significant digits; datetime entries carry no dates; the minimal-mode "range class" is a `range:{unit_interval,nonnegative,signed}` flag (no schema change). Other flags: `possibly_categorical`, `high_cardinality`, `leak_strong`, `leak_near_deterministic`, `name_contains_target`. `warnings` holds codes only. (5) `canonical_json` = `model_dump(mode="json", exclude_none=True)` with sorted keys and compact separators; it is the exact LLM/inspector text. (6) Time caps: total max(5% budget, 60 s), group caps scaled to fit (PI-27), leakage scan ≤ 60 s; a cooperative `GroupTimer` with an injectable clock records `truncated_stats` | Implementation details within §9; privacy proven by property test T-PRIV-01 | accepted | `src/tabpilot/profiling/` |
 | DEC-029 | 2026-10-19 | P07 | Feature engine details. (1) The per-feature cap is `max(min_cap_s, 2 s × rows / 100K)` with `min_cap_s = 0.5 s`. A purely linear cap is sub-millisecond on small frames, below fixed per-call overhead. The cap is soft: it is measured after each op returns, which is enough because all ops are first-party vectorized code. Fit overruns mark the feature failed; transform overruns go to `slow_features_` for the P08 CV runner to drop and restart (§14.6). (2) Output names `llm__<name>`, with collisions suffixed `__2`, `__3`… Specs reference earlier specs by `name`. Depth is 1 on raw columns, max 2. (3) Degenerate means constant or ≥ 99% NaN on training rows. (4) The runtime keeps its own copy of the boolean tokens (`TRUE_TOKENS`/`FALSE_TOKENS`, kept equal to ingestion by a test). Ops read boolean-token columns as 1/0. (5) Unseen and missing group keys: missing values are their own key `__missing__`; unseen keys → NaN. (6) `negative_inputs_` is the A-007 counter (training rows). (7) Validator issue codes match the plan fixtures (DEC-025); `negative_inputs` is non-fatal | Implementation details within §14.3–§14.6 | accepted | `src/tabpilot_runtime/`, `src/tabpilot/features/` |
+| DEC-030 | 2026-10-19 | P08 | Pipeline and CV details. (1) `build_pipeline(candidate, schema, registry, *, early_stopping, profile)`: the task comes from `candidate.model.task`. `run_cv` returns `CVRun`, whose `.result` is the `TrainingResult` contract; OOF, best iterations, dropped features and warnings stay in process. (2) Branches are selected by anchored name regex (`make_column_selector`), because datetime `hour` and DSL collision suffixes are known only at fit. Branch names: `num`, `bool`, `lowcat` (≤ 15), `midcat` (16–50, one-hot `max_categories=16`), `highcat` (> 50), and `cat` (CatBoost raw). Cardinality uses DEV-profile distinct counts. (3) A-006 indicators come from `BaselineFeatureTransformer` (≥ 5% missing, when `imputation.add_missing_indicators`). `SimpleImputer(add_indicator)` stays off to avoid duplicates. (4) LightGBM categoricals: ordinal codes declared via `categorical_feature` by `TabularModel`. Unknown → −1, missing seen at fit → −2; missing unseen at fit is treated as unknown (−1); LightGBM treats negatives as missing. XGBoost and hist_gb use ordinal codes as numeric. CatBoost gets imputed strings as `cat_features`. (5) Early stopping (LightGBM/XGBoost/CatBoost) inside `TabularModel`: a 90/10 stratified split of the preprocessed training fold, 50 rounds, `seed` = model seed, only when ≥ 20 rows. hist_gb keeps sklearn's own early stopping. (6) Fallback: retried only when fold 1 fails **and** the candidate had non-default params; a retry with the same defaults would repeat the failure. (7) An LLM candidate whose features all fail is `failed` ("all LLM features failed"); it would otherwise duplicate the baseline candidate. (8) Sanitized error = exception class + "on fold N" + first message line with quoted fragments replaced by `<…>` and key patterns scrubbed. (9) `TargetEncoder` uses `cv=StratifiedKFold/KFold(5, shuffle, seed)`; sklearn 1.9 deprecates `shuffle`/`random_state`. (10) Hosted RF guard: `rf_model_mb(train_rows, n_estimators)` (shared with the estimator) > 40% of the RSS budget → `skipped_resource`. (11) XGBoost multiclass has no class weighting (§16.2 names only binary `scale_pos_weight`) | Implementation details within §15–§16; no behavior change | accepted | `src/tabpilot/{preprocessing,models,training}/`, `src/tabpilot_runtime/{columns,estimators}.py` |
 
 ---
 
@@ -350,19 +351,21 @@ Things that could not be verified in a session (no Docker, no network, no provid
 | 2026-10-19 | P05 | `tabpilot.ingestion.task`, `tabpilot.evaluation.metrics`, `tabpilot.splitting.{strategy,guard}`; tests for T-TGT-07…10, T-LEAK-01, T-LEAK-03 (guard level), T-LEAK-04, every §11.3 branch, K reduction, duplicate grouping, determinism across processes, hand-computed metrics; `tests/security/test_holdout_access.py`; W-GROUP-HOLDOUT-FALLBACK, W-NO-REPEATED-CV (`warning/1.2`, `run_result/1.2`, `state/1.2`); contract R2 narrowed; DEC-027 |
 | 2026-10-19 | P06 | `tabpilot.profiling.{budget,stats,leakage,profile,compact}`; tests T-PRF-01…04, T-LEAK-05/06, T-PRIV-01 (hypothesis property test), DEV-only access via GuardedFrame, group/temporal detection, warnings; mypy ignores scipy stubs; DEC-028 |
 | 2026-10-19 | P07 | `tabpilot_runtime.{dsl_ops,transformers}` (all §14.3 ops, NaN semantics, baseline/rare/frequency transformers), `tabpilot.features.{dsl.catalog,dsl.validate,provenance}`; tests T-FE-01…07, T-LEAK-07 for every stateful op (FitSpy), T-SEC-01 AST scan, clone equivalence, canonical dedup, pickle round-trip in a subprocess without `tabpilot` (`-S` + explicit site-packages); `ingestion.loader._limit_error` no longer uses `getattr` (T-SEC-01); DEC-029 |
+| 2026-10-19 | P08 | `tabpilot.preprocessing.pipeline`, `tabpilot.models.registry`, `tabpilot.training.{cv,guards}`, runtime `columns.py` + `estimators.py`; `FrequencyEncoder(columns=None)`; `resources.estimator.rf_model_mb` (refactor, same numbers); test helpers `prepared.py`, `synthetic.py`, and `FitSpy` attribute forwarding; tests T-PRE-01…05, T-TRN-01…05 (every model × task), T-LEAK-07 (exact per-fold fit rows for every stateful step), T-LEAK-08 (5 seeds), T-FE-08, target-encoder cross-fit, probability alignment, pickle without `tabpilot`; DEC-030 |
 
 ---
 
 ## 18. Handoff note  *(replace at the end of every session)*
 
-**Latest (P07, 2026-10-19):** P07 is complete and pushed to `main`. `make check` is green (559 tests).
+**Latest (P08, 2026-10-19):** P08 is complete and pushed to `main`. `make check` is green (656 tests, about 3 min).
 
-- **Next:** P08 (preprocessing pipelines, model zoo, CV runner).
-- **P08 must apply:**
-  - Feed `runtime_specs(specs)` into `DSLFeatureTransformer`. After each fold, read `failed_features_` and `slow_features_`. Any failure in any fold → drop the feature for the candidate and restart from fold 1 (T-FE-08, §14.6).
-  - Put `BaselineFeatureTransformer` (A-006 missing indicators: pass columns with ≥ 5% missing) inside the Pipeline. All transformers return pandas.
-  - Boolean columns are `category` of tokens. Map them with `tabpilot_runtime.dsl_ops.TRUE_TOKENS`/`FALSE_TOKENS`.
-  - New pickled classes (`ColumnNameMapper`, `TypeCaster`, …) go in `tabpilot_runtime` (A-001, R5). Extend the subprocess pickle test.
-  - A-010: cap active LLM features at 12 (`validate_specs(max_count=…)`).
-- **Environment:** always run tools via `uv run --frozen` or `make`. Ruff never touches Markdown. Avoid `# fmt: skip` inside expressions (RUF028).
+- **Next:** P09 (tuning, evaluation, selection, holdout, budgets, rule-based CLI). **Gate A follows P09:** stop for the human check and the U1 audit.
+- **P09 must apply:**
+  - `run_cv(..., budget_hook=…)` raises `BudgetExceeded` → `skipped_budget`; `cancel` raises `Cancelled`.
+  - `CVRun.best_iterations` feeds the final refit: `n_estimators = mean × 1.1` with `build_pipeline(..., early_stopping=False)` (§11.10).
+  - Leaderboard rows must recompute mean/std/sem from `TrainingResult.fold_scores` (repeated CV: all 15).
+  - The holdout is opened only through `HoldoutGuard` in `evaluation` (contract R2).
+  - A-004 budgets: hosted 960/1800 s, local 1200/7200 s; stage shares 5/5/40/15/5/30; stop at 70%.
+  - KI-001: SM-2 is measured at `time_budget_s=480`.
+- **Environment:** always run tools via `uv run --frozen` or `make`. Never run `ruff --select … RUF100 --fix`: it strips valid `noqa`s for unselected rules. Avoid `# fmt: skip` inside expressions.
 - **Work mode:** commit and push each prompt to `main`, then continue (stop at gates, failures, or new questions).

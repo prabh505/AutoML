@@ -64,15 +64,18 @@ class RareCategoryGrouper(_FrameTransformer):
 
 
 class FrequencyEncoder(_FrameTransformer):
-    """Replaces each listed categorical with its training-fold frequency; unseen → 0 (§14.2)."""
+    """Replaces each listed categorical with its training-fold frequency; unseen → 0 (§14.2).
 
-    def __init__(self, columns: list[str]) -> None:
+    `columns=None` encodes every input column (used as a `ColumnTransformer` branch, §15.2).
+    """
+
+    def __init__(self, columns: list[str] | None = None) -> None:
         self.columns = columns
 
     def fit(self, X: pd.DataFrame, y: Any = None) -> FrequencyEncoder:
+        columns = list(X.columns) if self.columns is None else self.columns
         self.freq_ = {
-            col: X[col].astype("string").value_counts(normalize=True).to_dict()
-            for col in self.columns
+            col: X[col].astype("string").value_counts(normalize=True).to_dict() for col in columns
         }
         self.feature_names_out_ = list(X.columns)
         return self
