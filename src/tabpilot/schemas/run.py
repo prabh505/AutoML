@@ -154,9 +154,12 @@ class RunConfig(Contract):
 
 
 class RunWarning(Contract):
-    """A structured warning (`warning/1.0`; named `RunWarning` to avoid the builtin, PI-25)."""
+    """A structured warning (`warning/1.1`: + W-NEAR-CONSTANT, W-HIGH-CARDINALITY, PI-42).
 
-    schema_version: Literal["warning/1.0"] = "warning/1.0"
+    Named `RunWarning` to avoid the builtin (PI-25).
+    """
+
+    schema_version: Literal["warning/1.1"] = "warning/1.1"
     code: WarningCode
     message: str = Field(max_length=500)
     stage: Stage | None = None
@@ -207,9 +210,9 @@ RunStatus = Literal["running", "completed", "completed_partial", "failed", "canc
 
 
 class RunResult(Contract):
-    """Final run outcome returned to the Run Manager (`run_result/1.0`, PRD §28.2–§28.3)."""
+    """Final run outcome (`run_result/1.1`: embeds `warning/1.1`; PRD §28.2–§28.3)."""
 
-    schema_version: Literal["run_result/1.0"] = "run_result/1.0"
+    schema_version: Literal["run_result/1.1"] = "run_result/1.1"
     run_id: RunId
     status: Literal["completed", "completed_partial", "failed", "cancelled"]
     duration_s: NonNegFloat
@@ -232,12 +235,12 @@ class RunResult(Contract):
 
 
 class RunState(MutableContract):
-    """LangGraph run state (`state/1.0`, PRD §13.3). Small and serializable.
+    """LangGraph run state (`state/1.1`: embeds `warning/1.1`; PRD §13.3). Small, serializable.
 
     Large objects (DataFrames, OOF arrays, fitted pipelines) live in the worker's `RunContext`.
     """
 
-    schema_version: Literal["state/1.0"] = "state/1.0"
+    schema_version: Literal["state/1.1"] = "state/1.1"
     run_id: RunId
     config: RunConfig
     dataset_meta: DatasetMetadata

@@ -3091,7 +3091,7 @@
     },
     "RunWarning": {
       "additionalProperties": false,
-      "description": "A structured warning (`warning/1.0`; named `RunWarning` to avoid the builtin, PI-25).",
+      "description": "A structured warning (`warning/1.1`: + W-NEAR-CONSTANT, W-HIGH-CARDINALITY, PI-42).\n\nNamed `RunWarning` to avoid the builtin (PI-25).",
       "properties": {
         "code": {
           "$ref": "#/$defs/WarningCode"
@@ -3129,8 +3129,8 @@
           "type": "string"
         },
         "schema_version": {
-          "const": "warning/1.0",
-          "default": "warning/1.0",
+          "const": "warning/1.1",
+          "default": "warning/1.1",
           "title": "Schema Version",
           "type": "string"
         },
@@ -3475,7 +3475,7 @@
       "type": "object"
     },
     "WarningCode": {
-      "description": "Every warning code used in the PRD (§8.2, §8.5–§8.7, §9.3, §11.1; A-008).",
+      "description": "Every warning code used in the PRD (§8.2, §8.5–§8.7, §9.3, §11.1; A-008; PI-42).",
       "enum": [
         "W-SMALL-DATA",
         "W-IMBALANCE",
@@ -3491,14 +3491,16 @@
         "W-COERCED",
         "W-INF",
         "W-TARGET-MISSING",
-        "W-NO-HOLDOUT"
+        "W-NO-HOLDOUT",
+        "W-NEAR-CONSTANT",
+        "W-HIGH-CARDINALITY"
       ],
       "title": "WarningCode",
       "type": "string"
     }
   },
   "additionalProperties": false,
-  "description": "LangGraph run state (`state/1.0`, PRD §13.3). Small and serializable.\n\nLarge objects (DataFrames, OOF arrays, fitted pipelines) live in the worker's `RunContext`.",
+  "description": "LangGraph run state (`state/1.1`: embeds `warning/1.1`; PRD §13.3). Small, serializable.\n\nLarge objects (DataFrames, OOF arrays, fitted pipelines) live in the worker's `RunContext`.",
   "properties": {
     "best_candidate_id": {
       "anyOf": [
@@ -3632,8 +3634,8 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "state/1.0",
-      "default": "state/1.0",
+      "const": "state/1.1",
+      "default": "state/1.1",
       "title": "Schema Version",
       "type": "string"
     },
@@ -3676,5 +3678,5 @@
   ],
   "title": "RunState",
   "type": "object",
-  "x-schema-version": "state/1.0"
+  "x-schema-version": "state/1.1"
 }

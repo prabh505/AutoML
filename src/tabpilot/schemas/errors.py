@@ -144,7 +144,7 @@ class TabPilotError(Exception):
 
 
 class WarningCode(StrEnum):
-    """Every warning code used in the PRD (§8.2, §8.5–§8.7, §9.3, §11.1; A-008)."""
+    """Every warning code used in the PRD (§8.2, §8.5–§8.7, §9.3, §11.1; A-008; PI-42)."""
 
     SMALL_DATA = "W-SMALL-DATA"
     IMBALANCE = "W-IMBALANCE"
@@ -161,3 +161,5 @@ class WarningCode(StrEnum):
     INF = "W-INF"
     TARGET_MISSING = "W-TARGET-MISSING"
     NO_HOLDOUT = "W-NO-HOLDOUT"
+    NEAR_CONSTANT = "W-NEAR-CONSTANT"  # PI-42 (§8.6 near-constant)
+    HIGH_CARDINALITY = "W-HIGH-CARDINALITY"  # PI-42 (§8.6 very high cardinality)

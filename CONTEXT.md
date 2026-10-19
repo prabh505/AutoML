@@ -45,11 +45,11 @@
 
 | Field | Value |
 | --- | --- |
-| Last completed prompt | **P03** Deterministic fixtures and test harness |
-| Next prompt | **P04** Ingestion, validation, feasibility (Milestone 1) |
+| Last completed prompt | **P04** Ingestion, validation, feasibility |
+| Next prompt | **P05** Task detection, metrics, splitting, holdout guard |
 | Current milestone | Milestone 1 — Deterministic AutoML core (M0 complete) |
-| Test suite | `make check` green: ruff, format, mypy (strict on schemas), import-linter 5/5, pytest 394 passed, coverage 94.28%; `make schemas-check` and `make fixtures-check` green |
-| Last green commit | P03 commit (`git log --grep '^P03:'`) |
+| Test suite | `make check` green: ruff, format, mypy, import-linter 5/5, pytest 456 passed, coverage 94.47% (ingestion 96% lines); `make schemas-check` and `make fixtures-check` green |
+| Last green commit | P04 commit (`git log --grep '^P04:'`) |
 | Blockers | None. Owner answered Q-04…Q-16 (ADR-0003) |
 
 ---
@@ -64,7 +64,7 @@ Status values: `pending` · `in_progress` · `complete` · `complete_with_issues
 | P01 | Repository scaffold, toolchain, CI skeleton | §25, §34.1–34.2, §34.5 | M0 | complete | see `git log --grep '^P01:'` | 2026-10-19 |
 | P02 | Data contracts, configuration, logging | §26, §8.9, §14.3, §28.2, §29.1, §30.2–30.3 | M0 | complete | see `git log --grep '^P02:'` | 2026-10-19 |
 | P03 | Deterministic fixtures and test harness | §31.1–31.4 | M0 | complete | see `git log --grep '^P03:'` | 2026-10-19 |
-| P04 | Ingestion, validation, feasibility | §8, §29.4–29.5, FR-ING-*, FR-TGT-01 | M1 | pending | | |
+| P04 | Ingestion, validation, feasibility | §8, §29.4–29.5, FR-ING-*, FR-TGT-01 | M1 | complete | see `git log --grep '^P04:'` | 2026-10-19 |
 | P05 | Task detection, metrics, splitting, holdout guard | §10, §11.1–11.6 | M1 | pending | | |
 | P06 | Profiling, leakage scan, compact profile | §9, §11.7 | M1 | pending | | |
 | P07 | Feature engine: baseline + DSL + runtime package | §14.1–14.6 | M1 | pending | | |
@@ -112,8 +112,8 @@ Utility prompts (run any time): U1 Independent audit · U2 Course correction · 
 | `tabpilot.schemas` | P02 | complete | 39 contracts + `FeatureSpec`/`ReflectionChange` unions; `ErrorCode` (21), `WarningCode` (15), `EventType`; JSON Schemas in `docs/schemas/` |
 | `tabpilot.config`, `tabpilot.logging` | P02 | complete | `load_settings()`; stdlib JSON logging with key scrubber and dataset-content guard |
 | Fixtures + test harness (`fixtures/`, `tests/helpers/`, `tests/conftest.py`) | P03 | complete | 101 committed fixtures + MANIFEST; `make fixtures-check` |
-| `tabpilot.ingestion` | P04 | not started | |
-| `tabpilot.resources` (estimator) | P04 / P09 | not started | |
+| `tabpilot.ingestion` | P04 | complete | `accept_upload`, `load_dataset`, `validate_target` + `apply_target`, normalization, inference; all fixture types match MANIFEST |
+| `tabpilot.resources` (estimator) | P04 / P09 | estimator complete (P04); monitor/ledger P09 | `estimate_feasibility`, `raise_if_infeasible`; SAFETY 1.5 until P18 |
 | `tabpilot.evaluation.metrics` | P05 | not started | |
 | `tabpilot.splitting` | P05 | not started | |
 | `tabpilot.profiling` | P06 | not started | |
@@ -202,6 +202,7 @@ Format: `ID | Date | Prompt | Decision | Rationale | Status (proposed/accepted/s
 | DEC-023 | 2026-10-19 | P02 | Logging uses the stdlib with a JSON formatter (no `structlog`). Dataset content (`data_value(...)`, pandas DataFrame/Series/Index, numpy arrays) is never formatted: it raises `LoggingPolicyError` in strict mode (autouse in tests) and becomes `[REDACTED-DATA]` otherwise. Unknown objects log as `<TypeName>` only. Tracebacks only with `include_tracebacks=True` (local debug) | §30.2 allows either; no new dependency; `tabpilot.logging` must not import pandas (llm uses it) | accepted | PI-26 |
 | DEC-024 | 2026-10-19 | P02 | Contract details. (1) Top-level contracts carry `schema_version`; nested components (e.g. `ColumnInfo`, `SourceInfo`) are versioned through their parent. (2) `schema_version` has a default, so LLM output may omit it. (3) `LeaderboardEntry.std` is the sample std (ddof=1, 0 for one fold), and mean/std/sem are validated against `fold_scores` (G-09). (4) Feature `rationale` ≤ 300 chars and `id` `^[a-z][a-z0-9_]{0,15}$` (not set by PRD). (5) DSL params use strict floats/ints (no strings or booleans). (6) `RunConfig.llm_mode` ∈ {providers, off, stub}; `time_budget_s` 240–7200 (A-004), profile max checked on start. (7) `RunResult` with status failed must carry an `ErrorCode` (T-E2E-05). (8) `LLMRequest`/`LLMResponse`/`LLMBudget` gained `schema_version`. (9) The schema check (`make schemas-check SCHEMA_BASE=HEAD^` in CI) fails on stale `docs/schemas` or a changed contract without a version bump. (10) Config placeholders must be the whole (quoted) value; unset → `None`; `Settings` never holds key values | Implementation details within the PRD contracts; no behavior change | accepted | `docs/schemas/` |
 | DEC-025 | 2026-10-19 | P03 | Harness design. (1) `FitSpy` records `X.index` per fit in a module log keyed by `key` (survives `clone`); inputs must be pandas. (2) `GuardedFrame` raises `HoldoutAccessError` whenever pandas builds a frame/series containing holdout rows, or the full frame is converted to an array. (3) `ScriptedLLMProvider` raises `Scripted*` errors by default; P10 passes `raise_with=` to raise its own classified errors. (4) Plan fixtures declare outcome ∈ {valid, repaired, invalid, schema_invalid} plus issue codes (`unknown_column`, `excluded_column`, `target_column`, `metric_not_allowed`, `model_unavailable`, `contradictory_decision`, `unsafe_feature`, `target_transform_invalid`, `feature_type_mismatch`); P11's validator uses these codes. `schema_invalid` plans go through the §12.5 repair call, then fallback. (5) A legacy-Excel (OLE) file renamed `.csv` → E-FILE-CORRUPT. (6) `leaky_binary.csv` has exactly 12 flips (0.48%) and `risk_score` AUC ≈ 0.93 (A-002 bands) | Makes later tests meaningful and unambiguous | accepted | `fixtures/MANIFEST.yaml` |
+| DEC-026 | 2026-10-19 | P04 | Ingestion details. (1) 1 MB = 2^20 bytes (matches Streamlit's upload limit). (2) NA tokens (case-insensitive, after stripping whitespace): "", na, n/a, nan, null, none, #n/a. (3) A UTF-16 BOM → utf-16 (allowlisted; deterministic). (4) W-ENCODING-FALLBACK carries up to 3 line *numbers*, never line content. (5) Parsing: `csv`-module pre-scan → drop malformed records → pandas C engine; a record-count mismatch → E-FILE-CORRUPT. (6) `load_dataset` repeats the magic-byte check (defense in depth). (7) Boolean columns keep their original tokens as `category`; preprocessing maps them to 0/1 with TRUE_TOKENS (target labels such as "Yes" survive). (8) inf→NaN conversions count in `coerced_to_missing` and W-INF. (9) The row limit is checked on parsed data rows at load; the local down-sampling offer is UI work (P16). (10) `validate_target(..., task)` is pure; `apply_target` performs and records the removals. (11) A single-column file → E-DELIMITER-AMBIGUOUS. (12) `WarningCode` gained W-NEAR-CONSTANT and W-HIGH-CARDINALITY (PI-42), bumping `warning/1.1`, `run_result/1.1`, `state/1.1` | Implementation details within §8; no behavior change beyond the PI resolutions listed | accepted | `src/tabpilot/ingestion/` |
 
 ---
 
@@ -265,12 +266,16 @@ Each amendment overrides the PRD only for the exact item named.
 | PI-35 | §25.1, §14.7, T-SEC-08 vs D-09 | §25.1 lists `sandbox/`, but D-09 defaults to "Not built in v1", and P01 forbids placeholder code. | P01 does not create `tabpilot/sandbox/`. T-SEC-08 asserts `import tabpilot.sandbox` fails in every build. Contract rule 4 stays as a forbidden-module rule. | applied in P01 (DEC-021); T-SEC-08 in P17 |
 | PI-36 | FR-RUN-01 | Cites "§27.5" for "progress events are emitted only by code that performed the action". That rule is in §27.4; §27.5 is responsiveness/accessibility. | Read as §27.4. | doc reference error |
 | PI-37 | §10.1 | Task detection doesn't cover float targets whose values are all integers (e.g. 1.0, 2.0), or string targets with > 50 distinct values. | Floats with all-integer values follow the integer rules. Strings with > 50 distinct → E-TARGET-TOO-MANY-CLASSES (§8.7). | proposed, no behavior change (P05) |
-| PI-38 | FR-ING-06 AC, US-F1, §31.3 | Requirements with no test ID: FR-ING-06 "Each sample completes a run within the SM-2 budget on REF-HOSTED" (T-E2E-01..03 use fixtures, not samples). E-FILE-TYPE, E-FILE-EMPTY, E-FILE-CORRUPT, E-PARQUET-NESTED, E-TOO-MANY-COLUMNS/ROWS and E-EXPORT-PARITY have no dedicated T-ID, although US-F1 needs each E-code triggered by a fixture. | Owning prompts add tests named after the E-code (TRACEABILITY App. A). P16 adds a local stub-LLM run of each sample. P20 records the live smoke run (G-14). | proposed, no behavior change |
+| PI-38 | FR-ING-06 AC, US-F1, §31.3 | Requirements with no test ID: FR-ING-06 "Each sample completes a run within the SM-2 budget on REF-HOSTED" (T-E2E-01..03 use fixtures, not samples). E-FILE-TYPE, E-FILE-EMPTY, E-FILE-CORRUPT, E-PARQUET-NESTED, E-TOO-MANY-COLUMNS/ROWS and E-EXPORT-PARITY have no dedicated T-ID, although US-F1 needs each E-code triggered by a fixture. | Owning prompts add tests named after the E-code (TRACEABILITY App. A). P16 adds a local stub-LLM run of each sample. P20 records the live smoke run (G-14). | partly applied in P04 (E-FILE-TYPE/EMPTY/CORRUPT, E-PARQUET-NESTED, E-TOO-MANY-COLUMNS/ROWS tests); E-EXPORT-PARITY in P14; samples in P16 |
 | PI-39 | §27.1–§27.2 vs §29.1 | Time-budget slider is fixed at 120–900 s, but the local profile allows up to 3,600 s. | Slider max = the active profile's maximum. | proposed, no behavior change (P16) |
 | PI-40 | §23.3 | The `providers.yaml` snippet is not valid YAML: `model_ids: [${TABPILOT_OR_MODEL_1}, ${TABPILOT_OR_MODEL_2}]` fails to parse (unquoted `${` inside a flow sequence). Found by the P01 smoke test. | Quote every `${ENV}` placeholder (done in `config/providers.yaml`); P02's interpolation works on the quoted strings. | resolved in P01 |
-| PI-41 | §8.5 rules 4, 7, 10 | Rules are listed "in order", but rule 4 (≥ 95% numeric → numeric) catches every integer column first, so rule 7 (integer ID-like → identifier) and rule 10 (≤ 15 distinct integers → `possibly_categorical`) could never apply under first-match. | Apply rules 7 and 10 as refinements of a column already classified numeric by rule 4. `fixtures/MANIFEST.yaml` expected types assume this. | proposed, no behavior change (P04 adopts) |
-| PI-42 | §8.6 vs §9.3 | §8.6 requires warnings for near-constant columns (top value ≥ 99.5%) and very-high-cardinality categoricals (distinct ratio > 0.5), but no W-code exists for them. | P04 adds `W-NEAR-CONSTANT` and `W-HIGH-CARDINALITY` to `WarningCode` (a schema change: bump `warning/1.0` → `warning/1.1`). | proposed, no behavior change (P04) |
-| PI-43 | §8.2 step 4 | "accept if confidence ≥ 0.8": charset-normalizer exposes no confidence, only chaos/coherence. On the cp1252 fixture, 3.5.2 reports `mac_latin2` (outside the allowlist), so the file correctly falls back to latin-1 with W-ENCODING-FALLBACK (cp1252 and latin-1 agree on its bytes). | P04 defines confidence = 1 − chaos and records it; the fixture expectation accepts cp1252 or latin-1 fallback, provided the decoded text is correct. | proposed, no behavior change (P04) |
+| PI-41 | §8.5 rules 4, 7, 10 | Rules are listed "in order", but rule 4 (≥ 95% numeric → numeric) catches every integer column first, so rule 7 (integer ID-like → identifier) and rule 10 (≤ 15 distinct integers → `possibly_categorical`) could never apply under first-match. | Apply rules 7 and 10 as refinements of a column already classified numeric by rule 4. `fixtures/MANIFEST.yaml` expected types assume this. | applied in P04 |
+| PI-42 | §8.6 vs §9.3 | §8.6 requires warnings for near-constant columns (top value ≥ 99.5%) and very-high-cardinality categoricals (distinct ratio > 0.5), but no W-code exists for them. | P04 adds `W-NEAR-CONSTANT` and `W-HIGH-CARDINALITY` to `WarningCode` (a schema change: bump `warning/1.0` → `warning/1.1`). | applied in P04 (codes added; warning/1.1) |
+| PI-43 | §8.2 step 4 | "accept if confidence ≥ 0.8": charset-normalizer exposes no confidence, only chaos/coherence. On the cp1252 fixture, 3.5.2 reports `mac_latin2` (outside the allowlist), so the file correctly falls back to latin-1 with W-ENCODING-FALLBACK (cp1252 and latin-1 agree on its bytes). | P04 defines confidence = 1 − chaos and records it; the fixture expectation accepts cp1252 or latin-1 fallback, provided the decoded text is correct. | applied in P04 (confidence = 1 − chaos) |
+| PI-44 | §8.3 step 3 | No behavior is defined when no delimiter scores ≥ 0.95 (e.g. a comma file with 10% malformed rows scores 0.90, so E-PARSE-MALFORMED is never reached). | Use the best candidate when it is unambiguous (gap > 0.02) and let the malformed-line rule decide. No multi-field candidate at all, or a tie → E-DELIMITER-AMBIGUOUS. | applied in P04 (no behavior change) |
+| PI-45 | §8.4 vs §26.1, §39 | The algorithm never lowercases, but every example normalizes `TotalCharges` → `totalcharges`. Also, the dedupe suffix `__2` is not stable under re-normalization (`__` collapses). | Lowercase names. Idempotence is guaranteed per name (`normalize_name`). Dedupe works by position, so duplicate original headers stay distinct. | applied in P04 (no behavior change) |
+| PI-46 | §29.4 | The random-forest term `rows * n_estimators * avg_leaf_nodes(rows, …) * 32 B` counts `rows` twice. | n_estimators × leaf nodes × 32 B, with leaf nodes ≈ training-fold rows / 2. Calibrated in P18. | applied in P04 (estimator v0) |
+| PI-47 | §8.7, §10.1, FR-TGT-01/02 | The class checks of §8.7 (≥ 2 rows per class, ≤ 50 classes) need the task, but target validation runs before task detection. | `validate_target(…, task=None)` applies the task-independent rules. P05 re-runs it with the confirmed task (FR-TGT-02: "changing the task re-runs target validation"). | applied in P04 |
 
 ---
 
@@ -338,29 +343,27 @@ Things that could not be verified in a session (no Docker, no network, no provid
 | 2026-10-19 | P01 | Scaffold: `pyproject.toml` (deps, extras, ruff/mypy/pytest/coverage/import-linter config), `uv.lock`, `requirements.txt` + `scripts/export_requirements.sh`, `Makefile`, `config/{profiles,models,providers}.yaml`, `.github/workflows/ci.yml`, `.pre-commit-config.yaml`, `.gitignore`, `.env.example`, MIT `LICENSE`, package tree with docstrings, `streamlit_app.py` + UI shell, smoke + UI tests; DEC-020…022; PI-40; UV-001 |
 | 2026-10-19 | P02 | `tabpilot.schemas` (_base, dataset, split, profile, features, plan, experiment, reflection, report, llm, run, errors), `tabpilot.config`, `tabpilot.logging`, `scripts/export_schemas.py`, `docs/schemas/` (41 files), `tests/fixtures/contracts/` (41 incl. 12 concrete PRD §26 examples), `tests/conftest.py` (strict logging), unit tests (334 passing); Makefile `schemas-check`; CI schema step (fetch-depth 2); ruff ignores RUF001–003 (PRD notation); DEC-023, DEC-024 |
 | 2026-10-19 | P03 | `fixtures/make_fixtures.py` (11 datasets, `generate_hosted_limit`, 14 parsing, 8 malicious, 20 plans, 48 LLM scripts) + `fixtures/MANIFEST.yaml`; `tests/helpers/{fit_spy,guarded_frame,llm_stub,clock,errors}.py`; `tests/conftest.py` fixtures (`allow_network`, `fake_clock`, `tmp_run_dir`, `fixtures_dir`, fit-log reset); harness + ground-truth tests; Makefile `fixtures`/`fixtures-check`; CI fixtures step; pytest `pythonpath`; ruff ignores N803/N806 (sklearn naming) globally and test-only N818/RUF012/PLW0108; DEC-025; PI-41…43; UV-002 |
+| 2026-10-19 | P04 | `tabpilot.ingestion` (upload, encoding, dialect, normalize, inference, loader, target) and `tabpilot.resources.estimator`; tests for T-ING-01…13, T-TGT-01…06, T-RES-01…02, T-SEC-04 (filenames), PI-38 E-codes, hypothesis normalization properties (62 tests); `WarningCode` + 2 codes with schema bumps; mypy ignores pyarrow/charset_normalizer stubs; ruff N802 allowed in tests (PRD test-ID names); DEC-026; PI-44…47 |
 
 ---
 
 ## 18. Handoff note  *(replace at the end of every session)*
 
-**Latest (P03, 2026-10-19):** P03 is complete and pushed to `main`. Milestone 0 is done. `make check` is green (394 tests), as are `make schemas-check` and `make fixtures-check`.
+**Latest (P04, 2026-10-19):** P04 is complete and pushed to `main`. `make check` is green (456 tests); ingestion coverage is 96%.
 
-- **Next:** P04 (ingestion, validation, feasibility). It starts Milestone 1.
-- **Ground truth for P04:**
-  - `fixtures/MANIFEST.yaml` holds the expected types, warnings, E-codes and counts. Test against it; don't re-derive.
-  - The parsing fixtures cover every §8.2–§8.3 case.
-  - `malicious/upload_names.json` holds the filename attacks.
-- **P04 must apply:**
-  - PI-41: type rules 7 and 10 refine numeric.
-  - PI-42: add W-NEAR-CONSTANT and W-HIGH-CARDINALITY, with a `warning/1.1` bump.
-  - PI-43: confidence = 1 − chaos.
-  - A-008: target with > 50% missing → warning plus confirmation.
-  - PI-38: tests named after each E-code that lacks a T-ID.
-  - The P04 prompt's malformed-line approach (pre-scan with the `csv` module, then the C engine).
-  - pandas 3 string dtypes when parsing string-first.
-- **Harness:**
-  - `FitSpy` (T-LEAK-07), `guard()` / `GuardedFrame` (T-LEAK-02), `ScriptedLLMProvider` (P10/P11), `raises_error` (E-code asserts).
-  - Fixtures: `fake_clock`, `tmp_run_dir`, and `allow_network` (only for `live` tests).
-  - Strict logging is on in every test.
+- **Next:** P05 (task detection, metrics, splitting, holdout guard).
+- **Inputs for P05:**
+  - Use `load_dataset(path, display_name, settings, run_id)`, then `validate_target(loaded, target, task)` and `apply_target(loaded, check)`. This gives a frame with missing-target rows removed and `metadata.n_rows_valid`.
+  - Boolean columns, including binary targets, keep their original tokens as `category`.
+  - Binary positive-label rule (§10.1): pick from the target's original labels.
+  - Detect the task on the column (P05), then re-run `validate_target` with the task for class checks (PI-47).
+  - A target column named "target" is normalized to `target_` (reserved name).
+- **P05 must apply:**
+  - A-003: holdout and repeated CV use n_valid.
+  - PI-14: a single holdout `open()`.
+  - PI-29: K reduction counts classes on DEV.
+  - PI-37: float targets whose values are all integers follow the integer rules.
+  - PI-13: narrow import contract R2 to `splitting.guard`.
+  - Duplicate grouping (§11.6): W-DUPLICATES in metadata gives the count.
 - **Environment:** always run tools via `uv run --frozen` or `make`. Ruff never touches Markdown.
 - **Work mode:** commit and push each prompt to `main`, then continue (stop at gates, failures, or new questions).

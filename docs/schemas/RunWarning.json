@@ -25,7 +25,7 @@
       "type": "string"
     },
     "WarningCode": {
-      "description": "Every warning code used in the PRD (§8.2, §8.5–§8.7, §9.3, §11.1; A-008).",
+      "description": "Every warning code used in the PRD (§8.2, §8.5–§8.7, §9.3, §11.1; A-008; PI-42).",
       "enum": [
         "W-SMALL-DATA",
         "W-IMBALANCE",
@@ -41,14 +41,16 @@
         "W-COERCED",
         "W-INF",
         "W-TARGET-MISSING",
-        "W-NO-HOLDOUT"
+        "W-NO-HOLDOUT",
+        "W-NEAR-CONSTANT",
+        "W-HIGH-CARDINALITY"
       ],
       "title": "WarningCode",
       "type": "string"
     }
   },
   "additionalProperties": false,
-  "description": "A structured warning (`warning/1.0`; named `RunWarning` to avoid the builtin, PI-25).",
+  "description": "A structured warning (`warning/1.1`: + W-NEAR-CONSTANT, W-HIGH-CARDINALITY, PI-42).\n\nNamed `RunWarning` to avoid the builtin (PI-25).",
   "properties": {
     "code": {
       "$ref": "#/$defs/WarningCode"
@@ -86,8 +88,8 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "warning/1.0",
-      "default": "warning/1.0",
+      "const": "warning/1.1",
+      "default": "warning/1.1",
       "title": "Schema Version",
       "type": "string"
     },
@@ -109,5 +111,5 @@
   ],
   "title": "RunWarning",
   "type": "object",
-  "x-schema-version": "warning/1.0"
+  "x-schema-version": "warning/1.1"
 }
