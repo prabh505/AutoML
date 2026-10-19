@@ -5,3 +5,9 @@ schemas.
 
 Must not: HoldoutGuard, LLM; reading HOLD rows; raw values in CompactProfile.
 """
+
+from tabpilot.profiling.compact import build_compact_profile, canonical_json
+from tabpilot.profiling.leakage import apply_leakage_exclusions
+from tabpilot.profiling.profile import profile
+
+__all__ = ["apply_leakage_exclusions", "build_compact_profile", "canonical_json", "profile"]

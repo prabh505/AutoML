@@ -106,7 +106,7 @@ module = ["tabpilot.schemas.*", "tabpilot.evaluation.*", "tabpilot.splitting.*",
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["pyarrow.*", "charset_normalizer.*", "lightgbm.*", "shap.*", "optuna.*", "xgboost.*", "catboost.*", "sklearn.*", "joblib.*", "flaml.*", "mlflow.*", "langgraph.*"]
+module = ["scipy.*", "pyarrow.*", "charset_normalizer.*", "lightgbm.*", "shap.*", "optuna.*", "xgboost.*", "catboost.*", "sklearn.*", "joblib.*", "flaml.*", "mlflow.*", "langgraph.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------- pytest
