@@ -5,3 +5,17 @@ Shipped inside export bundles; imports only numpy, pandas, scikit-learn and mode
 
 Must not: Importing tabpilot (import contract R5).
 """
+
+from tabpilot_runtime.transformers import (
+    BaselineFeatureTransformer,
+    DSLFeatureTransformer,
+    FrequencyEncoder,
+    RareCategoryGrouper,
+)
+
+__all__ = [
+    "BaselineFeatureTransformer",
+    "DSLFeatureTransformer",
+    "FrequencyEncoder",
+    "RareCategoryGrouper",
+]

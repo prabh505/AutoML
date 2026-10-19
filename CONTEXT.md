@@ -45,11 +45,11 @@
 
 | Field | Value |
 | --- | --- |
-| Last completed prompt | **P06** Profiling, leakage scan, compact profile |
-| Next prompt | **P07** Feature engine: baseline + DSL + runtime package |
+| Last completed prompt | **P07** Feature engine: baseline + DSL + runtime package |
+| Next prompt | **P08** Preprocessing pipelines, model zoo, CV runner |
 | Current milestone | Milestone 1 — Deterministic AutoML core (M0 complete) |
-| Test suite | `make check` green: ruff, format, mypy, import-linter 5/5, pytest 514 passed, coverage 94.94% (profiling 96% lines); `make schemas-check` and `make fixtures-check` green |
-| Last green commit | P06 commit (`git log --grep '^P06:'`) |
+| Test suite | `make check` green: ruff, format, mypy, import-linter 5/5, pytest 559 passed, coverage 95.52% (features 97–100%, tabpilot_runtime 99%); `make schemas-check` and `make fixtures-check` green |
+| Last green commit | P07 commit (`git log --grep '^P07:'`) |
 | Blockers | None. Owner answered Q-04…Q-16 (ADR-0003) |
 
 ---
@@ -67,7 +67,7 @@ Status values: `pending` · `in_progress` · `complete` · `complete_with_issues
 | P04 | Ingestion, validation, feasibility | §8, §29.4–29.5, FR-ING-*, FR-TGT-01 | M1 | complete | see `git log --grep '^P04:'` | 2026-10-19 |
 | P05 | Task detection, metrics, splitting, holdout guard | §10, §11.1–11.6 | M1 | complete | see `git log --grep '^P05:'` | 2026-10-19 |
 | P06 | Profiling, leakage scan, compact profile | §9, §11.7 | M1 | complete | see `git log --grep '^P06:'` | 2026-10-19 |
-| P07 | Feature engine: baseline + DSL + runtime package | §14.1–14.6 | M1 | pending | | |
+| P07 | Feature engine: baseline + DSL + runtime package | §14.1–14.6 | M1 | complete | see `git log --grep '^P07:'` | 2026-10-19 |
 | P08 | Preprocessing, model zoo, CV runner | §15, §16, §11.4, §11.8 | M1 | pending | | |
 | P09 | Tuning, evaluation, selection, holdout, budgets, rule-based CLI | §17, §18, §11.10, §12.8, §29.3, §29.6, §30.1 | **Gate A** | pending | | |
 | P10 | LLM provider router | §23, §6.4, §24.5 | M2 | pending | | |
@@ -117,7 +117,7 @@ Utility prompts (run any time): U1 Independent audit · U2 Course correction · 
 | `tabpilot.evaluation.metrics` | P05 | complete | `score`, `Problem`, defaults, F1-optimal threshold; 100% coverage |
 | `tabpilot.splitting` | P05 | complete | `build_split`, `iter_folds`, `average_repeats`, `HoldoutGuard` (single open); task detection in `tabpilot.ingestion.task` |
 | `tabpilot.profiling` | P06 | complete | `profile` (DEV only), leakage scan + `apply_leakage_exclusions`, `build_compact_profile`, `canonical_json` |
-| `tabpilot.features` + `tabpilot_runtime` | P07 | not started | |
+| `tabpilot.features` + `tabpilot_runtime` | P07 | complete | `validate_specs`/`canonical_form`, `catalog_for_planner`, provenance builders; runtime `DSLFeatureTransformer`, `BaselineFeatureTransformer`, `RareCategoryGrouper`, `FrequencyEncoder`, `dsl_ops.OPS` |
 | `tabpilot.preprocessing`, `tabpilot.models`, `tabpilot.training` | P08 | not started | |
 | `tabpilot.tuning`, `tabpilot.evaluation`, `tabpilot.tracking`, `planning.fallback` | P09 | not started | |
 | `tabpilot.llm` | P10 | not started | |
@@ -205,6 +205,7 @@ Format: `ID | Date | Prompt | Decision | Rationale | Status (proposed/accepted/s
 | DEC-026 | 2026-10-19 | P04 | Ingestion details. (1) 1 MB = 2^20 bytes (matches Streamlit's upload limit). (2) NA tokens (case-insensitive, after stripping whitespace): "", na, n/a, nan, null, none, #n/a. (3) A UTF-16 BOM → utf-16 (allowlisted; deterministic). (4) W-ENCODING-FALLBACK carries up to 3 line *numbers*, never line content. (5) Parsing: `csv`-module pre-scan → drop malformed records → pandas C engine; a record-count mismatch → E-FILE-CORRUPT. (6) `load_dataset` repeats the magic-byte check (defense in depth). (7) Boolean columns keep their original tokens as `category`; preprocessing maps them to 0/1 with TRUE_TOKENS (target labels such as "Yes" survive). (8) inf→NaN conversions count in `coerced_to_missing` and W-INF. (9) The row limit is checked on parsed data rows at load; the local down-sampling offer is UI work (P16). (10) `validate_target(..., task)` is pure; `apply_target` performs and records the removals. (11) A single-column file → E-DELIMITER-AMBIGUOUS. (12) `WarningCode` gained W-NEAR-CONSTANT and W-HIGH-CARDINALITY (PI-42), bumping `warning/1.1`, `run_result/1.1`, `state/1.1` | Implementation details within §8; no behavior change beyond the PI resolutions listed | accepted | `src/tabpilot/ingestion/` |
 | DEC-027 | 2026-10-19 | P05 | Split/metric details. (1) Task detection lives in `tabpilot.ingestion.task`. (2) Metric conventions: classification `y_true` = class indices in `Problem.classes` order; predictions = an (n, k) probability matrix; binary metrics use the `positive_index` column. Log loss is computed manually with clipping + row renormalization over all classes. OvR macro AUC averages the classes present in the fold. RMSLE clips predictions at 0. (3) `HoldoutGuard`: one granted `open()` per run (PI-14); granted calls go to `access_log`, refused calls (pre-freeze or second open) to `refused_log`; returned indices are read-only. (4) Duplicate grouping hashes feature rows (target excluded) and triggers when duplicates exceed 1% of rows (§11.6). (5) Small data + a group column → one stratified/plain group K-fold (no repeated-group splitter) with W-NO-REPEATED-CV. A group holdout tries 20 seeded `GroupShuffleSplit`s to keep every class on both sides, then falls back to one `StratifiedGroupKFold` fold with W-GROUP-HOLDOUT-FALLBACK (both codes added: `warning/1.2` cascade). (6) Import contract R2 now forbids only `tabpilot.splitting.guard` (PI-13), so stage modules may use `iter_folds`. An AST test (`tests/security/test_holdout_access.py`) fails if code outside the finalizer path reads `.holdout_indices` | Enforces L-2/I-1 beyond the import contract; no behavior change | accepted | `src/tabpilot/splitting/` |
 | DEC-028 | 2026-10-19 | P06 | Profiling details. (1) `profile(frame, split, …)` selects DEV rows itself via `split.dev_indices`; it is proven HOLD-free with `GuardedFrame`. (2) Classification association is the direction-free AUC max(a, 1 − a) (mean over classes for multiclass); regression uses Spearman ρ; categoricals use MI on the top 50 categories + "other". Ranking strength = 2·\|AUC − 0.5\| or \|ρ\| / MI. (3) Leakage scan per §11.7 + A-002, with frequency encoding fitted inside each CV fold. Near-deterministic columns are excluded by `apply_leakage_exclusions` (reason `leakage_near_deterministic`); a `ColumnOverride(role=feature)` re-includes them. Excluded columns are left out of the compact profile, which carries only the W-code. (4) Compact profile: values rounded to 6 significant digits; datetime entries carry no dates; the minimal-mode "range class" is a `range:{unit_interval,nonnegative,signed}` flag (no schema change). Other flags: `possibly_categorical`, `high_cardinality`, `leak_strong`, `leak_near_deterministic`, `name_contains_target`. `warnings` holds codes only. (5) `canonical_json` = `model_dump(mode="json", exclude_none=True)` with sorted keys and compact separators; it is the exact LLM/inspector text. (6) Time caps: total max(5% budget, 60 s), group caps scaled to fit (PI-27), leakage scan ≤ 60 s; a cooperative `GroupTimer` with an injectable clock records `truncated_stats` | Implementation details within §9; privacy proven by property test T-PRIV-01 | accepted | `src/tabpilot/profiling/` |
+| DEC-029 | 2026-10-19 | P07 | Feature engine details. (1) The per-feature cap is `max(min_cap_s, 2 s × rows / 100K)` with `min_cap_s = 0.5 s`. A purely linear cap is sub-millisecond on small frames, below fixed per-call overhead. The cap is soft: it is measured after each op returns, which is enough because all ops are first-party vectorized code. Fit overruns mark the feature failed; transform overruns go to `slow_features_` for the P08 CV runner to drop and restart (§14.6). (2) Output names `llm__<name>`, with collisions suffixed `__2`, `__3`… Specs reference earlier specs by `name`. Depth is 1 on raw columns, max 2. (3) Degenerate means constant or ≥ 99% NaN on training rows. (4) The runtime keeps its own copy of the boolean tokens (`TRUE_TOKENS`/`FALSE_TOKENS`, kept equal to ingestion by a test). Ops read boolean-token columns as 1/0. (5) Unseen and missing group keys: missing values are their own key `__missing__`; unseen keys → NaN. (6) `negative_inputs_` is the A-007 counter (training rows). (7) Validator issue codes match the plan fixtures (DEC-025); `negative_inputs` is non-fatal | Implementation details within §14.3–§14.6 | accepted | `src/tabpilot_runtime/`, `src/tabpilot/features/` |
 
 ---
 
@@ -348,21 +349,20 @@ Things that could not be verified in a session (no Docker, no network, no provid
 | 2026-10-19 | P04 | `tabpilot.ingestion` (upload, encoding, dialect, normalize, inference, loader, target) and `tabpilot.resources.estimator`; tests for T-ING-01…13, T-TGT-01…06, T-RES-01…02, T-SEC-04 (filenames), PI-38 E-codes, hypothesis normalization properties (62 tests); `WarningCode` + 2 codes with schema bumps; mypy ignores pyarrow/charset_normalizer stubs; ruff N802 allowed in tests (PRD test-ID names); DEC-026; PI-44…47 |
 | 2026-10-19 | P05 | `tabpilot.ingestion.task`, `tabpilot.evaluation.metrics`, `tabpilot.splitting.{strategy,guard}`; tests for T-TGT-07…10, T-LEAK-01, T-LEAK-03 (guard level), T-LEAK-04, every §11.3 branch, K reduction, duplicate grouping, determinism across processes, hand-computed metrics; `tests/security/test_holdout_access.py`; W-GROUP-HOLDOUT-FALLBACK, W-NO-REPEATED-CV (`warning/1.2`, `run_result/1.2`, `state/1.2`); contract R2 narrowed; DEC-027 |
 | 2026-10-19 | P06 | `tabpilot.profiling.{budget,stats,leakage,profile,compact}`; tests T-PRF-01…04, T-LEAK-05/06, T-PRIV-01 (hypothesis property test), DEV-only access via GuardedFrame, group/temporal detection, warnings; mypy ignores scipy stubs; DEC-028 |
+| 2026-10-19 | P07 | `tabpilot_runtime.{dsl_ops,transformers}` (all §14.3 ops, NaN semantics, baseline/rare/frequency transformers), `tabpilot.features.{dsl.catalog,dsl.validate,provenance}`; tests T-FE-01…07, T-LEAK-07 for every stateful op (FitSpy), T-SEC-01 AST scan, clone equivalence, canonical dedup, pickle round-trip in a subprocess without `tabpilot` (`-S` + explicit site-packages); `ingestion.loader._limit_error` no longer uses `getattr` (T-SEC-01); DEC-029 |
 
 ---
 
 ## 18. Handoff note  *(replace at the end of every session)*
 
-**Latest (P06, 2026-10-19):** P06 is complete and pushed to `main`. `make check` is green (514 tests).
+**Latest (P07, 2026-10-19):** P07 is complete and pushed to `main`. `make check` is green (559 tests).
 
-- **Next:** P07 (feature engine: baseline transformations, Feature DSL, `tabpilot_runtime`).
-- **P07 must apply:**
-  - A-007: `log1p`/`sqrt` negatives → NaN + counter; static validation flags `log1p` when the profile min is < 0.
-  - A-006: missing indicators at ≥ 5%.
-  - A-010: ≤ 12 active LLM features.
-  - Pickled classes live in `tabpilot_runtime` (A-001); `tabpilot_runtime` must not import `tabpilot` (contract R5).
-  - Boolean columns arrive as `category` of original tokens; map them with `TRUE_TOKENS` (`tabpilot.ingestion.inference`). The runtime package needs its own copy, since it cannot import `tabpilot`.
-  - `FeatureSpec` contracts and bounds already exist (`tabpilot.schemas.features`); reuse them.
-- **T-SEC-01:** write the AST no-dynamic-eval scan in `tests/security/`.
-- **Environment:** always run tools via `uv run --frozen` or `make`. Ruff never touches Markdown.
+- **Next:** P08 (preprocessing pipelines, model zoo, CV runner).
+- **P08 must apply:**
+  - Feed `runtime_specs(specs)` into `DSLFeatureTransformer`. After each fold, read `failed_features_` and `slow_features_`. Any failure in any fold → drop the feature for the candidate and restart from fold 1 (T-FE-08, §14.6).
+  - Put `BaselineFeatureTransformer` (A-006 missing indicators: pass columns with ≥ 5% missing) inside the Pipeline. All transformers return pandas.
+  - Boolean columns are `category` of tokens. Map them with `tabpilot_runtime.dsl_ops.TRUE_TOKENS`/`FALSE_TOKENS`.
+  - New pickled classes (`ColumnNameMapper`, `TypeCaster`, …) go in `tabpilot_runtime` (A-001, R5). Extend the subprocess pickle test.
+  - A-010: cap active LLM features at 12 (`validate_specs(max_count=…)`).
+- **Environment:** always run tools via `uv run --frozen` or `make`. Ruff never touches Markdown. Avoid `# fmt: skip` inside expressions (RUF028).
 - **Work mode:** commit and push each prompt to `main`, then continue (stop at gates, failures, or new questions).

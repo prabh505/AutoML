@@ -44,15 +44,19 @@ class LoadedDataset:
     parse_report: ParseReport
 
 
-def _limit_error(code: ErrorCode, count: int, settings: Settings, attr: str) -> TabPilotError:
-    local = getattr(settings.profiles[ExecutionProfileName.LOCAL], attr)
-    return TabPilotError(code, count=count, profile=settings.profile.value,
-                         limit=getattr(settings.limits, attr), local_limit=local)  # fmt: skip
+def _limit_error(code: ErrorCode, count: int, settings: Settings) -> TabPilotError:
+    local = settings.profiles[ExecutionProfileName.LOCAL]
+    if code == ErrorCode.TOO_MANY_COLUMNS:
+        limit, local_limit = settings.limits.max_columns, local.max_columns
+    else:
+        limit, local_limit = settings.limits.max_rows, local.max_rows
+    return TabPilotError(code, count=count, profile=settings.profile.value, limit=limit,
+                         local_limit=local_limit)  # fmt: skip
 
 
 def _check_columns(n: int, settings: Settings) -> None:
     if n > settings.limits.max_columns:
-        raise _limit_error(ErrorCode.TOO_MANY_COLUMNS, n, settings, "max_columns")
+        raise _limit_error(ErrorCode.TOO_MANY_COLUMNS, n, settings)
 
 
 def _read_parquet(path: Path, settings: Settings) -> tuple[pd.DataFrame, ParseReport]:
@@ -147,7 +151,7 @@ def load_dataset(
     else:
         raw, report = _read_text(path, settings, encoding_override, delimiter_override)
     if len(raw) > settings.limits.max_rows:
-        raise _limit_error(ErrorCode.TOO_MANY_ROWS, len(raw), settings, "max_rows")
+        raise _limit_error(ErrorCode.TOO_MANY_ROWS, len(raw), settings)
     if raw.shape[1] < 2:
         raise TabPilotError(ErrorCode.DELIMITER_AMBIGUOUS)
 
