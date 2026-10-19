@@ -41,11 +41,11 @@ class ScriptedHTTPError(ScriptedProviderError):
 
 
 class ScriptedTimeout(ScriptedProviderError):
-    pass
+    """The scripted call timed out."""
 
 
 class ScriptedConnectionError(ScriptedProviderError):
-    pass
+    """The scripted call could not connect."""
 
 
 class ScriptExhausted(AssertionError):

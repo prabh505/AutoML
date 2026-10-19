@@ -160,7 +160,7 @@ def test_scripted_provider_leaves_fences_and_bad_json_to_the_router() -> None:
 @pytest.mark.unit
 def test_scripted_provider_custom_error_mapping() -> None:
     class Classified(Exception):
-        pass
+        """Stands in for a P10 classified provider error."""
 
     p = ScriptedLLMProvider.from_fixture("groq", "all_failures", raise_with=lambda s: Classified(s))
     with pytest.raises(Classified):
