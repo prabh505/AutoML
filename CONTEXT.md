@@ -48,7 +48,7 @@
 | Last completed prompt | **P05** Task detection, metrics, splitting, holdout guard |
 | Next prompt | **P06** Profiling, leakage scan, compact profile |
 | Current milestone | Milestone 1 — Deterministic AutoML core (M0 complete) |
-| Test suite | `make check` green: ruff, format, mypy, import-linter 5/5, pytest 502 passed, coverage ≈95% (splitting 98%, evaluation.metrics 100%); `make schemas-check` and `make fixtures-check` green |
+| Test suite | `make check` green: ruff, format, mypy, import-linter 5/5, pytest 501 passed, coverage ≈95% (splitting 98%, evaluation.metrics 100%); `make schemas-check` and `make fixtures-check` green |
 | Last green commit | P05 commit (`git log --grep '^P05:'`) |
 | Blockers | None. Owner answered Q-04…Q-16 (ADR-0003) |
 
@@ -351,7 +351,7 @@ Things that could not be verified in a session (no Docker, no network, no provid
 
 ## 18. Handoff note  *(replace at the end of every session)*
 
-**Latest (P05, 2026-10-19):** P05 is complete and pushed to `main`. `make check` is green (502 tests).
+**Latest (P05, 2026-10-19):** P05 is complete and pushed to `main`. `make check` is green (501 tests).
 
 - **Next:** P06 (profiling, leakage scan, compact profile).
 - **Inputs for P06:**
