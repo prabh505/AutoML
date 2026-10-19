@@ -1,0 +1,7 @@
+{
+  "schema_version": "stage_error/1.0",
+  "stage": "train_candidates",
+  "error_class": "LightGBMError",
+  "message": "training failed on fold 1",
+  "recoverable": true
+}

@@ -1,0 +1,6 @@
+{
+  "schema_version": "selection/1.0",
+  "winner": "0-lightgbm-3c9e1a20",
+  "rule": "max_mean_with_simplicity_tiebreak",
+  "near_ties": []
+}

@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "Task": {
+      "description": "Supported prediction tasks (PRD §2.2, §10.1).",
+      "enum": [
+        "binary",
+        "multiclass",
+        "regression"
+      ],
+      "title": "Task",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Detected task (`task_detection/1.0`, FR-TGT-02, §10.1).",
+  "properties": {
+    "alternatives": {
+      "items": {
+        "$ref": "#/$defs/Task"
+      },
+      "title": "Alternatives",
+      "type": "array"
+    },
+    "confidence": {
+      "enum": [
+        "high",
+        "ambiguous"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "positive_label": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Positive Label"
+    },
+    "reason": {
+      "maxLength": 300,
+      "title": "Reason",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "task_detection/1.0",
+      "default": "task_detection/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "task": {
+      "$ref": "#/$defs/Task"
+    }
+  },
+  "required": [
+    "task",
+    "confidence",
+    "reason"
+  ],
+  "title": "TaskDetection",
+  "type": "object",
+  "x-schema-version": "task_detection/1.0"
+}

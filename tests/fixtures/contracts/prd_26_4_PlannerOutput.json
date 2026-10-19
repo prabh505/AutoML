@@ -1,0 +1,54 @@
+{
+  "schema_version": "plan/1.0",
+  "column_decisions": [
+    {
+      "column": "seniorcitizen",
+      "action": "treat_as_categorical",
+      "reason": "Binary flag stored as integer."
+    }
+  ],
+  "imputation": {
+    "numeric": "median",
+    "categorical": "most_frequent",
+    "add_missing_indicators": true
+  },
+  "encoding": {
+    "low_cardinality": "onehot",
+    "high_cardinality": "frequency"
+  },
+  "features": [
+    {
+      "id": "f01",
+      "name": "avg_monthly_spend",
+      "op": "ratio",
+      "inputs": [
+        "totalcharges",
+        "tenure"
+      ],
+      "params": {
+        "eps": 1e-06
+      },
+      "rationale": "Spend per month of tenure."
+    }
+  ],
+  "models": [
+    {
+      "name": "lightgbm",
+      "priority": 1,
+      "class_weight": "balanced"
+    },
+    {
+      "name": "linear",
+      "priority": 2,
+      "class_weight": "balanced"
+    }
+  ],
+  "tuning_allocation": {
+    "lightgbm": 0.75,
+    "linear": 0.25
+  },
+  "target_transform": "none",
+  "cv_folds": 5,
+  "metric_recommendation": "roc_auc",
+  "rationale": "Contract type and tenure dominate churn; spend per month adds signal."
+}

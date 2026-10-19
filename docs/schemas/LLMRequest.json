@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "additionalProperties": false,
+  "description": "One LLM request (`llm_request/1.0`, PRD §23.1).\n\n`response_schema` is a Python type used for parsing. It is excluded from serialization and\nfrom the exported JSON Schema (PI-25).",
+  "properties": {
+    "max_output_tokens": {
+      "maximum": 8000,
+      "minimum": 1,
+      "title": "Max Output Tokens",
+      "type": "integer"
+    },
+    "purpose": {
+      "enum": [
+        "plan",
+        "plan_repair",
+        "reflect",
+        "reflect_repair",
+        "narrate",
+        "narrate_repair"
+      ],
+      "title": "Purpose",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "llm_request/1.0",
+      "default": "llm_request/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "system": {
+      "title": "System",
+      "type": "string"
+    },
+    "temperature": {
+      "default": 0.0,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "title": "Temperature",
+      "type": "number"
+    },
+    "timeout_s": {
+      "default": 90.0,
+      "maximum": 240.0,
+      "minimum": 20.0,
+      "title": "Timeout S",
+      "type": "number"
+    },
+    "user_json": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "User Json",
+      "type": "object"
+    }
+  },
+  "required": [
+    "purpose",
+    "system",
+    "user_json",
+    "max_output_tokens"
+  ],
+  "title": "LLMRequest",
+  "type": "object",
+  "x-schema-version": "llm_request/1.0"
+}

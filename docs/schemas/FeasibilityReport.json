@@ -1,0 +1,61 @@
+{
+  "$defs": {
+    "Simplification": {
+      "description": "Resource simplifications, applied in this order (PRD §29.5).",
+      "enum": [
+        "reduce_tuning_trials",
+        "within_fold_subsample",
+        "disable_random_forest",
+        "reduce_folds",
+        "cap_onehot",
+        "disable_ensemble"
+      ],
+      "title": "Simplification",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Resource feasibility verdict (`feasibility/1.0`, FR-ING-05, §29.4–§29.5).",
+  "properties": {
+    "estimated_peak_mb": {
+      "minimum": 0.0,
+      "title": "Estimated Peak Mb",
+      "type": "number"
+    },
+    "limit_mb": {
+      "minimum": 0.0,
+      "title": "Limit Mb",
+      "type": "number"
+    },
+    "schema_version": {
+      "const": "feasibility/1.0",
+      "default": "feasibility/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "simplifications": {
+      "items": {
+        "$ref": "#/$defs/Simplification"
+      },
+      "title": "Simplifications",
+      "type": "array"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "simplified",
+        "rejected"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "status",
+    "estimated_peak_mb",
+    "limit_mb"
+  ],
+  "title": "FeasibilityReport",
+  "type": "object",
+  "x-schema-version": "feasibility/1.0"
+}

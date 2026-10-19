@@ -1,0 +1,398 @@
+{
+  "$defs": {
+    "ErrorCode": {
+      "description": "Every user-facing error code (PRD §8.9).",
+      "enum": [
+        "E-FILE-TOO-LARGE",
+        "E-FILE-TYPE",
+        "E-FILE-EMPTY",
+        "E-FILE-CORRUPT",
+        "E-ARCHIVE-UNSUPPORTED",
+        "E-ENCODING",
+        "E-DELIMITER-AMBIGUOUS",
+        "E-PARSE-MALFORMED",
+        "E-PARQUET-NESTED",
+        "E-TOO-MANY-COLUMNS",
+        "E-TOO-MANY-ROWS",
+        "E-TARGET-CONSTANT",
+        "E-TARGET-ALL-MISSING",
+        "E-TARGET-TOO-FEW-ROWS",
+        "E-TARGET-CLASS-TOO-SMALL",
+        "E-TARGET-TOO-MANY-CLASSES",
+        "E-TARGET-UNSUPPORTED-TYPE",
+        "E-RESOURCE-INFEASIBLE",
+        "E-NO-VALID-MODEL",
+        "E-EXPORT-PARITY",
+        "E-WORKER-LOST"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "FinalResult": {
+      "additionalProperties": false,
+      "description": "Frozen selection and its outputs (`final_result/1.0`, PRD §13.3, L-8).",
+      "properties": {
+        "bundle_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bundle Path"
+        },
+        "bundle_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bundle Sha256"
+        },
+        "explanation_method": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Explanation Method"
+        },
+        "holdout": {
+          "$ref": "#/$defs/HoldoutResult"
+        },
+        "is_ensemble": {
+          "default": false,
+          "title": "Is Ensemble",
+          "type": "boolean"
+        },
+        "report_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Report Paths",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "final_result/1.0",
+          "default": "final_result/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "selected_entry_id": {
+          "title": "Selected Entry Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "selected_entry_id",
+        "holdout"
+      ],
+      "title": "FinalResult",
+      "type": "object"
+    },
+    "HoldoutResult": {
+      "additionalProperties": false,
+      "description": "One-time holdout scores (PRD §18.3, §26.9; L-7). `ci95` is [low, high] when present.",
+      "properties": {
+        "accessed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accessed At"
+        },
+        "baseline": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline"
+        },
+        "final": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Final"
+        },
+        "present": {
+          "title": "Present",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "present"
+      ],
+      "title": "HoldoutResult",
+      "type": "object"
+    },
+    "RunWarning": {
+      "additionalProperties": false,
+      "description": "A structured warning (`warning/1.0`; named `RunWarning` to avoid the builtin, PI-25).",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/WarningCode"
+        },
+        "column": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column"
+        },
+        "count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Count"
+        },
+        "message": {
+          "maxLength": 500,
+          "title": "Message",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "warning/1.0",
+          "default": "warning/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Stage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "RunWarning",
+      "type": "object"
+    },
+    "Stage": {
+      "description": "Run stages and graph nodes used for events, timings, and errors (PRD §13.2, §13.4).",
+      "enum": [
+        "run",
+        "ingest",
+        "split",
+        "profile",
+        "plan",
+        "validate_plan",
+        "build_features",
+        "train_candidates",
+        "evaluate",
+        "reflect",
+        "apply_changes",
+        "ensemble",
+        "finalize",
+        "explain",
+        "report",
+        "export",
+        "recover"
+      ],
+      "title": "Stage",
+      "type": "string"
+    },
+    "WarningCode": {
+      "description": "Every warning code used in the PRD (§8.2, §8.5–§8.7, §9.3, §11.1; A-008).",
+      "enum": [
+        "W-SMALL-DATA",
+        "W-IMBALANCE",
+        "W-HIGH-MISSING",
+        "W-LEAK-STRONG",
+        "W-LEAK-NEAR-DETERMINISTIC",
+        "W-GROUP-SUSPECTED",
+        "W-TEMPORAL",
+        "W-DUPLICATES",
+        "W-CONFLICTING-DUPLICATES",
+        "W-WIDE",
+        "W-ENCODING-FALLBACK",
+        "W-COERCED",
+        "W-INF",
+        "W-TARGET-MISSING",
+        "W-NO-HOLDOUT"
+      ],
+      "title": "WarningCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Final run outcome returned to the Run Manager (`run_result/1.0`, PRD §28.2–§28.3).",
+  "properties": {
+    "duration_s": {
+      "minimum": 0.0,
+      "title": "Duration S",
+      "type": "number"
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "error_message": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Message"
+    },
+    "final": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FinalResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "run_id": {
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "run_result/1.0",
+      "default": "run_result/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "completed_partial",
+        "failed",
+        "cancelled"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "stopped_after_stage": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Stage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "warnings": {
+      "items": {
+        "$ref": "#/$defs/RunWarning"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "run_id",
+    "status",
+    "duration_s"
+  ],
+  "title": "RunResult",
+  "type": "object",
+  "x-schema-version": "run_result/1.0"
+}

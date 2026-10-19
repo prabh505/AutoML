@@ -1,0 +1,11 @@
+{
+  "schema_version": "target_report/1.0",
+  "target": "churn",
+  "n_missing": 0,
+  "n_rows_removed": 0,
+  "n_unique": 2,
+  "class_counts": {
+    "No": 5174,
+    "Yes": 1869
+  }
+}

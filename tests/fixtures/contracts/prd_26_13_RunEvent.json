@@ -1,0 +1,15 @@
+{
+  "schema_version": "event/1.0",
+  "run_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+  "seq": 17,
+  "ts": "2026-10-19T10:15:02Z",
+  "stage": "train_candidates",
+  "type": "candidate_completed",
+  "data": {
+    "entry_id": "0-lightgbm-3c9e1a20",
+    "mean": 0.847,
+    "std": 0.006,
+    "seconds": 41.2
+  },
+  "origin": "system"
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": "profile/1.0",
+  "task": "binary",
+  "n_rows_dev": 5634,
+  "n_features": 19,
+  "memory_mb": 3.2,
+  "duplicate_rows": 0,
+  "conflicting_duplicate_rows": 0,
+  "columns": [
+    {
+      "name": "tenure",
+      "type": "numeric",
+      "missing_rate": 0.0,
+      "distinct": 73,
+      "mean": 32.4,
+      "std": 24.6,
+      "min": 0,
+      "p50": 29,
+      "max": 72,
+      "skew": 0.24,
+      "association": {
+        "kind": "auc",
+        "value": 0.74
+      }
+    }
+  ],
+  "target": {
+    "class_counts": {
+      "No": 4139,
+      "Yes": 1495
+    },
+    "imbalance_ratio": 2.77,
+    "positive_share": 0.265
+  },
+  "leakage": [],
+  "warnings": [
+    "W-IMBALANCE"
+  ],
+  "truncated_stats": []
+}

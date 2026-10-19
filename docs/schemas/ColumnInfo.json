@@ -1,0 +1,111 @@
+{
+  "$defs": {
+    "ColumnRole": {
+      "description": "Column roles (FR-ING-04).",
+      "enum": [
+        "feature",
+        "target",
+        "excluded",
+        "group"
+      ],
+      "title": "ColumnRole",
+      "type": "string"
+    },
+    "SemanticType": {
+      "description": "Column semantic types (FR-ING-04, §8.5).",
+      "enum": [
+        "numeric",
+        "categorical",
+        "boolean",
+        "datetime",
+        "text",
+        "identifier",
+        "constant"
+      ],
+      "title": "SemanticType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One column's normalized name, type, role, and data decisions (FR-ING-03, FR-ING-04).",
+  "properties": {
+    "coerced_to_missing": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Coerced To Missing",
+      "type": "integer"
+    },
+    "dtype": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dtype"
+    },
+    "exclusion_reason": {
+      "anyOf": [
+        {
+          "maxLength": 120,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Exclusion Reason"
+    },
+    "hints": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 10,
+      "title": "Hints",
+      "type": "array"
+    },
+    "missing_rate": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Missing Rate"
+    },
+    "name": {
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,79}$",
+      "title": "Name",
+      "type": "string"
+    },
+    "original": {
+      "maxLength": 1000,
+      "title": "Original",
+      "type": "string"
+    },
+    "role": {
+      "$ref": "#/$defs/ColumnRole"
+    },
+    "semantic_type": {
+      "$ref": "#/$defs/SemanticType"
+    }
+  },
+  "required": [
+    "original",
+    "name",
+    "semantic_type",
+    "role"
+  ],
+  "title": "ColumnInfo",
+  "type": "object",
+  "x-schema-version": null
+}

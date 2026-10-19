@@ -1,0 +1,102 @@
+{
+  "$defs": {
+    "Stage": {
+      "description": "Run stages and graph nodes used for events, timings, and errors (PRD §13.2, §13.4).",
+      "enum": [
+        "run",
+        "ingest",
+        "split",
+        "profile",
+        "plan",
+        "validate_plan",
+        "build_features",
+        "train_candidates",
+        "evaluate",
+        "reflect",
+        "apply_changes",
+        "ensemble",
+        "finalize",
+        "explain",
+        "report",
+        "export",
+        "recover"
+      ],
+      "title": "Stage",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Budget use so far (`budget_ledger/1.0`, PRD §29.3; A-004). Replaced, not mutated.",
+  "properties": {
+    "elapsed_s": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Elapsed S",
+      "type": "number"
+    },
+    "llm_calls_used": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Llm Calls Used",
+      "type": "integer"
+    },
+    "llm_input_tokens_used": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Llm Input Tokens Used",
+      "type": "integer"
+    },
+    "llm_output_tokens_used": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Llm Output Tokens Used",
+      "type": "integer"
+    },
+    "llm_seconds_used": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Llm Seconds Used",
+      "type": "number"
+    },
+    "schema_version": {
+      "const": "budget_ledger/1.0",
+      "default": "budget_ledger/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "stage_seconds": {
+      "additionalProperties": {
+        "minimum": 0.0,
+        "type": "number"
+      },
+      "propertyNames": {
+        "$ref": "#/$defs/Stage"
+      },
+      "title": "Stage Seconds",
+      "type": "object"
+    },
+    "time_budget_s": {
+      "exclusiveMinimum": 0,
+      "title": "Time Budget S",
+      "type": "integer"
+    },
+    "trials_max": {
+      "minimum": 0,
+      "title": "Trials Max",
+      "type": "integer"
+    },
+    "trials_used": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Trials Used",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "time_budget_s",
+    "trials_max"
+  ],
+  "title": "BudgetLedger",
+  "type": "object",
+  "x-schema-version": "budget_ledger/1.0"
+}

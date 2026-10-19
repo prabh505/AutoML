@@ -1,0 +1,49 @@
+{
+  "schema_version": "experiment_config/1.0",
+  "run_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+  "tabpilot_version": "0.1.0",
+  "execution_profile": "hosted",
+  "task": "binary",
+  "target": "churn",
+  "positive_label": "Yes",
+  "primary_metric": {
+    "name": "roc_auc",
+    "direction": "maximize"
+  },
+  "split": {
+    "split_id": "a91f000000000000000000000000000000000000000000000000000000000000",
+    "strategy": "stratified_kfold",
+    "k": 5,
+    "holdout_fraction": 0.2,
+    "holdout_present": true,
+    "group_column": null,
+    "duplicate_grouping": false
+  },
+  "seeds": {
+    "root": 42,
+    "split": 42,
+    "model": 43,
+    "optuna": 44,
+    "profile": 45,
+    "explain": 46
+  },
+  "budgets": {
+    "time_s": 480,
+    "max_trials": 60,
+    "llm_calls": 12,
+    "reflection_rounds": 1
+  },
+  "llm": {
+    "enabled": true,
+    "order": [
+      "groq",
+      "gemini",
+      "openrouter"
+    ]
+  },
+  "library_versions": {
+    "python": "3.11.17",
+    "scikit-learn": "1.9.1",
+    "lightgbm": "4.7.0"
+  }
+}

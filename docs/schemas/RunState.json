@@ -1,0 +1,3680 @@
+{
+  "$defs": {
+    "AcceptanceDecision": {
+      "additionalProperties": false,
+      "description": "Paired-fold acceptance outcome (`acceptance/1.0`, PRD §19.5, §20.4).",
+      "properties": {
+        "accepted": {
+          "title": "Accepted",
+          "type": "boolean"
+        },
+        "child_entry_id": {
+          "title": "Child Entry Id",
+          "type": "string"
+        },
+        "fold_deltas": {
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1,
+          "title": "Fold Deltas",
+          "type": "array"
+        },
+        "folds_better": {
+          "minimum": 0,
+          "title": "Folds Better",
+          "type": "integer"
+        },
+        "folds_required": {
+          "minimum": 0,
+          "title": "Folds Required",
+          "type": "integer"
+        },
+        "mean_gain": {
+          "title": "Mean Gain",
+          "type": "number"
+        },
+        "parent_entry_id": {
+          "title": "Parent Entry Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 300,
+          "title": "Reason",
+          "type": "string"
+        },
+        "rel_gain": {
+          "title": "Rel Gain",
+          "type": "number"
+        },
+        "schema_version": {
+          "const": "acceptance/1.0",
+          "default": "acceptance/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "parent_entry_id",
+        "child_entry_id",
+        "fold_deltas",
+        "mean_gain",
+        "rel_gain",
+        "folds_better",
+        "folds_required",
+        "accepted",
+        "reason"
+      ],
+      "title": "AcceptanceDecision",
+      "type": "object"
+    },
+    "AddFeatures": {
+      "additionalProperties": false,
+      "description": "Add ≤ 6 new DSL features (PRD §19.3).",
+      "properties": {
+        "features": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "add": "#/$defs/BinaryArithmeticSpec",
+                "bin_quantile": "#/$defs/BinQuantileSpec",
+                "clip": "#/$defs/ClipSpec",
+                "concat_categories": "#/$defs/ConcatCategoriesSpec",
+                "count_missing": "#/$defs/RowAggregateSpec",
+                "date_diff_days": "#/$defs/DateDiffSpec",
+                "equals": "#/$defs/EqualsSpec",
+                "group_count": "#/$defs/GroupCountSpec",
+                "group_deviation": "#/$defs/GroupStatSpec",
+                "group_mean": "#/$defs/GroupStatSpec",
+                "group_std": "#/$defs/GroupStatSpec",
+                "is_missing": "#/$defs/IsMissingSpec",
+                "log1p": "#/$defs/UnaryNumericSpec",
+                "multiply": "#/$defs/BinaryArithmeticSpec",
+                "ratio": "#/$defs/RatioSpec",
+                "row_mean": "#/$defs/RowAggregateSpec",
+                "row_sum": "#/$defs/RowAggregateSpec",
+                "sqrt": "#/$defs/UnaryNumericSpec",
+                "square": "#/$defs/UnaryNumericSpec",
+                "subtract": "#/$defs/BinaryArithmeticSpec"
+              },
+              "propertyName": "op"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/BinaryArithmeticSpec"
+              },
+              {
+                "$ref": "#/$defs/RatioSpec"
+              },
+              {
+                "$ref": "#/$defs/UnaryNumericSpec"
+              },
+              {
+                "$ref": "#/$defs/ClipSpec"
+              },
+              {
+                "$ref": "#/$defs/BinQuantileSpec"
+              },
+              {
+                "$ref": "#/$defs/IsMissingSpec"
+              },
+              {
+                "$ref": "#/$defs/EqualsSpec"
+              },
+              {
+                "$ref": "#/$defs/RowAggregateSpec"
+              },
+              {
+                "$ref": "#/$defs/ConcatCategoriesSpec"
+              },
+              {
+                "$ref": "#/$defs/GroupStatSpec"
+              },
+              {
+                "$ref": "#/$defs/GroupCountSpec"
+              },
+              {
+                "$ref": "#/$defs/DateDiffSpec"
+              }
+            ]
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "title": "Features",
+          "type": "array"
+        },
+        "type": {
+          "const": "add_features",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "features"
+      ],
+      "title": "AddFeatures",
+      "type": "object"
+    },
+    "Association": {
+      "additionalProperties": false,
+      "description": "Feature–target association score (PRD §9.2).",
+      "properties": {
+        "kind": {
+          "enum": [
+            "auc",
+            "mi",
+            "spearman",
+            "r2"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "Association",
+      "type": "object"
+    },
+    "BinQuantileParams": {
+      "additionalProperties": false,
+      "description": "`bin_quantile`: number of bins 2–20 (PRD §14.3).",
+      "properties": {
+        "n_bins": {
+          "maximum": 20,
+          "minimum": 2,
+          "title": "N Bins",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "n_bins"
+      ],
+      "title": "BinQuantileParams",
+      "type": "object"
+    },
+    "BinQuantileSpec": {
+      "additionalProperties": false,
+      "description": "`bin_quantile`: 1 numeric input → categorical; stateful.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "bin_quantile",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/BinQuantileParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs",
+        "params"
+      ],
+      "title": "BinQuantileSpec",
+      "type": "object"
+    },
+    "BinaryArithmeticSpec": {
+      "additionalProperties": false,
+      "description": "`add`, `subtract`, `multiply`: 2 numeric inputs.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "add",
+            "subtract",
+            "multiply"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "BinaryArithmeticSpec",
+      "type": "object"
+    },
+    "BudgetLedger": {
+      "additionalProperties": false,
+      "description": "Budget use so far (`budget_ledger/1.0`, PRD §29.3; A-004). Replaced, not mutated.",
+      "properties": {
+        "elapsed_s": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Elapsed S",
+          "type": "number"
+        },
+        "llm_calls_used": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Llm Calls Used",
+          "type": "integer"
+        },
+        "llm_input_tokens_used": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Llm Input Tokens Used",
+          "type": "integer"
+        },
+        "llm_output_tokens_used": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Llm Output Tokens Used",
+          "type": "integer"
+        },
+        "llm_seconds_used": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Llm Seconds Used",
+          "type": "number"
+        },
+        "schema_version": {
+          "const": "budget_ledger/1.0",
+          "default": "budget_ledger/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "stage_seconds": {
+          "additionalProperties": {
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/Stage"
+          },
+          "title": "Stage Seconds",
+          "type": "object"
+        },
+        "time_budget_s": {
+          "exclusiveMinimum": 0,
+          "title": "Time Budget S",
+          "type": "integer"
+        },
+        "trials_max": {
+          "minimum": 0,
+          "title": "Trials Max",
+          "type": "integer"
+        },
+        "trials_used": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Trials Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "time_budget_s",
+        "trials_max"
+      ],
+      "title": "BudgetLedger",
+      "type": "object"
+    },
+    "CandidateSpec": {
+      "additionalProperties": false,
+      "description": "A candidate pipeline: preprocessing + features + model (`candidate/1.0`, PRD §0.4).",
+      "properties": {
+        "candidate_id": {
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "change_set_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Change Set Id"
+        },
+        "column_decisions": {
+          "items": {
+            "$ref": "#/$defs/ColumnDecision"
+          },
+          "title": "Column Decisions",
+          "type": "array"
+        },
+        "encoding": {
+          "$ref": "#/$defs/Encoding"
+        },
+        "feature_set": {
+          "enum": [
+            "baseline",
+            "baseline+llm"
+          ],
+          "title": "Feature Set",
+          "type": "string"
+        },
+        "features": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "add": "#/$defs/BinaryArithmeticSpec",
+                "bin_quantile": "#/$defs/BinQuantileSpec",
+                "clip": "#/$defs/ClipSpec",
+                "concat_categories": "#/$defs/ConcatCategoriesSpec",
+                "count_missing": "#/$defs/RowAggregateSpec",
+                "date_diff_days": "#/$defs/DateDiffSpec",
+                "equals": "#/$defs/EqualsSpec",
+                "group_count": "#/$defs/GroupCountSpec",
+                "group_deviation": "#/$defs/GroupStatSpec",
+                "group_mean": "#/$defs/GroupStatSpec",
+                "group_std": "#/$defs/GroupStatSpec",
+                "is_missing": "#/$defs/IsMissingSpec",
+                "log1p": "#/$defs/UnaryNumericSpec",
+                "multiply": "#/$defs/BinaryArithmeticSpec",
+                "ratio": "#/$defs/RatioSpec",
+                "row_mean": "#/$defs/RowAggregateSpec",
+                "row_sum": "#/$defs/RowAggregateSpec",
+                "sqrt": "#/$defs/UnaryNumericSpec",
+                "square": "#/$defs/UnaryNumericSpec",
+                "subtract": "#/$defs/BinaryArithmeticSpec"
+              },
+              "propertyName": "op"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/BinaryArithmeticSpec"
+              },
+              {
+                "$ref": "#/$defs/RatioSpec"
+              },
+              {
+                "$ref": "#/$defs/UnaryNumericSpec"
+              },
+              {
+                "$ref": "#/$defs/ClipSpec"
+              },
+              {
+                "$ref": "#/$defs/BinQuantileSpec"
+              },
+              {
+                "$ref": "#/$defs/IsMissingSpec"
+              },
+              {
+                "$ref": "#/$defs/EqualsSpec"
+              },
+              {
+                "$ref": "#/$defs/RowAggregateSpec"
+              },
+              {
+                "$ref": "#/$defs/ConcatCategoriesSpec"
+              },
+              {
+                "$ref": "#/$defs/GroupStatSpec"
+              },
+              {
+                "$ref": "#/$defs/GroupCountSpec"
+              },
+              {
+                "$ref": "#/$defs/DateDiffSpec"
+              }
+            ]
+          },
+          "maxItems": 12,
+          "title": "Features",
+          "type": "array"
+        },
+        "imputation": {
+          "$ref": "#/$defs/Imputation"
+        },
+        "iteration": {
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Iteration",
+          "type": "integer"
+        },
+        "model": {
+          "$ref": "#/$defs/ModelConfig"
+        },
+        "parent_entry_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Entry Id"
+        },
+        "schema_version": {
+          "const": "candidate/1.0",
+          "default": "candidate/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "target_transform": {
+          "$ref": "#/$defs/TargetTransform",
+          "default": "none"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "iteration",
+        "model",
+        "feature_set"
+      ],
+      "title": "CandidateSpec",
+      "type": "object"
+    },
+    "ChangeEncoding": {
+      "additionalProperties": false,
+      "description": "Change encoding for named columns within the allowed encodings (PRD §19.3).",
+      "properties": {
+        "columns": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Columns",
+          "type": "array"
+        },
+        "encoding": {
+          "enum": [
+            "onehot",
+            "ordinal",
+            "frequency",
+            "target"
+          ],
+          "title": "Encoding",
+          "type": "string"
+        },
+        "type": {
+          "const": "change_encoding",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "columns",
+        "encoding"
+      ],
+      "title": "ChangeEncoding",
+      "type": "object"
+    },
+    "ChangeTargetTransform": {
+      "additionalProperties": false,
+      "description": "Regression only: none ↔ log1p (PRD §19.3).",
+      "properties": {
+        "type": {
+          "const": "change_target_transform",
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/TargetTransform"
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "title": "ChangeTargetTransform",
+      "type": "object"
+    },
+    "ClassWeight": {
+      "description": "Class-weight setting for classification models (PRD §12.3, §16.2).",
+      "enum": [
+        "none",
+        "balanced"
+      ],
+      "title": "ClassWeight",
+      "type": "string"
+    },
+    "ClipParams": {
+      "additionalProperties": false,
+      "description": "`clip`: quantile bounds learned per fold (PRD §14.3).",
+      "properties": {
+        "lower_q": {
+          "maximum": 0.2,
+          "minimum": 0.0,
+          "title": "Lower Q",
+          "type": "number"
+        },
+        "upper_q": {
+          "maximum": 1.0,
+          "minimum": 0.8,
+          "title": "Upper Q",
+          "type": "number"
+        }
+      },
+      "required": [
+        "lower_q",
+        "upper_q"
+      ],
+      "title": "ClipParams",
+      "type": "object"
+    },
+    "ClipSpec": {
+      "additionalProperties": false,
+      "description": "`clip`: 1 numeric input; stateful.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "clip",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/ClipParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs",
+        "params"
+      ],
+      "title": "ClipSpec",
+      "type": "object"
+    },
+    "ColumnDecision": {
+      "additionalProperties": false,
+      "description": "Planner decision for one listed column (PRD §12.3).",
+      "properties": {
+        "action": {
+          "enum": [
+            "keep",
+            "drop",
+            "treat_as_categorical",
+            "treat_as_numeric"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "column": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Column",
+          "type": "string"
+        },
+        "reason": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "column",
+        "action"
+      ],
+      "title": "ColumnDecision",
+      "type": "object"
+    },
+    "ColumnInfo": {
+      "additionalProperties": false,
+      "description": "One column's normalized name, type, role, and data decisions (FR-ING-03, FR-ING-04).",
+      "properties": {
+        "coerced_to_missing": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Coerced To Missing",
+          "type": "integer"
+        },
+        "dtype": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dtype"
+        },
+        "exclusion_reason": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exclusion Reason"
+        },
+        "hints": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Hints",
+          "type": "array"
+        },
+        "missing_rate": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Missing Rate"
+        },
+        "name": {
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,79}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "original": {
+          "maxLength": 1000,
+          "title": "Original",
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/$defs/ColumnRole"
+        },
+        "semantic_type": {
+          "$ref": "#/$defs/SemanticType"
+        }
+      },
+      "required": [
+        "original",
+        "name",
+        "semantic_type",
+        "role"
+      ],
+      "title": "ColumnInfo",
+      "type": "object"
+    },
+    "ColumnOverride": {
+      "additionalProperties": false,
+      "description": "A user override from the configure page (PRD §3.2 stage 2, FR-ING-04).",
+      "properties": {
+        "column": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Column",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "feature",
+                "excluded"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "semantic_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SemanticType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "column"
+      ],
+      "title": "ColumnOverride",
+      "type": "object"
+    },
+    "ColumnRole": {
+      "description": "Column roles (FR-ING-04).",
+      "enum": [
+        "feature",
+        "target",
+        "excluded",
+        "group"
+      ],
+      "title": "ColumnRole",
+      "type": "string"
+    },
+    "CompactColumn": {
+      "additionalProperties": false,
+      "description": "One column in the compact profile: aggregates only, no cell labels (PRD §9.4, A-005).\n\n`q` = [min, p5, p25, p50, p75, p95, max]; absent in minimal mode.",
+      "properties": {
+        "assoc": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Association"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "distinct": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distinct"
+        },
+        "entropy_bits": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entropy Bits"
+        },
+        "flags": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Flags",
+          "type": "array"
+        },
+        "level": {
+          "enum": [
+            "full",
+            "short"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "missing": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Missing",
+          "type": "number"
+        },
+        "name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "q": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 7,
+              "minItems": 7,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Q"
+        },
+        "skew": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skew"
+        },
+        "top_shares": {
+          "anyOf": [
+            {
+              "items": {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "maxItems": 10,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top Shares"
+        },
+        "type": {
+          "$ref": "#/$defs/SemanticType"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "level",
+        "missing"
+      ],
+      "title": "CompactColumn",
+      "type": "object"
+    },
+    "CompactProfile": {
+      "additionalProperties": false,
+      "description": "LLM-safe bounded profile (`compact_profile/1.0`, PRD §9.4, §26.2).",
+      "properties": {
+        "columns": {
+          "items": {
+            "$ref": "#/$defs/CompactColumn"
+          },
+          "title": "Columns",
+          "type": "array"
+        },
+        "mode": {
+          "default": "standard",
+          "enum": [
+            "standard",
+            "minimal"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "n_features": {
+          "minimum": 0,
+          "title": "N Features",
+          "type": "integer"
+        },
+        "n_rows_dev": {
+          "minimum": 0,
+          "title": "N Rows Dev",
+          "type": "integer"
+        },
+        "rest_summary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RestSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": "compact_profile/1.0",
+          "default": "compact_profile/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/CompactTarget"
+        },
+        "task": {
+          "$ref": "#/$defs/Task"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "task",
+        "n_rows_dev",
+        "n_features",
+        "target",
+        "columns"
+      ],
+      "title": "CompactProfile",
+      "type": "object"
+    },
+    "CompactTarget": {
+      "additionalProperties": false,
+      "description": "Target aggregates in the compact profile (PRD §26.2).",
+      "properties": {
+        "imbalance_ratio": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Imbalance Ratio"
+        },
+        "n_classes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N Classes"
+        },
+        "nonnegative": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nonnegative"
+        },
+        "positive_share": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Positive Share"
+        },
+        "skew": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skew"
+        }
+      },
+      "title": "CompactTarget",
+      "type": "object"
+    },
+    "ConcatCategoriesSpec": {
+      "additionalProperties": false,
+      "description": "`concat_categories`: 2–3 categorical inputs.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "concat_categories",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "ConcatCategoriesSpec",
+      "type": "object"
+    },
+    "DatasetMetadata": {
+      "additionalProperties": false,
+      "description": "Dataset metadata (`dataset/1.0`, PRD §26.1).",
+      "properties": {
+        "columns": {
+          "items": {
+            "$ref": "#/$defs/ColumnInfo"
+          },
+          "title": "Columns",
+          "type": "array"
+        },
+        "n_columns": {
+          "minimum": 0,
+          "title": "N Columns",
+          "type": "integer"
+        },
+        "n_rows_raw": {
+          "minimum": 0,
+          "title": "N Rows Raw",
+          "type": "integer"
+        },
+        "n_rows_valid": {
+          "minimum": 0,
+          "title": "N Rows Valid",
+          "type": "integer"
+        },
+        "row_removals": {
+          "items": {
+            "$ref": "#/$defs/RowRemoval"
+          },
+          "title": "Row Removals",
+          "type": "array"
+        },
+        "run_id": {
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "dataset/1.0",
+          "default": "dataset/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceInfo"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TargetInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "run_id",
+        "source",
+        "n_rows_raw",
+        "n_rows_valid",
+        "n_columns",
+        "columns"
+      ],
+      "title": "DatasetMetadata",
+      "type": "object"
+    },
+    "DateDiffSpec": {
+      "additionalProperties": false,
+      "description": "`date_diff_days`: 2 datetime inputs.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "date_diff_days",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "DateDiffSpec",
+      "type": "object"
+    },
+    "Direction": {
+      "description": "Metric optimization direction (PRD §10.4).",
+      "enum": [
+        "maximize",
+        "minimize"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "DropModel": {
+      "additionalProperties": false,
+      "description": "Drop one model; the validator keeps ≥ 1 model (PRD §19.3).",
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/ModelName"
+        },
+        "type": {
+          "const": "drop_model",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "model"
+      ],
+      "title": "DropModel",
+      "type": "object"
+    },
+    "Encoding": {
+      "additionalProperties": false,
+      "description": "Encoding choices (PRD §12.3).",
+      "properties": {
+        "high_cardinality": {
+          "default": "frequency",
+          "enum": [
+            "frequency",
+            "target"
+          ],
+          "title": "High Cardinality",
+          "type": "string"
+        },
+        "low_cardinality": {
+          "default": "onehot",
+          "enum": [
+            "onehot",
+            "ordinal"
+          ],
+          "title": "Low Cardinality",
+          "type": "string"
+        }
+      },
+      "title": "Encoding",
+      "type": "object"
+    },
+    "EnsembleMember": {
+      "additionalProperties": false,
+      "description": "One ensemble member and its weight (PRD §20.3).",
+      "properties": {
+        "entry_id": {
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "weight": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Weight",
+          "type": "number"
+        }
+      },
+      "required": [
+        "entry_id",
+        "weight"
+      ],
+      "title": "EnsembleMember",
+      "type": "object"
+    },
+    "EnsembleResult": {
+      "additionalProperties": false,
+      "description": "Ensemble search outcome (`ensemble/1.0`, PRD §20).",
+      "properties": {
+        "decision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AcceptanceDecision"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "fold_scores": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Fold Scores",
+          "type": "array"
+        },
+        "kept": {
+          "title": "Kept",
+          "type": "boolean"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/$defs/EnsembleMember"
+          },
+          "maxItems": 5,
+          "title": "Members",
+          "type": "array"
+        },
+        "predicted_inference_ratio": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predicted Inference Ratio"
+        },
+        "reason": {
+          "maxLength": 300,
+          "title": "Reason",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "ensemble/1.0",
+          "default": "ensemble/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kept",
+        "reason"
+      ],
+      "title": "EnsembleResult",
+      "type": "object"
+    },
+    "EqualsParams": {
+      "additionalProperties": false,
+      "description": "`equals`: numeric value only; categorical labels are never sent to the LLM (§14.3).",
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "EqualsParams",
+      "type": "object"
+    },
+    "EqualsSpec": {
+      "additionalProperties": false,
+      "description": "`equals`: 1 numeric/boolean input compared with a numeric value → boolean.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "equals",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/EqualsParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs",
+        "params"
+      ],
+      "title": "EqualsSpec",
+      "type": "object"
+    },
+    "ErrorCode": {
+      "description": "Every user-facing error code (PRD §8.9).",
+      "enum": [
+        "E-FILE-TOO-LARGE",
+        "E-FILE-TYPE",
+        "E-FILE-EMPTY",
+        "E-FILE-CORRUPT",
+        "E-ARCHIVE-UNSUPPORTED",
+        "E-ENCODING",
+        "E-DELIMITER-AMBIGUOUS",
+        "E-PARSE-MALFORMED",
+        "E-PARQUET-NESTED",
+        "E-TOO-MANY-COLUMNS",
+        "E-TOO-MANY-ROWS",
+        "E-TARGET-CONSTANT",
+        "E-TARGET-ALL-MISSING",
+        "E-TARGET-TOO-FEW-ROWS",
+        "E-TARGET-CLASS-TOO-SMALL",
+        "E-TARGET-TOO-MANY-CLASSES",
+        "E-TARGET-UNSUPPORTED-TYPE",
+        "E-RESOURCE-INFEASIBLE",
+        "E-NO-VALID-MODEL",
+        "E-EXPORT-PARITY",
+        "E-WORKER-LOST"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "ExecutionProfileName": {
+      "description": "Execution profiles (PRD §29.1).",
+      "enum": [
+        "hosted",
+        "local"
+      ],
+      "title": "ExecutionProfileName",
+      "type": "string"
+    },
+    "FinalResult": {
+      "additionalProperties": false,
+      "description": "Frozen selection and its outputs (`final_result/1.0`, PRD §13.3, L-8).",
+      "properties": {
+        "bundle_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bundle Path"
+        },
+        "bundle_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bundle Sha256"
+        },
+        "explanation_method": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Explanation Method"
+        },
+        "holdout": {
+          "$ref": "#/$defs/HoldoutResult"
+        },
+        "is_ensemble": {
+          "default": false,
+          "title": "Is Ensemble",
+          "type": "boolean"
+        },
+        "report_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Report Paths",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "final_result/1.0",
+          "default": "final_result/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "selected_entry_id": {
+          "title": "Selected Entry Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "selected_entry_id",
+        "holdout"
+      ],
+      "title": "FinalResult",
+      "type": "object"
+    },
+    "GroupCountSpec": {
+      "additionalProperties": false,
+      "description": "`group_count`: [categorical key]; stateful.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "group_count",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "GroupCountSpec",
+      "type": "object"
+    },
+    "GroupStatSpec": {
+      "additionalProperties": false,
+      "description": "`group_mean`, `group_std`, `group_deviation`: [categorical key, numeric value]; stateful.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "group_mean",
+            "group_std",
+            "group_deviation"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "GroupStatSpec",
+      "type": "object"
+    },
+    "HoldoutResult": {
+      "additionalProperties": false,
+      "description": "One-time holdout scores (PRD §18.3, §26.9; L-7). `ci95` is [low, high] when present.",
+      "properties": {
+        "accessed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accessed At"
+        },
+        "baseline": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline"
+        },
+        "final": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Final"
+        },
+        "present": {
+          "title": "Present",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "present"
+      ],
+      "title": "HoldoutResult",
+      "type": "object"
+    },
+    "Imputation": {
+      "additionalProperties": false,
+      "description": "Imputation choices (PRD §12.3).",
+      "properties": {
+        "add_missing_indicators": {
+          "default": true,
+          "title": "Add Missing Indicators",
+          "type": "boolean"
+        },
+        "categorical": {
+          "default": "most_frequent",
+          "enum": [
+            "most_frequent",
+            "constant_missing"
+          ],
+          "title": "Categorical",
+          "type": "string"
+        },
+        "numeric": {
+          "default": "median",
+          "enum": [
+            "median",
+            "mean",
+            "constant_zero"
+          ],
+          "title": "Numeric",
+          "type": "string"
+        }
+      },
+      "title": "Imputation",
+      "type": "object"
+    },
+    "IsMissingSpec": {
+      "additionalProperties": false,
+      "description": "`is_missing`: 1 input of any type → boolean.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "is_missing",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "IsMissingSpec",
+      "type": "object"
+    },
+    "LeaderboardEntry": {
+      "additionalProperties": false,
+      "description": "One leaderboard row (`leaderboard_entry/1.0`, PRD §18.1).\n\n`mean`, `std` (ddof=1) and `sem` must equal the values recomputed from `fold_scores`\n(G-09 / T-EVL-01).",
+      "properties": {
+        "change_set_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Change Set Id"
+        },
+        "comparable": {
+          "title": "Comparable",
+          "type": "boolean"
+        },
+        "entry_id": {
+          "pattern": "^[0-2]-[a-z_]+-[0-9a-f]{8}$",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "experiment_id": {
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+          "title": "Experiment Id",
+          "type": "string"
+        },
+        "feature_set": {
+          "enum": [
+            "baseline",
+            "baseline+llm",
+            "ensemble"
+          ],
+          "title": "Feature Set",
+          "type": "string"
+        },
+        "fit_seconds": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Fit Seconds",
+          "type": "number"
+        },
+        "fold_scores": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Fold Scores",
+          "type": "array"
+        },
+        "iteration": {
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Iteration",
+          "type": "integer"
+        },
+        "mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean"
+        },
+        "metric": {
+          "$ref": "#/$defs/MetricSpec"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelName"
+            },
+            {
+              "const": "ensemble",
+              "type": "string"
+            }
+          ],
+          "title": "Model"
+        },
+        "model_size_bytes": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Model Size Bytes",
+          "type": "integer"
+        },
+        "n_features_out": {
+          "default": 0,
+          "minimum": 0,
+          "title": "N Features Out",
+          "type": "integer"
+        },
+        "params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Params",
+          "type": "object"
+        },
+        "parent_entry_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Entry Id"
+        },
+        "predict_seconds": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Predict Seconds",
+          "type": "number"
+        },
+        "schema_version": {
+          "const": "leaderboard_entry/1.0",
+          "default": "leaderboard_entry/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "secondary": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/MetricName"
+          },
+          "title": "Secondary",
+          "type": "object"
+        },
+        "sem": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sem"
+        },
+        "split_id": {
+          "minLength": 1,
+          "title": "Split Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "failed",
+            "skipped_resource",
+            "skipped_budget"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "std": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Std"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entry_id",
+        "experiment_id",
+        "iteration",
+        "model",
+        "feature_set",
+        "metric",
+        "status",
+        "comparable",
+        "split_id"
+      ],
+      "title": "LeaderboardEntry",
+      "type": "object"
+    },
+    "MetricName": {
+      "description": "Metric names (PRD §10.2).",
+      "enum": [
+        "roc_auc",
+        "average_precision",
+        "log_loss",
+        "brier",
+        "accuracy",
+        "f1",
+        "macro_f1",
+        "balanced_accuracy",
+        "ovr_macro_roc_auc",
+        "rmse",
+        "mae",
+        "rmsle",
+        "r2"
+      ],
+      "title": "MetricName",
+      "type": "string"
+    },
+    "MetricSpec": {
+      "additionalProperties": false,
+      "description": "A metric and its direction (`metric_spec/1.0`, PRD §10.2, §10.4).",
+      "properties": {
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "name": {
+          "$ref": "#/$defs/MetricName"
+        },
+        "schema_version": {
+          "const": "metric_spec/1.0",
+          "default": "metric_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "direction"
+      ],
+      "title": "MetricSpec",
+      "type": "object"
+    },
+    "ModelConfig": {
+      "additionalProperties": false,
+      "description": "A concrete model configuration (`model_config/1.0`, PRD §26.6).",
+      "properties": {
+        "class_weight": {
+          "$ref": "#/$defs/ClassWeight",
+          "default": "none"
+        },
+        "n_jobs": {
+          "minimum": 1,
+          "title": "N Jobs",
+          "type": "integer"
+        },
+        "name": {
+          "$ref": "#/$defs/ModelName"
+        },
+        "params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Params",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": "model_config/1.0",
+          "default": "model_config/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "seed": {
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "task": {
+          "$ref": "#/$defs/Task"
+        }
+      },
+      "required": [
+        "name",
+        "task",
+        "seed",
+        "n_jobs"
+      ],
+      "title": "ModelConfig",
+      "type": "object"
+    },
+    "ModelName": {
+      "description": "Model zoo entries (PRD §16.1).",
+      "enum": [
+        "linear",
+        "random_forest",
+        "lightgbm",
+        "xgboost",
+        "catboost",
+        "hist_gb"
+      ],
+      "title": "ModelName",
+      "type": "string"
+    },
+    "NoParams": {
+      "additionalProperties": false,
+      "description": "Parameters for ops that take none (any key is rejected).",
+      "properties": {},
+      "title": "NoParams",
+      "type": "object"
+    },
+    "PlanIssue": {
+      "additionalProperties": false,
+      "description": "One validator finding (PRD §12.6).",
+      "properties": {
+        "code": {
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 300,
+          "title": "Message",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "repair",
+            "severe"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "message"
+      ],
+      "title": "PlanIssue",
+      "type": "object"
+    },
+    "PlanValidation": {
+      "additionalProperties": false,
+      "description": "Outcome of plan validation (`plan_validation/1.0`, PRD §12.6–§12.7).",
+      "properties": {
+        "cv_folds_ignored": {
+          "default": false,
+          "title": "Cv Folds Ignored",
+          "type": "boolean"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/PlanIssue"
+          },
+          "title": "Issues",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "plan_validation/1.0",
+          "default": "plan_validation/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simplifications": {
+          "items": {
+            "$ref": "#/$defs/Simplification"
+          },
+          "title": "Simplifications",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "valid",
+            "repaired",
+            "invalid"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "PlanValidation",
+      "type": "object"
+    },
+    "PlannedModel": {
+      "additionalProperties": false,
+      "description": "One model in the plan (PRD §12.3).",
+      "properties": {
+        "class_weight": {
+          "$ref": "#/$defs/ClassWeight",
+          "default": "none"
+        },
+        "name": {
+          "$ref": "#/$defs/ModelName"
+        },
+        "priority": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "priority"
+      ],
+      "title": "PlannedModel",
+      "type": "object"
+    },
+    "PlannerOutput": {
+      "additionalProperties": false,
+      "description": "A modeling plan from the LLM or the rule-based planner (`plan/1.0`, PRD §12.3, §26.4).\n\nStructural bounds live here; dataset-dependent checks (columns, availability, DSL types,\ncost) are done by the plan validator (P11, §12.6).",
+      "properties": {
+        "column_decisions": {
+          "items": {
+            "$ref": "#/$defs/ColumnDecision"
+          },
+          "title": "Column Decisions",
+          "type": "array"
+        },
+        "cv_folds": {
+          "default": 5,
+          "enum": [
+            3,
+            5
+          ],
+          "title": "Cv Folds",
+          "type": "integer"
+        },
+        "encoding": {
+          "$ref": "#/$defs/Encoding"
+        },
+        "features": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "add": "#/$defs/BinaryArithmeticSpec",
+                "bin_quantile": "#/$defs/BinQuantileSpec",
+                "clip": "#/$defs/ClipSpec",
+                "concat_categories": "#/$defs/ConcatCategoriesSpec",
+                "count_missing": "#/$defs/RowAggregateSpec",
+                "date_diff_days": "#/$defs/DateDiffSpec",
+                "equals": "#/$defs/EqualsSpec",
+                "group_count": "#/$defs/GroupCountSpec",
+                "group_deviation": "#/$defs/GroupStatSpec",
+                "group_mean": "#/$defs/GroupStatSpec",
+                "group_std": "#/$defs/GroupStatSpec",
+                "is_missing": "#/$defs/IsMissingSpec",
+                "log1p": "#/$defs/UnaryNumericSpec",
+                "multiply": "#/$defs/BinaryArithmeticSpec",
+                "ratio": "#/$defs/RatioSpec",
+                "row_mean": "#/$defs/RowAggregateSpec",
+                "row_sum": "#/$defs/RowAggregateSpec",
+                "sqrt": "#/$defs/UnaryNumericSpec",
+                "square": "#/$defs/UnaryNumericSpec",
+                "subtract": "#/$defs/BinaryArithmeticSpec"
+              },
+              "propertyName": "op"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/BinaryArithmeticSpec"
+              },
+              {
+                "$ref": "#/$defs/RatioSpec"
+              },
+              {
+                "$ref": "#/$defs/UnaryNumericSpec"
+              },
+              {
+                "$ref": "#/$defs/ClipSpec"
+              },
+              {
+                "$ref": "#/$defs/BinQuantileSpec"
+              },
+              {
+                "$ref": "#/$defs/IsMissingSpec"
+              },
+              {
+                "$ref": "#/$defs/EqualsSpec"
+              },
+              {
+                "$ref": "#/$defs/RowAggregateSpec"
+              },
+              {
+                "$ref": "#/$defs/ConcatCategoriesSpec"
+              },
+              {
+                "$ref": "#/$defs/GroupStatSpec"
+              },
+              {
+                "$ref": "#/$defs/GroupCountSpec"
+              },
+              {
+                "$ref": "#/$defs/DateDiffSpec"
+              }
+            ]
+          },
+          "maxItems": 12,
+          "title": "Features",
+          "type": "array"
+        },
+        "imputation": {
+          "$ref": "#/$defs/Imputation"
+        },
+        "metric_recommendation": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metric Recommendation"
+        },
+        "models": {
+          "items": {
+            "$ref": "#/$defs/PlannedModel"
+          },
+          "maxItems": 5,
+          "minItems": 1,
+          "title": "Models",
+          "type": "array"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 800,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "plan/1.0",
+          "default": "plan/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "target_transform": {
+          "$ref": "#/$defs/TargetTransform",
+          "default": "none"
+        },
+        "tuning_allocation": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/ModelName"
+          },
+          "title": "Tuning Allocation",
+          "type": "object"
+        }
+      },
+      "required": [
+        "models"
+      ],
+      "title": "PlannerOutput",
+      "type": "object"
+    },
+    "ProviderName": {
+      "description": "LLM providers (PRD §23.2).",
+      "enum": [
+        "groq",
+        "gemini",
+        "openrouter",
+        "ollama"
+      ],
+      "title": "ProviderName",
+      "type": "string"
+    },
+    "RatioParams": {
+      "additionalProperties": false,
+      "description": "`ratio`: denominator threshold (PRD §14.3: eps 1e-9 … 1).",
+      "properties": {
+        "eps": {
+          "default": 1e-06,
+          "maximum": 1.0,
+          "minimum": 1e-09,
+          "title": "Eps",
+          "type": "number"
+        }
+      },
+      "title": "RatioParams",
+      "type": "object"
+    },
+    "RatioSpec": {
+      "additionalProperties": false,
+      "description": "`ratio`: 2 numeric inputs; |denominator| < eps → NaN.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "ratio",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/RatioParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "RatioSpec",
+      "type": "object"
+    },
+    "ReallocateTuning": {
+      "additionalProperties": false,
+      "description": "New tuning fractions over available models (PRD §19.3).",
+      "properties": {
+        "allocation": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/ModelName"
+          },
+          "title": "Allocation",
+          "type": "object"
+        },
+        "type": {
+          "const": "reallocate_tuning",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "allocation"
+      ],
+      "title": "ReallocateTuning",
+      "type": "object"
+    },
+    "ReflectionProposal": {
+      "additionalProperties": false,
+      "description": "One bounded set of changes (`reflection/1.0`, PRD §19.3, §26.10).\n\nTask, target, metric, folds, holdout, seeds, and budgets are not fields, so they cannot\nbe changed.",
+      "properties": {
+        "changes": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "add_features": "#/$defs/AddFeatures",
+                "change_encoding": "#/$defs/ChangeEncoding",
+                "change_target_transform": "#/$defs/ChangeTargetTransform",
+                "drop_model": "#/$defs/DropModel",
+                "reallocate_tuning": "#/$defs/ReallocateTuning",
+                "remove_features": "#/$defs/RemoveFeatures",
+                "toggle_class_weight": "#/$defs/ToggleClassWeight"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/AddFeatures"
+              },
+              {
+                "$ref": "#/$defs/RemoveFeatures"
+              },
+              {
+                "$ref": "#/$defs/ChangeEncoding"
+              },
+              {
+                "$ref": "#/$defs/ToggleClassWeight"
+              },
+              {
+                "$ref": "#/$defs/ChangeTargetTransform"
+              },
+              {
+                "$ref": "#/$defs/ReallocateTuning"
+              },
+              {
+                "$ref": "#/$defs/DropModel"
+              }
+            ]
+          },
+          "maxItems": 10,
+          "title": "Changes",
+          "type": "array"
+        },
+        "expected_effect": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Expected Effect",
+          "type": "string"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 800,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "reflection/1.0",
+          "default": "reflection/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "ReflectionProposal",
+      "type": "object"
+    },
+    "ReflectionRecord": {
+      "additionalProperties": false,
+      "description": "One reflection round (`reflection_record/1.0`, PRD §19.6–§19.7).",
+      "properties": {
+        "decisions": {
+          "items": {
+            "$ref": "#/$defs/AcceptanceDecision"
+          },
+          "title": "Decisions",
+          "type": "array"
+        },
+        "issues": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Issues",
+          "type": "array"
+        },
+        "proposal": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReflectionProposal"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "reason": {
+          "maxLength": 300,
+          "title": "Reason",
+          "type": "string"
+        },
+        "round": {
+          "maximum": 2,
+          "minimum": 1,
+          "title": "Round",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "reflection_record/1.0",
+          "default": "reflection_record/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "skipped",
+            "invalid",
+            "failed",
+            "empty"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "round",
+        "status",
+        "reason"
+      ],
+      "title": "ReflectionRecord",
+      "type": "object"
+    },
+    "RemoveFeatures": {
+      "additionalProperties": false,
+      "description": "Remove LLM features by name (PRD §19.3).",
+      "properties": {
+        "feature_names": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Feature Names",
+          "type": "array"
+        },
+        "type": {
+          "const": "remove_features",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "feature_names"
+      ],
+      "title": "RemoveFeatures",
+      "type": "object"
+    },
+    "RestSummary": {
+      "additionalProperties": false,
+      "description": "Summary of columns beyond the detailed list (PRD §9.4).",
+      "properties": {
+        "counts_by_type": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/SemanticType"
+          },
+          "title": "Counts By Type",
+          "type": "object"
+        },
+        "mean_missing": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Mean Missing",
+          "type": "number"
+        },
+        "n_columns": {
+          "minimum": 0,
+          "title": "N Columns",
+          "type": "integer"
+        },
+        "names": {
+          "anyOf": [
+            {
+              "items": {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 50,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Names"
+        }
+      },
+      "required": [
+        "n_columns",
+        "counts_by_type",
+        "mean_missing"
+      ],
+      "title": "RestSummary",
+      "type": "object"
+    },
+    "RowAggregateSpec": {
+      "additionalProperties": false,
+      "description": "`count_missing` (any), `row_sum`, `row_mean` (numeric): 2–20 inputs.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "count_missing",
+            "row_sum",
+            "row_mean"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "RowAggregateSpec",
+      "type": "object"
+    },
+    "RowRemoval": {
+      "additionalProperties": false,
+      "description": "A recorded row removal (no-silent-discard rule, PRD §8.6).",
+      "properties": {
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "reason": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "count"
+      ],
+      "title": "RowRemoval",
+      "type": "object"
+    },
+    "RunConfig": {
+      "additionalProperties": false,
+      "description": "User-confirmed run configuration (`run_config/1.0`, PRD §28.2).",
+      "properties": {
+        "column_overrides": {
+          "items": {
+            "$ref": "#/$defs/ColumnOverride"
+          },
+          "title": "Column Overrides",
+          "type": "array"
+        },
+        "consented_providers": {
+          "items": {
+            "$ref": "#/$defs/ProviderName"
+          },
+          "title": "Consented Providers",
+          "type": "array"
+        },
+        "enable_ensemble": {
+          "default": true,
+          "title": "Enable Ensemble",
+          "type": "boolean"
+        },
+        "execution_profile": {
+          "$ref": "#/$defs/ExecutionProfileName"
+        },
+        "group_column": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group Column"
+        },
+        "llm_mode": {
+          "default": "providers",
+          "enum": [
+            "providers",
+            "off",
+            "stub"
+          ],
+          "title": "Llm Mode",
+          "type": "string"
+        },
+        "positive_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Positive Label"
+        },
+        "primary_metric": {
+          "$ref": "#/$defs/MetricName"
+        },
+        "profile_mode": {
+          "default": "standard",
+          "enum": [
+            "standard",
+            "minimal"
+          ],
+          "title": "Profile Mode",
+          "type": "string"
+        },
+        "provider_order": {
+          "items": {
+            "$ref": "#/$defs/ProviderName"
+          },
+          "title": "Provider Order",
+          "type": "array"
+        },
+        "reflection_max_rounds": {
+          "default": 1,
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Reflection Max Rounds",
+          "type": "integer"
+        },
+        "run_id": {
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "run_config/1.0",
+          "default": "run_config/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "seed_root": {
+          "default": 42,
+          "minimum": 0,
+          "title": "Seed Root",
+          "type": "integer"
+        },
+        "target": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Target",
+          "type": "string"
+        },
+        "task": {
+          "$ref": "#/$defs/Task"
+        },
+        "time_budget_s": {
+          "maximum": 7200,
+          "minimum": 240,
+          "title": "Time Budget S",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "run_id",
+        "target",
+        "task",
+        "primary_metric",
+        "time_budget_s",
+        "execution_profile"
+      ],
+      "title": "RunConfig",
+      "type": "object"
+    },
+    "RunWarning": {
+      "additionalProperties": false,
+      "description": "A structured warning (`warning/1.0`; named `RunWarning` to avoid the builtin, PI-25).",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/WarningCode"
+        },
+        "column": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column"
+        },
+        "count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Count"
+        },
+        "message": {
+          "maxLength": 500,
+          "title": "Message",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "warning/1.0",
+          "default": "warning/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Stage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "RunWarning",
+      "type": "object"
+    },
+    "SemanticType": {
+      "description": "Column semantic types (FR-ING-04, §8.5).",
+      "enum": [
+        "numeric",
+        "categorical",
+        "boolean",
+        "datetime",
+        "text",
+        "identifier",
+        "constant"
+      ],
+      "title": "SemanticType",
+      "type": "string"
+    },
+    "Simplification": {
+      "description": "Resource simplifications, applied in this order (PRD §29.5).",
+      "enum": [
+        "reduce_tuning_trials",
+        "within_fold_subsample",
+        "disable_random_forest",
+        "reduce_folds",
+        "cap_onehot",
+        "disable_ensemble"
+      ],
+      "title": "Simplification",
+      "type": "string"
+    },
+    "SourceInfo": {
+      "additionalProperties": false,
+      "description": "Uploaded file facts. `display_name` is sanitized display text only (PRD §24.2).",
+      "properties": {
+        "delimiter": {
+          "anyOf": [
+            {
+              "maxLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delimiter"
+        },
+        "display_name": {
+          "maxLength": 120,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "encoding": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encoding"
+        },
+        "format": {
+          "enum": [
+            "csv",
+            "tsv",
+            "txt",
+            "parquet"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "malformed_lines_skipped": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Malformed Lines Skipped",
+          "type": "integer"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "display_name",
+        "format",
+        "size_bytes"
+      ],
+      "title": "SourceInfo",
+      "type": "object"
+    },
+    "Stage": {
+      "description": "Run stages and graph nodes used for events, timings, and errors (PRD §13.2, §13.4).",
+      "enum": [
+        "run",
+        "ingest",
+        "split",
+        "profile",
+        "plan",
+        "validate_plan",
+        "build_features",
+        "train_candidates",
+        "evaluate",
+        "reflect",
+        "apply_changes",
+        "ensemble",
+        "finalize",
+        "explain",
+        "report",
+        "export",
+        "recover"
+      ],
+      "title": "Stage",
+      "type": "string"
+    },
+    "StageError": {
+      "additionalProperties": false,
+      "description": "A sanitized stage error (`stage_error/1.0`, PRD §24.10).",
+      "properties": {
+        "error_class": {
+          "maxLength": 100,
+          "title": "Error Class",
+          "type": "string"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorCode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "message": {
+          "maxLength": 500,
+          "title": "Message",
+          "type": "string"
+        },
+        "recoverable": {
+          "title": "Recoverable",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "stage_error/1.0",
+          "default": "stage_error/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "stage": {
+          "$ref": "#/$defs/Stage"
+        }
+      },
+      "required": [
+        "stage",
+        "error_class",
+        "message",
+        "recoverable"
+      ],
+      "title": "StageError",
+      "type": "object"
+    },
+    "TargetInfo": {
+      "additionalProperties": false,
+      "description": "Target summary stored in `DatasetMetadata`.",
+      "properties": {
+        "class_counts": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Class Counts"
+        },
+        "name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "positive_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Positive Label"
+        },
+        "task": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Task"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "TargetInfo",
+      "type": "object"
+    },
+    "TargetTransform": {
+      "description": "Regression target transform (PRD §12.3, §10.4).",
+      "enum": [
+        "none",
+        "log1p"
+      ],
+      "title": "TargetTransform",
+      "type": "string"
+    },
+    "Task": {
+      "description": "Supported prediction tasks (PRD §2.2, §10.1).",
+      "enum": [
+        "binary",
+        "multiclass",
+        "regression"
+      ],
+      "title": "Task",
+      "type": "string"
+    },
+    "ToggleClassWeight": {
+      "additionalProperties": false,
+      "description": "Set class weighting for one model (PRD §19.3).",
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/ModelName"
+        },
+        "type": {
+          "const": "toggle_class_weight",
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/ClassWeight"
+        }
+      },
+      "required": [
+        "type",
+        "model",
+        "value"
+      ],
+      "title": "ToggleClassWeight",
+      "type": "object"
+    },
+    "UnaryNumericSpec": {
+      "additionalProperties": false,
+      "description": "`log1p`, `sqrt`, `square`: 1 numeric input (negatives → NaN for log1p/sqrt, A-007).",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "log1p",
+            "sqrt",
+            "square"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "UnaryNumericSpec",
+      "type": "object"
+    },
+    "WarningCode": {
+      "description": "Every warning code used in the PRD (§8.2, §8.5–§8.7, §9.3, §11.1; A-008).",
+      "enum": [
+        "W-SMALL-DATA",
+        "W-IMBALANCE",
+        "W-HIGH-MISSING",
+        "W-LEAK-STRONG",
+        "W-LEAK-NEAR-DETERMINISTIC",
+        "W-GROUP-SUSPECTED",
+        "W-TEMPORAL",
+        "W-DUPLICATES",
+        "W-CONFLICTING-DUPLICATES",
+        "W-WIDE",
+        "W-ENCODING-FALLBACK",
+        "W-COERCED",
+        "W-INF",
+        "W-TARGET-MISSING",
+        "W-NO-HOLDOUT"
+      ],
+      "title": "WarningCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "LangGraph run state (`state/1.0`, PRD §13.3). Small and serializable.\n\nLarge objects (DataFrames, OOF arrays, fitted pipelines) live in the worker's `RunContext`.",
+  "properties": {
+    "best_candidate_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Best Candidate Id"
+    },
+    "budget": {
+      "$ref": "#/$defs/BudgetLedger"
+    },
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/CandidateSpec"
+      },
+      "title": "Candidates",
+      "type": "array"
+    },
+    "config": {
+      "$ref": "#/$defs/RunConfig"
+    },
+    "dataset_meta": {
+      "$ref": "#/$defs/DatasetMetadata"
+    },
+    "ensemble": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EnsembleResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "errors": {
+      "items": {
+        "$ref": "#/$defs/StageError"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "final": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FinalResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "iteration": {
+      "default": 0,
+      "maximum": 2,
+      "minimum": 0,
+      "title": "Iteration",
+      "type": "integer"
+    },
+    "leaderboard": {
+      "items": {
+        "$ref": "#/$defs/LeaderboardEntry"
+      },
+      "title": "Leaderboard",
+      "type": "array"
+    },
+    "plan": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PlannerOutput"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "plan_source": {
+      "anyOf": [
+        {
+          "enum": [
+            "llm",
+            "rule_based"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Plan Source"
+    },
+    "plan_validation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PlanValidation"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "profile_compact": {
+      "$ref": "#/$defs/CompactProfile"
+    },
+    "reflection_history": {
+      "items": {
+        "$ref": "#/$defs/ReflectionRecord"
+      },
+      "title": "Reflection History",
+      "type": "array"
+    },
+    "rounds_used": {
+      "default": 0,
+      "maximum": 2,
+      "minimum": 0,
+      "title": "Rounds Used",
+      "type": "integer"
+    },
+    "run_id": {
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "state/1.0",
+      "default": "state/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selection_frozen": {
+      "default": false,
+      "title": "Selection Frozen",
+      "type": "boolean"
+    },
+    "split_spec_ref": {
+      "title": "Split Spec Ref",
+      "type": "string"
+    },
+    "status": {
+      "default": "running",
+      "enum": [
+        "running",
+        "completed",
+        "completed_partial",
+        "failed",
+        "cancelled"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "$ref": "#/$defs/RunWarning"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "run_id",
+    "config",
+    "dataset_meta",
+    "split_spec_ref",
+    "profile_compact",
+    "budget"
+  ],
+  "title": "RunState",
+  "type": "object",
+  "x-schema-version": "state/1.0"
+}

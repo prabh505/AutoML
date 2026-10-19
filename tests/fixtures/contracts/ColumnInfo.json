@@ -1,0 +1,10 @@
+{
+  "original": "TotalCharges",
+  "name": "totalcharges",
+  "semantic_type": "numeric",
+  "role": "feature",
+  "dtype": "float32",
+  "missing_rate": 0.0016,
+  "coerced_to_missing": 11,
+  "exclusion_reason": null
+}

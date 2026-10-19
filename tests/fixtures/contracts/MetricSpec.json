@@ -1,0 +1,5 @@
+{
+  "schema_version": "metric_spec/1.0",
+  "name": "rmse",
+  "direction": "minimize"
+}

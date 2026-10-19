@@ -1,0 +1,200 @@
+{
+  "$defs": {
+    "ExplanationsSection": {
+      "additionalProperties": false,
+      "description": "Explanation summary in the report (PRD §21.3).",
+      "properties": {
+        "method": {
+          "enum": [
+            "shap_tree",
+            "shap_linear",
+            "shap_member_plus_permutation",
+            "permutation",
+            "gain",
+            "none"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "top_features": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Top Features",
+          "type": "array"
+        },
+        "unavailable_reason": {
+          "anyOf": [
+            {
+              "maxLength": 300,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unavailable Reason"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "title": "ExplanationsSection",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "NarrativeSection": {
+      "additionalProperties": false,
+      "description": "Narrative and its fact-check status (PRD §21.7).",
+      "properties": {
+        "fact_check": {
+          "enum": [
+            "passed",
+            "failed",
+            "not_run"
+          ],
+          "title": "Fact Check",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "llm",
+            "template"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 4000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "fact_check",
+        "text"
+      ],
+      "title": "NarrativeSection",
+      "type": "object"
+    },
+    "ReportSections": {
+      "additionalProperties": false,
+      "description": "Report sections (PRD §21.1, §26.11).",
+      "properties": {
+        "data_decisions": {
+          "items": {
+            "additionalProperties": {
+              "$ref": "#/$defs/JsonValue"
+            },
+            "type": "object"
+          },
+          "title": "Data Decisions",
+          "type": "array"
+        },
+        "explanations": {
+          "$ref": "#/$defs/ExplanationsSection"
+        },
+        "holdout": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Holdout",
+          "type": "object"
+        },
+        "leaderboard_ref": {
+          "title": "Leaderboard Ref",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "narrative": {
+          "$ref": "#/$defs/NarrativeSection"
+        },
+        "plan": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Plan",
+          "type": "object"
+        },
+        "selection": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Selection",
+          "type": "object"
+        },
+        "summary": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Summary",
+          "type": "object"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "summary",
+        "leaderboard_ref",
+        "explanations",
+        "narrative"
+      ],
+      "title": "ReportSections",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Structured report (`report/1.0`, PRD §26.11).",
+  "properties": {
+    "facts_ref": {
+      "title": "Facts Ref",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "report/1.0",
+      "default": "report/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sections": {
+      "$ref": "#/$defs/ReportSections"
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "completed_partial",
+        "failed",
+        "cancelled"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "status",
+    "sections",
+    "facts_ref"
+  ],
+  "title": "FinalReport",
+  "type": "object",
+  "x-schema-version": "report/1.0"
+}

@@ -1,0 +1,8 @@
+{
+  "schema_version": "warning/1.0",
+  "code": "W-COERCED",
+  "message": "11 values could not be read as numbers and were treated as missing.",
+  "stage": "ingest",
+  "column": "totalcharges",
+  "count": 11
+}

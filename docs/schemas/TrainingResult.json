@@ -1,0 +1,119 @@
+{
+  "additionalProperties": false,
+  "description": "Outcome of one candidate's CV / tuning (`training_result/1.0`, PRD §26.8).",
+  "properties": {
+    "best_params": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Best Params",
+      "type": "object"
+    },
+    "entry_id": {
+      "pattern": "^[0-2]-[a-z_]+-[0-9a-f]{8}$",
+      "title": "Entry Id",
+      "type": "string"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "fit_seconds_mean": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Fit Seconds Mean",
+      "type": "number"
+    },
+    "fold_scores": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Fold Scores",
+      "type": "array"
+    },
+    "oof_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Oof Ref"
+    },
+    "predict_seconds_mean": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Predict Seconds Mean",
+      "type": "number"
+    },
+    "schema_version": {
+      "const": "training_result/1.0",
+      "default": "training_result/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "failed",
+        "skipped_resource",
+        "skipped_budget"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "trials_completed": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Trials Completed",
+      "type": "integer"
+    },
+    "trials_failed": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Trials Failed",
+      "type": "integer"
+    },
+    "trials_pruned": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Trials Pruned",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "entry_id",
+    "status"
+  ],
+  "title": "TrainingResult",
+  "type": "object",
+  "x-schema-version": "training_result/1.0"
+}

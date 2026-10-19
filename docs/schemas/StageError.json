@@ -1,0 +1,103 @@
+{
+  "$defs": {
+    "ErrorCode": {
+      "description": "Every user-facing error code (PRD §8.9).",
+      "enum": [
+        "E-FILE-TOO-LARGE",
+        "E-FILE-TYPE",
+        "E-FILE-EMPTY",
+        "E-FILE-CORRUPT",
+        "E-ARCHIVE-UNSUPPORTED",
+        "E-ENCODING",
+        "E-DELIMITER-AMBIGUOUS",
+        "E-PARSE-MALFORMED",
+        "E-PARQUET-NESTED",
+        "E-TOO-MANY-COLUMNS",
+        "E-TOO-MANY-ROWS",
+        "E-TARGET-CONSTANT",
+        "E-TARGET-ALL-MISSING",
+        "E-TARGET-TOO-FEW-ROWS",
+        "E-TARGET-CLASS-TOO-SMALL",
+        "E-TARGET-TOO-MANY-CLASSES",
+        "E-TARGET-UNSUPPORTED-TYPE",
+        "E-RESOURCE-INFEASIBLE",
+        "E-NO-VALID-MODEL",
+        "E-EXPORT-PARITY",
+        "E-WORKER-LOST"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "Stage": {
+      "description": "Run stages and graph nodes used for events, timings, and errors (PRD §13.2, §13.4).",
+      "enum": [
+        "run",
+        "ingest",
+        "split",
+        "profile",
+        "plan",
+        "validate_plan",
+        "build_features",
+        "train_candidates",
+        "evaluate",
+        "reflect",
+        "apply_changes",
+        "ensemble",
+        "finalize",
+        "explain",
+        "report",
+        "export",
+        "recover"
+      ],
+      "title": "Stage",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A sanitized stage error (`stage_error/1.0`, PRD §24.10).",
+  "properties": {
+    "error_class": {
+      "maxLength": 100,
+      "title": "Error Class",
+      "type": "string"
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "message": {
+      "maxLength": 500,
+      "title": "Message",
+      "type": "string"
+    },
+    "recoverable": {
+      "title": "Recoverable",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": "stage_error/1.0",
+      "default": "stage_error/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "stage": {
+      "$ref": "#/$defs/Stage"
+    }
+  },
+  "required": [
+    "stage",
+    "error_class",
+    "message",
+    "recoverable"
+  ],
+  "title": "StageError",
+  "type": "object",
+  "x-schema-version": "stage_error/1.0"
+}

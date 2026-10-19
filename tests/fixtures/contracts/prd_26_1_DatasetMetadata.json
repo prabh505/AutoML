@@ -1,0 +1,60 @@
+{
+  "schema_version": "dataset/1.0",
+  "run_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+  "source": {
+    "display_name": "telco_churn.csv",
+    "format": "csv",
+    "size_bytes": 977501,
+    "encoding": "utf-8",
+    "delimiter": ",",
+    "malformed_lines_skipped": 0
+  },
+  "n_rows_raw": 7043,
+  "n_rows_valid": 7043,
+  "n_columns": 21,
+  "row_removals": [
+    {
+      "reason": "target_missing",
+      "count": 0
+    }
+  ],
+  "columns": [
+    {
+      "original": "TotalCharges",
+      "name": "totalcharges",
+      "semantic_type": "numeric",
+      "role": "feature",
+      "dtype": "float32",
+      "missing_rate": 0.0016,
+      "coerced_to_missing": 11,
+      "exclusion_reason": null
+    },
+    {
+      "original": "customerID",
+      "name": "customerid",
+      "semantic_type": "identifier",
+      "role": "excluded",
+      "exclusion_reason": "identifier_unique_ratio_1.0"
+    },
+    {
+      "original": "Churn",
+      "name": "churn",
+      "semantic_type": "categorical",
+      "role": "target",
+      "dtype": "category",
+      "missing_rate": 0.0
+    }
+  ],
+  "target": {
+    "name": "churn",
+    "task": "binary",
+    "positive_label": "Yes",
+    "class_counts": {
+      "No": 5174,
+      "Yes": 1869
+    }
+  },
+  "warnings": [
+    "W-COERCED:totalcharges:11"
+  ]
+}

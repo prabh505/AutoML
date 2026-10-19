@@ -1,0 +1,19 @@
+{
+  "schema_version": "run_config/1.0",
+  "run_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+  "target": "churn",
+  "task": "binary",
+  "positive_label": "Yes",
+  "primary_metric": "roc_auc",
+  "time_budget_s": 960,
+  "seed_root": 42,
+  "llm_mode": "providers",
+  "provider_order": [
+    "groq",
+    "gemini"
+  ],
+  "consented_providers": [
+    "groq"
+  ],
+  "execution_profile": "hosted"
+}

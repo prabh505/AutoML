@@ -1,0 +1,12 @@
+{
+  "schema_version": "llm_response/1.0",
+  "provider": "groq",
+  "model_id": "example-model",
+  "content": "{}",
+  "parsed": {},
+  "input_tokens": 3100,
+  "output_tokens": 420,
+  "latency_s": 2.9,
+  "cached": false,
+  "attempts": 1
+}

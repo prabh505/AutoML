@@ -1,0 +1,159 @@
+{
+  "$defs": {
+    "AcceptanceDecision": {
+      "additionalProperties": false,
+      "description": "Paired-fold acceptance outcome (`acceptance/1.0`, PRD §19.5, §20.4).",
+      "properties": {
+        "accepted": {
+          "title": "Accepted",
+          "type": "boolean"
+        },
+        "child_entry_id": {
+          "title": "Child Entry Id",
+          "type": "string"
+        },
+        "fold_deltas": {
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1,
+          "title": "Fold Deltas",
+          "type": "array"
+        },
+        "folds_better": {
+          "minimum": 0,
+          "title": "Folds Better",
+          "type": "integer"
+        },
+        "folds_required": {
+          "minimum": 0,
+          "title": "Folds Required",
+          "type": "integer"
+        },
+        "mean_gain": {
+          "title": "Mean Gain",
+          "type": "number"
+        },
+        "parent_entry_id": {
+          "title": "Parent Entry Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 300,
+          "title": "Reason",
+          "type": "string"
+        },
+        "rel_gain": {
+          "title": "Rel Gain",
+          "type": "number"
+        },
+        "schema_version": {
+          "const": "acceptance/1.0",
+          "default": "acceptance/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "parent_entry_id",
+        "child_entry_id",
+        "fold_deltas",
+        "mean_gain",
+        "rel_gain",
+        "folds_better",
+        "folds_required",
+        "accepted",
+        "reason"
+      ],
+      "title": "AcceptanceDecision",
+      "type": "object"
+    },
+    "EnsembleMember": {
+      "additionalProperties": false,
+      "description": "One ensemble member and its weight (PRD §20.3).",
+      "properties": {
+        "entry_id": {
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "weight": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Weight",
+          "type": "number"
+        }
+      },
+      "required": [
+        "entry_id",
+        "weight"
+      ],
+      "title": "EnsembleMember",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Ensemble search outcome (`ensemble/1.0`, PRD §20).",
+  "properties": {
+    "decision": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AcceptanceDecision"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "fold_scores": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Fold Scores",
+      "type": "array"
+    },
+    "kept": {
+      "title": "Kept",
+      "type": "boolean"
+    },
+    "members": {
+      "items": {
+        "$ref": "#/$defs/EnsembleMember"
+      },
+      "maxItems": 5,
+      "title": "Members",
+      "type": "array"
+    },
+    "predicted_inference_ratio": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Predicted Inference Ratio"
+    },
+    "reason": {
+      "maxLength": 300,
+      "title": "Reason",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "ensemble/1.0",
+      "default": "ensemble/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kept",
+    "reason"
+  ],
+  "title": "EnsembleResult",
+  "type": "object",
+  "x-schema-version": "ensemble/1.0"
+}

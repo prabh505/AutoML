@@ -1,0 +1,715 @@
+{
+  "$defs": {
+    "Association": {
+      "additionalProperties": false,
+      "description": "Feature–target association score (PRD §9.2).",
+      "properties": {
+        "kind": {
+          "enum": [
+            "auc",
+            "mi",
+            "spearman",
+            "r2"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "Association",
+      "type": "object"
+    },
+    "ColumnProfile": {
+      "additionalProperties": false,
+      "description": "Full statistics for one DEV column (PRD §9.2). Never sent to the LLM.",
+      "properties": {
+        "association": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Association"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "distinct": {
+          "minimum": 0,
+          "title": "Distinct",
+          "type": "integer"
+        },
+        "entropy_bits": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entropy Bits"
+        },
+        "kurtosis": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kurtosis"
+        },
+        "leakage_score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Leakage Score"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        },
+        "max_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Date"
+        },
+        "mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "min_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Date"
+        },
+        "missing_rate": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Missing Rate",
+          "type": "number"
+        },
+        "monotonic_with_row_order": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Monotonic With Row Order"
+        },
+        "name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "negative_rate": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Negative Rate"
+        },
+        "outlier_rate_iqr": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outlier Rate Iqr"
+        },
+        "outlier_rate_p1_p99": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outlier Rate P1 P99"
+        },
+        "p1": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P1"
+        },
+        "p25": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P25"
+        },
+        "p5": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P5"
+        },
+        "p50": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P50"
+        },
+        "p75": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P75"
+        },
+        "p95": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P95"
+        },
+        "p99": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P99"
+        },
+        "possibly_categorical": {
+          "default": false,
+          "title": "Possibly Categorical",
+          "type": "boolean"
+        },
+        "rare_share": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rare Share"
+        },
+        "skew": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skew"
+        },
+        "span_days": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Days"
+        },
+        "std": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Std"
+        },
+        "top_categories": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 10,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top Categories"
+        },
+        "top_shares": {
+          "anyOf": [
+            {
+              "items": {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "maxItems": 10,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top Shares"
+        },
+        "type": {
+          "$ref": "#/$defs/SemanticType"
+        },
+        "zero_rate": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Zero Rate"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "missing_rate",
+        "distinct"
+      ],
+      "title": "ColumnProfile",
+      "type": "object"
+    },
+    "CorrelatedPair": {
+      "additionalProperties": false,
+      "description": "A numeric feature pair with |ρ| ≥ 0.95 (PRD §9.2).",
+      "properties": {
+        "a": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "A",
+          "type": "string"
+        },
+        "b": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "B",
+          "type": "string"
+        },
+        "rho": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "Rho",
+          "type": "number"
+        }
+      },
+      "required": [
+        "a",
+        "b",
+        "rho"
+      ],
+      "title": "CorrelatedPair",
+      "type": "object"
+    },
+    "LeakageFinding": {
+      "additionalProperties": false,
+      "description": "Univariate leakage-scan result (PRD §11.7, A-002).",
+      "properties": {
+        "column": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Column",
+          "type": "string"
+        },
+        "level": {
+          "enum": [
+            "strong",
+            "near_deterministic"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "metric": {
+          "enum": [
+            "auc",
+            "r2"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "score": {
+          "title": "Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "column",
+        "score",
+        "metric",
+        "level"
+      ],
+      "title": "LeakageFinding",
+      "type": "object"
+    },
+    "SemanticType": {
+      "description": "Column semantic types (FR-ING-04, §8.5).",
+      "enum": [
+        "numeric",
+        "categorical",
+        "boolean",
+        "datetime",
+        "text",
+        "identifier",
+        "constant"
+      ],
+      "title": "SemanticType",
+      "type": "string"
+    },
+    "TargetProfile": {
+      "additionalProperties": false,
+      "description": "Target statistics on DEV (PRD §9.2).",
+      "properties": {
+        "class_counts": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Class Counts"
+        },
+        "imbalance_ratio": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Imbalance Ratio"
+        },
+        "mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "positive_share": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Positive Share"
+        },
+        "skew": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skew"
+        },
+        "std": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Std"
+        }
+      },
+      "title": "TargetProfile",
+      "type": "object"
+    },
+    "Task": {
+      "description": "Supported prediction tasks (PRD §2.2, §10.1).",
+      "enum": [
+        "binary",
+        "multiclass",
+        "regression"
+      ],
+      "title": "Task",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Full DEV profile (`profile/1.0`, PRD §9.2). Local display only.",
+  "properties": {
+    "columns": {
+      "items": {
+        "$ref": "#/$defs/ColumnProfile"
+      },
+      "title": "Columns",
+      "type": "array"
+    },
+    "conflicting_duplicate_rows": {
+      "minimum": 0,
+      "title": "Conflicting Duplicate Rows",
+      "type": "integer"
+    },
+    "correlated_pairs": {
+      "items": {
+        "$ref": "#/$defs/CorrelatedPair"
+      },
+      "title": "Correlated Pairs",
+      "type": "array"
+    },
+    "duplicate_rows": {
+      "minimum": 0,
+      "title": "Duplicate Rows",
+      "type": "integer"
+    },
+    "group_candidates": {
+      "items": {
+        "maxLength": 80,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Group Candidates",
+      "type": "array"
+    },
+    "leakage": {
+      "items": {
+        "$ref": "#/$defs/LeakageFinding"
+      },
+      "title": "Leakage",
+      "type": "array"
+    },
+    "memory_mb": {
+      "minimum": 0.0,
+      "title": "Memory Mb",
+      "type": "number"
+    },
+    "n_features": {
+      "minimum": 0,
+      "title": "N Features",
+      "type": "integer"
+    },
+    "n_rows_dev": {
+      "minimum": 0,
+      "title": "N Rows Dev",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "profile/1.0",
+      "default": "profile/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "target": {
+      "$ref": "#/$defs/TargetProfile"
+    },
+    "task": {
+      "$ref": "#/$defs/Task"
+    },
+    "temporal_columns": {
+      "items": {
+        "maxLength": 80,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Temporal Columns",
+      "type": "array"
+    },
+    "truncated_stats": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Truncated Stats",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "task",
+    "n_rows_dev",
+    "n_features",
+    "memory_mb",
+    "duplicate_rows",
+    "conflicting_duplicate_rows",
+    "columns",
+    "target"
+  ],
+  "title": "ProfileSummary",
+  "type": "object",
+  "x-schema-version": "profile/1.0"
+}

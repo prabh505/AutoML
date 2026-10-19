@@ -1,0 +1,40 @@
+{
+  "schema_version": "ensemble/1.0",
+  "kept": true,
+  "reason": "beats best single model in 4/5 folds",
+  "members": [
+    {
+      "entry_id": "0-lightgbm-3c9e1a20",
+      "weight": 0.6
+    },
+    {
+      "entry_id": "0-linear-77ab0c11",
+      "weight": 0.4
+    }
+  ],
+  "fold_scores": [
+    0.848,
+    0.853,
+    0.841,
+    0.858,
+    0.846
+  ],
+  "decision": {
+    "schema_version": "acceptance/1.0",
+    "parent_entry_id": "0-lightgbm-3c9e1a20",
+    "child_entry_id": "0-ensemble-0a1b2c3d",
+    "fold_deltas": [
+      0.002,
+      0.002,
+      0.002,
+      0.001,
+      0.002
+    ],
+    "mean_gain": 0.0018,
+    "rel_gain": 0.0021,
+    "folds_better": 5,
+    "folds_required": 3,
+    "accepted": true,
+    "reason": "accepted"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "reflection/1.0",
+  "changes": [
+    {
+      "type": "add_features",
+      "features": [
+        {
+          "id": "r01",
+          "name": "charges_per_service",
+          "op": "ratio",
+          "inputs": [
+            "monthlycharges",
+            "n_services"
+          ],
+          "params": {
+            "eps": 1e-06
+          },
+          "rationale": "Price per service."
+        }
+      ]
+    },
+    {
+      "type": "toggle_class_weight",
+      "model": "linear",
+      "value": "none"
+    }
+  ],
+  "expected_effect": "Small AUC gain from price-sensitivity features.",
+  "rationale": "Top features are tenure and contract; pricing interactions untested."
+}

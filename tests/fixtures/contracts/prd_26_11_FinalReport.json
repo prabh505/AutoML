@@ -1,0 +1,43 @@
+{
+  "schema_version": "report/1.0",
+  "run_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+  "status": "completed",
+  "sections": {
+    "summary": {
+      "task": "binary",
+      "target": "churn",
+      "final_model": "lightgbm",
+      "primary_metric": "roc_auc",
+      "cv_mean": 0.8474,
+      "holdout": 0.843
+    },
+    "data_decisions": [],
+    "warnings": [],
+    "plan": {
+      "source": "llm",
+      "status": "repaired"
+    },
+    "leaderboard_ref": "metadata/experiment.json",
+    "selection": {
+      "winner": "0-lightgbm-3c9e1a20"
+    },
+    "holdout": {
+      "present": true,
+      "roc_auc": 0.843
+    },
+    "explanations": {
+      "method": "shap_tree",
+      "top_features": [
+        "contract",
+        "tenure"
+      ]
+    },
+    "narrative": {
+      "source": "llm",
+      "fact_check": "passed",
+      "text": "The selected model is LightGBM [F1]."
+    },
+    "limitations": []
+  },
+  "facts_ref": "metadata/facts.json"
+}

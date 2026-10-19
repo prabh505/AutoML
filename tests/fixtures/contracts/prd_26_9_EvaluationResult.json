@@ -1,0 +1,98 @@
+{
+  "schema_version": "evaluation/1.0",
+  "entries": [
+    {
+      "schema_version": "leaderboard_entry/1.0",
+      "entry_id": "0-lightgbm-3c9e1a20",
+      "experiment_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+      "iteration": 0,
+      "model": "lightgbm",
+      "feature_set": "baseline+llm",
+      "params": {},
+      "metric": {
+        "name": "roc_auc",
+        "direction": "maximize"
+      },
+      "fold_scores": [
+        0.846,
+        0.851,
+        0.839,
+        0.857,
+        0.844
+      ],
+      "mean": 0.8474,
+      "std": 0.006877499545619766,
+      "sem": 0.0030757112998459424,
+      "secondary": {
+        "average_precision": 0.66
+      },
+      "fit_seconds": 1.9,
+      "predict_seconds": 0.05,
+      "model_size_bytes": 1840221,
+      "n_features_out": 31,
+      "status": "ok",
+      "comparable": true,
+      "warnings": [],
+      "split_id": "a91f000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "schema_version": "leaderboard_entry/1.0",
+      "entry_id": "0-linear-77ab0c11",
+      "experiment_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+      "iteration": 0,
+      "model": "linear",
+      "feature_set": "baseline+llm",
+      "params": {},
+      "metric": {
+        "name": "roc_auc",
+        "direction": "maximize"
+      },
+      "fold_scores": [
+        0.842,
+        0.848,
+        0.836,
+        0.851,
+        0.838
+      ],
+      "mean": 0.843,
+      "std": 0.006403124237432854,
+      "sem": 0.002863564212655273,
+      "secondary": {
+        "average_precision": 0.66
+      },
+      "fit_seconds": 1.9,
+      "predict_seconds": 0.05,
+      "model_size_bytes": 1840221,
+      "n_features_out": 31,
+      "status": "ok",
+      "comparable": true,
+      "warnings": [],
+      "split_id": "a91f000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "selection": {
+    "winner": "0-lightgbm-3c9e1a20",
+    "rule": "max_mean_with_simplicity_tiebreak",
+    "near_ties": [
+      "0-linear-77ab0c11"
+    ],
+    "runner_up_paired": {
+      "mean_diff": 0.004,
+      "folds_won": 4
+    }
+  },
+  "holdout": {
+    "present": true,
+    "final": {
+      "roc_auc": 0.843,
+      "ci95": [
+        0.82,
+        0.866
+      ]
+    },
+    "baseline": {
+      "roc_auc": 0.836
+    },
+    "accessed_at": "2026-10-19T10:22:31Z"
+  }
+}

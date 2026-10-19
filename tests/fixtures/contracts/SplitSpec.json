@@ -1,0 +1,55 @@
+{
+  "schema_version": "split_spec/1.0",
+  "split_id": "a91f000000000000000000000000000000000000000000000000000000000000",
+  "strategy": "stratified_kfold",
+  "k": 2,
+  "n_repeats": 1,
+  "seed": 42,
+  "n_valid": 20,
+  "holdout_present": true,
+  "holdout_fraction": 0.2,
+  "holdout_indices": [
+    0,
+    5,
+    10,
+    15
+  ],
+  "dev_indices": [
+    1,
+    2,
+    3,
+    4,
+    6,
+    7,
+    8,
+    9,
+    11,
+    12,
+    13,
+    14,
+    16,
+    17,
+    18,
+    19
+  ],
+  "fold_assignment": [
+    [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+    ]
+  ]
+}

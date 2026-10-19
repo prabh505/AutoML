@@ -75,6 +75,7 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "S", "PT", "C4", "PL
 ignore = [
     "PLR0913",  # pipeline factories take many explicit arguments by design
     "PLR2004",  # PRD thresholds are written inline with § references
+    "RUF001", "RUF002", "RUF003",  # PRD notation (–, ≥, →, ×) in strings, docstrings, comments
 ]
 
 [tool.ruff.lint.per-file-ignores]

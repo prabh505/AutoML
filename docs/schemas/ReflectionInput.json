@@ -1,0 +1,1458 @@
+{
+  "$defs": {
+    "BinQuantileParams": {
+      "additionalProperties": false,
+      "description": "`bin_quantile`: number of bins 2–20 (PRD §14.3).",
+      "properties": {
+        "n_bins": {
+          "maximum": 20,
+          "minimum": 2,
+          "title": "N Bins",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "n_bins"
+      ],
+      "title": "BinQuantileParams",
+      "type": "object"
+    },
+    "BinQuantileSpec": {
+      "additionalProperties": false,
+      "description": "`bin_quantile`: 1 numeric input → categorical; stateful.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "bin_quantile",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/BinQuantileParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs",
+        "params"
+      ],
+      "title": "BinQuantileSpec",
+      "type": "object"
+    },
+    "BinaryArithmeticSpec": {
+      "additionalProperties": false,
+      "description": "`add`, `subtract`, `multiply`: 2 numeric inputs.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "add",
+            "subtract",
+            "multiply"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "BinaryArithmeticSpec",
+      "type": "object"
+    },
+    "ClassWeight": {
+      "description": "Class-weight setting for classification models (PRD §12.3, §16.2).",
+      "enum": [
+        "none",
+        "balanced"
+      ],
+      "title": "ClassWeight",
+      "type": "string"
+    },
+    "ClipParams": {
+      "additionalProperties": false,
+      "description": "`clip`: quantile bounds learned per fold (PRD §14.3).",
+      "properties": {
+        "lower_q": {
+          "maximum": 0.2,
+          "minimum": 0.0,
+          "title": "Lower Q",
+          "type": "number"
+        },
+        "upper_q": {
+          "maximum": 1.0,
+          "minimum": 0.8,
+          "title": "Upper Q",
+          "type": "number"
+        }
+      },
+      "required": [
+        "lower_q",
+        "upper_q"
+      ],
+      "title": "ClipParams",
+      "type": "object"
+    },
+    "ClipSpec": {
+      "additionalProperties": false,
+      "description": "`clip`: 1 numeric input; stateful.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "clip",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/ClipParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs",
+        "params"
+      ],
+      "title": "ClipSpec",
+      "type": "object"
+    },
+    "ColumnDecision": {
+      "additionalProperties": false,
+      "description": "Planner decision for one listed column (PRD §12.3).",
+      "properties": {
+        "action": {
+          "enum": [
+            "keep",
+            "drop",
+            "treat_as_categorical",
+            "treat_as_numeric"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "column": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Column",
+          "type": "string"
+        },
+        "reason": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "column",
+        "action"
+      ],
+      "title": "ColumnDecision",
+      "type": "object"
+    },
+    "ConcatCategoriesSpec": {
+      "additionalProperties": false,
+      "description": "`concat_categories`: 2–3 categorical inputs.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "concat_categories",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "ConcatCategoriesSpec",
+      "type": "object"
+    },
+    "DateDiffSpec": {
+      "additionalProperties": false,
+      "description": "`date_diff_days`: 2 datetime inputs.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "date_diff_days",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "DateDiffSpec",
+      "type": "object"
+    },
+    "Direction": {
+      "description": "Metric optimization direction (PRD §10.4).",
+      "enum": [
+        "maximize",
+        "minimize"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "Encoding": {
+      "additionalProperties": false,
+      "description": "Encoding choices (PRD §12.3).",
+      "properties": {
+        "high_cardinality": {
+          "default": "frequency",
+          "enum": [
+            "frequency",
+            "target"
+          ],
+          "title": "High Cardinality",
+          "type": "string"
+        },
+        "low_cardinality": {
+          "default": "onehot",
+          "enum": [
+            "onehot",
+            "ordinal"
+          ],
+          "title": "Low Cardinality",
+          "type": "string"
+        }
+      },
+      "title": "Encoding",
+      "type": "object"
+    },
+    "EqualsParams": {
+      "additionalProperties": false,
+      "description": "`equals`: numeric value only; categorical labels are never sent to the LLM (§14.3).",
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "EqualsParams",
+      "type": "object"
+    },
+    "EqualsSpec": {
+      "additionalProperties": false,
+      "description": "`equals`: 1 numeric/boolean input compared with a numeric value → boolean.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "equals",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/EqualsParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs",
+        "params"
+      ],
+      "title": "EqualsSpec",
+      "type": "object"
+    },
+    "FeatureImportance": {
+      "additionalProperties": false,
+      "description": "Normalized importance of a **source** column (PRD §19.2; PI-16: no one-hot labels).",
+      "properties": {
+        "importance": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Importance",
+          "type": "number"
+        },
+        "name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "importance"
+      ],
+      "title": "FeatureImportance",
+      "type": "object"
+    },
+    "FeatureProvenance": {
+      "additionalProperties": false,
+      "description": "Provenance of one feature (`feature_provenance/1.0`, PRD §14.6).",
+      "properties": {
+        "cv_contribution": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cv Contribution"
+        },
+        "failure_reason": {
+          "anyOf": [
+            {
+              "maxLength": 300,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Failure Reason"
+        },
+        "id": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "iteration": {
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Iteration",
+          "type": "integer"
+        },
+        "name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_provenance/1.0",
+          "default": "feature_provenance/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "llm_plan",
+            "llm_reflection",
+            "baseline"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "spec": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "add": "#/$defs/BinaryArithmeticSpec",
+                  "bin_quantile": "#/$defs/BinQuantileSpec",
+                  "clip": "#/$defs/ClipSpec",
+                  "concat_categories": "#/$defs/ConcatCategoriesSpec",
+                  "count_missing": "#/$defs/RowAggregateSpec",
+                  "date_diff_days": "#/$defs/DateDiffSpec",
+                  "equals": "#/$defs/EqualsSpec",
+                  "group_count": "#/$defs/GroupCountSpec",
+                  "group_deviation": "#/$defs/GroupStatSpec",
+                  "group_mean": "#/$defs/GroupStatSpec",
+                  "group_std": "#/$defs/GroupStatSpec",
+                  "is_missing": "#/$defs/IsMissingSpec",
+                  "log1p": "#/$defs/UnaryNumericSpec",
+                  "multiply": "#/$defs/BinaryArithmeticSpec",
+                  "ratio": "#/$defs/RatioSpec",
+                  "row_mean": "#/$defs/RowAggregateSpec",
+                  "row_sum": "#/$defs/RowAggregateSpec",
+                  "sqrt": "#/$defs/UnaryNumericSpec",
+                  "square": "#/$defs/UnaryNumericSpec",
+                  "subtract": "#/$defs/BinaryArithmeticSpec"
+                },
+                "propertyName": "op"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/BinaryArithmeticSpec"
+                },
+                {
+                  "$ref": "#/$defs/RatioSpec"
+                },
+                {
+                  "$ref": "#/$defs/UnaryNumericSpec"
+                },
+                {
+                  "$ref": "#/$defs/ClipSpec"
+                },
+                {
+                  "$ref": "#/$defs/BinQuantileSpec"
+                },
+                {
+                  "$ref": "#/$defs/IsMissingSpec"
+                },
+                {
+                  "$ref": "#/$defs/EqualsSpec"
+                },
+                {
+                  "$ref": "#/$defs/RowAggregateSpec"
+                },
+                {
+                  "$ref": "#/$defs/ConcatCategoriesSpec"
+                },
+                {
+                  "$ref": "#/$defs/GroupStatSpec"
+                },
+                {
+                  "$ref": "#/$defs/GroupCountSpec"
+                },
+                {
+                  "$ref": "#/$defs/DateDiffSpec"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spec"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "failed",
+            "degenerate",
+            "rejected_static"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "source",
+        "iteration",
+        "status"
+      ],
+      "title": "FeatureProvenance",
+      "type": "object"
+    },
+    "GroupCountSpec": {
+      "additionalProperties": false,
+      "description": "`group_count`: [categorical key]; stateful.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "group_count",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "GroupCountSpec",
+      "type": "object"
+    },
+    "GroupStatSpec": {
+      "additionalProperties": false,
+      "description": "`group_mean`, `group_std`, `group_deviation`: [categorical key, numeric value]; stateful.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "group_mean",
+            "group_std",
+            "group_deviation"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "GroupStatSpec",
+      "type": "object"
+    },
+    "Imputation": {
+      "additionalProperties": false,
+      "description": "Imputation choices (PRD §12.3).",
+      "properties": {
+        "add_missing_indicators": {
+          "default": true,
+          "title": "Add Missing Indicators",
+          "type": "boolean"
+        },
+        "categorical": {
+          "default": "most_frequent",
+          "enum": [
+            "most_frequent",
+            "constant_missing"
+          ],
+          "title": "Categorical",
+          "type": "string"
+        },
+        "numeric": {
+          "default": "median",
+          "enum": [
+            "median",
+            "mean",
+            "constant_zero"
+          ],
+          "title": "Numeric",
+          "type": "string"
+        }
+      },
+      "title": "Imputation",
+      "type": "object"
+    },
+    "IsMissingSpec": {
+      "additionalProperties": false,
+      "description": "`is_missing`: 1 input of any type → boolean.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "is_missing",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "IsMissingSpec",
+      "type": "object"
+    },
+    "MetricName": {
+      "description": "Metric names (PRD §10.2).",
+      "enum": [
+        "roc_auc",
+        "average_precision",
+        "log_loss",
+        "brier",
+        "accuracy",
+        "f1",
+        "macro_f1",
+        "balanced_accuracy",
+        "ovr_macro_roc_auc",
+        "rmse",
+        "mae",
+        "rmsle",
+        "r2"
+      ],
+      "title": "MetricName",
+      "type": "string"
+    },
+    "MetricSpec": {
+      "additionalProperties": false,
+      "description": "A metric and its direction (`metric_spec/1.0`, PRD §10.2, §10.4).",
+      "properties": {
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "name": {
+          "$ref": "#/$defs/MetricName"
+        },
+        "schema_version": {
+          "const": "metric_spec/1.0",
+          "default": "metric_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "direction"
+      ],
+      "title": "MetricSpec",
+      "type": "object"
+    },
+    "ModelName": {
+      "description": "Model zoo entries (PRD §16.1).",
+      "enum": [
+        "linear",
+        "random_forest",
+        "lightgbm",
+        "xgboost",
+        "catboost",
+        "hist_gb"
+      ],
+      "title": "ModelName",
+      "type": "string"
+    },
+    "NoParams": {
+      "additionalProperties": false,
+      "description": "Parameters for ops that take none (any key is rejected).",
+      "properties": {},
+      "title": "NoParams",
+      "type": "object"
+    },
+    "PlannedModel": {
+      "additionalProperties": false,
+      "description": "One model in the plan (PRD §12.3).",
+      "properties": {
+        "class_weight": {
+          "$ref": "#/$defs/ClassWeight",
+          "default": "none"
+        },
+        "name": {
+          "$ref": "#/$defs/ModelName"
+        },
+        "priority": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "priority"
+      ],
+      "title": "PlannedModel",
+      "type": "object"
+    },
+    "PlannerOutput": {
+      "additionalProperties": false,
+      "description": "A modeling plan from the LLM or the rule-based planner (`plan/1.0`, PRD §12.3, §26.4).\n\nStructural bounds live here; dataset-dependent checks (columns, availability, DSL types,\ncost) are done by the plan validator (P11, §12.6).",
+      "properties": {
+        "column_decisions": {
+          "items": {
+            "$ref": "#/$defs/ColumnDecision"
+          },
+          "title": "Column Decisions",
+          "type": "array"
+        },
+        "cv_folds": {
+          "default": 5,
+          "enum": [
+            3,
+            5
+          ],
+          "title": "Cv Folds",
+          "type": "integer"
+        },
+        "encoding": {
+          "$ref": "#/$defs/Encoding"
+        },
+        "features": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "add": "#/$defs/BinaryArithmeticSpec",
+                "bin_quantile": "#/$defs/BinQuantileSpec",
+                "clip": "#/$defs/ClipSpec",
+                "concat_categories": "#/$defs/ConcatCategoriesSpec",
+                "count_missing": "#/$defs/RowAggregateSpec",
+                "date_diff_days": "#/$defs/DateDiffSpec",
+                "equals": "#/$defs/EqualsSpec",
+                "group_count": "#/$defs/GroupCountSpec",
+                "group_deviation": "#/$defs/GroupStatSpec",
+                "group_mean": "#/$defs/GroupStatSpec",
+                "group_std": "#/$defs/GroupStatSpec",
+                "is_missing": "#/$defs/IsMissingSpec",
+                "log1p": "#/$defs/UnaryNumericSpec",
+                "multiply": "#/$defs/BinaryArithmeticSpec",
+                "ratio": "#/$defs/RatioSpec",
+                "row_mean": "#/$defs/RowAggregateSpec",
+                "row_sum": "#/$defs/RowAggregateSpec",
+                "sqrt": "#/$defs/UnaryNumericSpec",
+                "square": "#/$defs/UnaryNumericSpec",
+                "subtract": "#/$defs/BinaryArithmeticSpec"
+              },
+              "propertyName": "op"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/BinaryArithmeticSpec"
+              },
+              {
+                "$ref": "#/$defs/RatioSpec"
+              },
+              {
+                "$ref": "#/$defs/UnaryNumericSpec"
+              },
+              {
+                "$ref": "#/$defs/ClipSpec"
+              },
+              {
+                "$ref": "#/$defs/BinQuantileSpec"
+              },
+              {
+                "$ref": "#/$defs/IsMissingSpec"
+              },
+              {
+                "$ref": "#/$defs/EqualsSpec"
+              },
+              {
+                "$ref": "#/$defs/RowAggregateSpec"
+              },
+              {
+                "$ref": "#/$defs/ConcatCategoriesSpec"
+              },
+              {
+                "$ref": "#/$defs/GroupStatSpec"
+              },
+              {
+                "$ref": "#/$defs/GroupCountSpec"
+              },
+              {
+                "$ref": "#/$defs/DateDiffSpec"
+              }
+            ]
+          },
+          "maxItems": 12,
+          "title": "Features",
+          "type": "array"
+        },
+        "imputation": {
+          "$ref": "#/$defs/Imputation"
+        },
+        "metric_recommendation": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metric Recommendation"
+        },
+        "models": {
+          "items": {
+            "$ref": "#/$defs/PlannedModel"
+          },
+          "maxItems": 5,
+          "minItems": 1,
+          "title": "Models",
+          "type": "array"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 800,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "plan/1.0",
+          "default": "plan/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "target_transform": {
+          "$ref": "#/$defs/TargetTransform",
+          "default": "none"
+        },
+        "tuning_allocation": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/ModelName"
+          },
+          "title": "Tuning Allocation",
+          "type": "object"
+        }
+      },
+      "required": [
+        "models"
+      ],
+      "title": "PlannerOutput",
+      "type": "object"
+    },
+    "RatioParams": {
+      "additionalProperties": false,
+      "description": "`ratio`: denominator threshold (PRD §14.3: eps 1e-9 … 1).",
+      "properties": {
+        "eps": {
+          "default": 1e-06,
+          "maximum": 1.0,
+          "minimum": 1e-09,
+          "title": "Eps",
+          "type": "number"
+        }
+      },
+      "title": "RatioParams",
+      "type": "object"
+    },
+    "RatioSpec": {
+      "additionalProperties": false,
+      "description": "`ratio`: 2 numeric inputs; |denominator| < eps → NaN.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "const": "ratio",
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/RatioParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "RatioSpec",
+      "type": "object"
+    },
+    "ReflectionLeaderboardRow": {
+      "additionalProperties": false,
+      "description": "A leaderboard row as shown to the reflector (PRD §19.2).",
+      "properties": {
+        "entry_id": {
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "feature_set": {
+          "enum": [
+            "baseline",
+            "baseline+llm",
+            "ensemble"
+          ],
+          "title": "Feature Set",
+          "type": "string"
+        },
+        "fit_seconds": {
+          "minimum": 0.0,
+          "title": "Fit Seconds",
+          "type": "number"
+        },
+        "fold_scores": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Fold Scores",
+          "type": "array"
+        },
+        "mean": {
+          "title": "Mean",
+          "type": "number"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelName"
+            },
+            {
+              "const": "ensemble",
+              "type": "string"
+            }
+          ],
+          "title": "Model"
+        },
+        "std": {
+          "minimum": 0.0,
+          "title": "Std",
+          "type": "number"
+        }
+      },
+      "required": [
+        "entry_id",
+        "model",
+        "feature_set",
+        "mean",
+        "std",
+        "fold_scores",
+        "fit_seconds"
+      ],
+      "title": "ReflectionLeaderboardRow",
+      "type": "object"
+    },
+    "RemainingBudget": {
+      "additionalProperties": false,
+      "description": "What the reflector may still spend (PRD §19.2, §19.4).",
+      "properties": {
+        "features_allowed": {
+          "maximum": 6,
+          "minimum": 0,
+          "title": "Features Allowed",
+          "type": "integer"
+        },
+        "seconds": {
+          "minimum": 0.0,
+          "title": "Seconds",
+          "type": "number"
+        },
+        "trials": {
+          "minimum": 0,
+          "title": "Trials",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seconds",
+        "trials",
+        "features_allowed"
+      ],
+      "title": "RemainingBudget",
+      "type": "object"
+    },
+    "RowAggregateSpec": {
+      "additionalProperties": false,
+      "description": "`count_missing` (any), `row_sum`, `row_mean` (numeric): 2–20 inputs.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 2,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "count_missing",
+            "row_sum",
+            "row_mean"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "RowAggregateSpec",
+      "type": "object"
+    },
+    "TargetTransform": {
+      "description": "Regression target transform (PRD §12.3, §10.4).",
+      "enum": [
+        "none",
+        "log1p"
+      ],
+      "title": "TargetTransform",
+      "type": "string"
+    },
+    "Task": {
+      "description": "Supported prediction tasks (PRD §2.2, §10.1).",
+      "enum": [
+        "binary",
+        "multiclass",
+        "regression"
+      ],
+      "title": "Task",
+      "type": "string"
+    },
+    "UnaryNumericSpec": {
+      "additionalProperties": false,
+      "description": "`log1p`, `sqrt`, `square`: 1 numeric input (negatives → NaN for log1p/sqrt, A-007).",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,15}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,59}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "log1p",
+            "sqrt",
+            "square"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/$defs/NoParams"
+        },
+        "rationale": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "feature_spec/1.0",
+          "default": "feature_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "op",
+        "inputs"
+      ],
+      "title": "UnaryNumericSpec",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Evidence given to the reflector (`reflection_input/1.0`, PRD §19.2).\n\nContains no raw rows, no predictions, and no holdout information.",
+  "properties": {
+    "current_plan": {
+      "$ref": "#/$defs/PlannerOutput"
+    },
+    "leaderboard_top": {
+      "items": {
+        "$ref": "#/$defs/ReflectionLeaderboardRow"
+      },
+      "maxItems": 5,
+      "title": "Leaderboard Top",
+      "type": "array"
+    },
+    "llm_features": {
+      "items": {
+        "$ref": "#/$defs/FeatureProvenance"
+      },
+      "title": "Llm Features",
+      "type": "array"
+    },
+    "primary_metric": {
+      "$ref": "#/$defs/MetricSpec"
+    },
+    "remaining_budget": {
+      "$ref": "#/$defs/RemainingBudget"
+    },
+    "schema_version": {
+      "const": "reflection_input/1.0",
+      "default": "reflection_input/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "task": {
+      "$ref": "#/$defs/Task"
+    },
+    "top_features": {
+      "items": {
+        "$ref": "#/$defs/FeatureImportance"
+      },
+      "maxItems": 15,
+      "title": "Top Features",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "task",
+    "primary_metric",
+    "leaderboard_top",
+    "current_plan",
+    "remaining_budget"
+  ],
+  "title": "ReflectionInput",
+  "type": "object",
+  "x-schema-version": "reflection_input/1.0"
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": "feasibility/1.0",
+  "status": "simplified",
+  "estimated_peak_mb": 540.0,
+  "limit_mb": 600.0,
+  "simplifications": [
+    "reduce_tuning_trials",
+    "within_fold_subsample"
+  ]
+}

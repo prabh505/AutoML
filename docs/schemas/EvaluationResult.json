@@ -1,0 +1,552 @@
+{
+  "$defs": {
+    "Direction": {
+      "description": "Metric optimization direction (PRD §10.4).",
+      "enum": [
+        "maximize",
+        "minimize"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "HoldoutResult": {
+      "additionalProperties": false,
+      "description": "One-time holdout scores (PRD §18.3, §26.9; L-7). `ci95` is [low, high] when present.",
+      "properties": {
+        "accessed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accessed At"
+        },
+        "baseline": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline"
+        },
+        "final": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Final"
+        },
+        "present": {
+          "title": "Present",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "present"
+      ],
+      "title": "HoldoutResult",
+      "type": "object"
+    },
+    "LeaderboardEntry": {
+      "additionalProperties": false,
+      "description": "One leaderboard row (`leaderboard_entry/1.0`, PRD §18.1).\n\n`mean`, `std` (ddof=1) and `sem` must equal the values recomputed from `fold_scores`\n(G-09 / T-EVL-01).",
+      "properties": {
+        "change_set_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Change Set Id"
+        },
+        "comparable": {
+          "title": "Comparable",
+          "type": "boolean"
+        },
+        "entry_id": {
+          "pattern": "^[0-2]-[a-z_]+-[0-9a-f]{8}$",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "experiment_id": {
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+          "title": "Experiment Id",
+          "type": "string"
+        },
+        "feature_set": {
+          "enum": [
+            "baseline",
+            "baseline+llm",
+            "ensemble"
+          ],
+          "title": "Feature Set",
+          "type": "string"
+        },
+        "fit_seconds": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Fit Seconds",
+          "type": "number"
+        },
+        "fold_scores": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Fold Scores",
+          "type": "array"
+        },
+        "iteration": {
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Iteration",
+          "type": "integer"
+        },
+        "mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean"
+        },
+        "metric": {
+          "$ref": "#/$defs/MetricSpec"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelName"
+            },
+            {
+              "const": "ensemble",
+              "type": "string"
+            }
+          ],
+          "title": "Model"
+        },
+        "model_size_bytes": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Model Size Bytes",
+          "type": "integer"
+        },
+        "n_features_out": {
+          "default": 0,
+          "minimum": 0,
+          "title": "N Features Out",
+          "type": "integer"
+        },
+        "params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Params",
+          "type": "object"
+        },
+        "parent_entry_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Entry Id"
+        },
+        "predict_seconds": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Predict Seconds",
+          "type": "number"
+        },
+        "schema_version": {
+          "const": "leaderboard_entry/1.0",
+          "default": "leaderboard_entry/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "secondary": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/MetricName"
+          },
+          "title": "Secondary",
+          "type": "object"
+        },
+        "sem": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sem"
+        },
+        "split_id": {
+          "minLength": 1,
+          "title": "Split Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "failed",
+            "skipped_resource",
+            "skipped_budget"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "std": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Std"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entry_id",
+        "experiment_id",
+        "iteration",
+        "model",
+        "feature_set",
+        "metric",
+        "status",
+        "comparable",
+        "split_id"
+      ],
+      "title": "LeaderboardEntry",
+      "type": "object"
+    },
+    "MetricName": {
+      "description": "Metric names (PRD §10.2).",
+      "enum": [
+        "roc_auc",
+        "average_precision",
+        "log_loss",
+        "brier",
+        "accuracy",
+        "f1",
+        "macro_f1",
+        "balanced_accuracy",
+        "ovr_macro_roc_auc",
+        "rmse",
+        "mae",
+        "rmsle",
+        "r2"
+      ],
+      "title": "MetricName",
+      "type": "string"
+    },
+    "MetricSpec": {
+      "additionalProperties": false,
+      "description": "A metric and its direction (`metric_spec/1.0`, PRD §10.2, §10.4).",
+      "properties": {
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "name": {
+          "$ref": "#/$defs/MetricName"
+        },
+        "schema_version": {
+          "const": "metric_spec/1.0",
+          "default": "metric_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "direction"
+      ],
+      "title": "MetricSpec",
+      "type": "object"
+    },
+    "ModelName": {
+      "description": "Model zoo entries (PRD §16.1).",
+      "enum": [
+        "linear",
+        "random_forest",
+        "lightgbm",
+        "xgboost",
+        "catboost",
+        "hist_gb"
+      ],
+      "title": "ModelName",
+      "type": "string"
+    },
+    "RunnerUpPaired": {
+      "additionalProperties": false,
+      "description": "Paired fold differences winner − runner-up, in selection-score units (PRD §18.3).",
+      "properties": {
+        "folds_won": {
+          "minimum": 0,
+          "title": "Folds Won",
+          "type": "integer"
+        },
+        "max_diff": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Diff"
+        },
+        "mean_diff": {
+          "title": "Mean Diff",
+          "type": "number"
+        },
+        "min_diff": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Diff"
+        },
+        "n_folds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N Folds"
+        },
+        "runner_up": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Runner Up"
+        }
+      },
+      "required": [
+        "mean_diff",
+        "folds_won"
+      ],
+      "title": "RunnerUpPaired",
+      "type": "object"
+    },
+    "SelectionRecord": {
+      "additionalProperties": false,
+      "description": "Model-selection outcome (`selection/1.0`, PRD §18.2).",
+      "properties": {
+        "near_ties": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Near Ties",
+          "type": "array"
+        },
+        "rule": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Rule",
+          "type": "string"
+        },
+        "runner_up_paired": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunnerUpPaired"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": "selection/1.0",
+          "default": "selection/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "tie_break": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tie Break"
+        },
+        "winner": {
+          "title": "Winner",
+          "type": "string"
+        }
+      },
+      "required": [
+        "winner",
+        "rule"
+      ],
+      "title": "SelectionRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Leaderboard, selection, and holdout (`evaluation/1.0`, PRD §26.9).",
+  "properties": {
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/LeaderboardEntry"
+      },
+      "title": "Entries",
+      "type": "array"
+    },
+    "holdout": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HoldoutResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "schema_version": {
+      "const": "evaluation/1.0",
+      "default": "evaluation/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selection": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SelectionRecord"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "entries"
+  ],
+  "title": "EvaluationResult",
+  "type": "object",
+  "x-schema-version": "evaluation/1.0"
+}

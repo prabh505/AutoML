@@ -1,0 +1,28 @@
+{
+  "schema_version": "candidate/1.0",
+  "candidate_id": "c-0-lightgbm-llm",
+  "iteration": 0,
+  "model": {
+    "name": "lightgbm",
+    "task": "binary",
+    "params": {},
+    "seed": 43,
+    "n_jobs": 2
+  },
+  "feature_set": "baseline+llm",
+  "features": [
+    {
+      "id": "f01",
+      "name": "avg_monthly_spend",
+      "op": "ratio",
+      "inputs": [
+        "totalcharges",
+        "tenure"
+      ],
+      "params": {
+        "eps": 1e-06
+      },
+      "rationale": "Spend per month of tenure."
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 UV ?= uv
 RUN := $(UV) run --frozen
 
-.PHONY: setup lint format format-check type contracts test test-all check schemas requirements requirements-check
+.PHONY: setup lint format format-check type contracts test test-all check schemas schemas-check requirements requirements-check
 
 setup:
 	$(UV) sync --all-extras --frozen
@@ -34,9 +34,13 @@ test-all:
 
 check: lint format-check type contracts test
 
-# Implemented in P02 (scripts/export_schemas.py).
 schemas:
 	$(RUN) python scripts/export_schemas.py
+
+# Fails if docs/schemas is stale, or (with SCHEMA_BASE=<git ref>) if a contract changed
+# without a schema_version bump.
+schemas-check:
+	$(RUN) python scripts/export_schemas.py --check $(if $(SCHEMA_BASE),--base $(SCHEMA_BASE))
 
 requirements:
 	scripts/export_requirements.sh

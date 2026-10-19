@@ -1,0 +1,11 @@
+{
+  "schema_version": "budget_ledger/1.0",
+  "time_budget_s": 960,
+  "elapsed_s": 12.5,
+  "stage_seconds": {
+    "ingest": 2.1,
+    "split": 0.3,
+    "profile": 10.1
+  },
+  "trials_max": 60
+}

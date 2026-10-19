@@ -1,0 +1,11 @@
+{
+  "schema_version": "parse_report/1.0",
+  "encoding": "utf-8",
+  "delimiter": ",",
+  "quote_char": "\"",
+  "decimal_comma_columns": [],
+  "rows_read": 7043,
+  "malformed_lines": 0,
+  "malformed_line_numbers": [],
+  "warnings": []
+}

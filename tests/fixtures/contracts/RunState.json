@@ -1,0 +1,277 @@
+{
+  "schema_version": "state/1.0",
+  "run_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+  "config": {
+    "schema_version": "run_config/1.0",
+    "run_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+    "target": "churn",
+    "task": "binary",
+    "positive_label": "Yes",
+    "primary_metric": "roc_auc",
+    "time_budget_s": 960,
+    "seed_root": 42,
+    "llm_mode": "providers",
+    "provider_order": [
+      "groq",
+      "gemini"
+    ],
+    "consented_providers": [
+      "groq"
+    ],
+    "execution_profile": "hosted"
+  },
+  "dataset_meta": {
+    "schema_version": "dataset/1.0",
+    "run_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+    "source": {
+      "display_name": "telco_churn.csv",
+      "format": "csv",
+      "size_bytes": 977501,
+      "encoding": "utf-8",
+      "delimiter": ",",
+      "malformed_lines_skipped": 0
+    },
+    "n_rows_raw": 7043,
+    "n_rows_valid": 7043,
+    "n_columns": 21,
+    "row_removals": [
+      {
+        "reason": "target_missing",
+        "count": 0
+      }
+    ],
+    "columns": [
+      {
+        "original": "TotalCharges",
+        "name": "totalcharges",
+        "semantic_type": "numeric",
+        "role": "feature",
+        "dtype": "float32",
+        "missing_rate": 0.0016,
+        "coerced_to_missing": 11,
+        "exclusion_reason": null
+      },
+      {
+        "original": "customerID",
+        "name": "customerid",
+        "semantic_type": "identifier",
+        "role": "excluded",
+        "exclusion_reason": "identifier_unique_ratio_1.0"
+      },
+      {
+        "original": "Churn",
+        "name": "churn",
+        "semantic_type": "categorical",
+        "role": "target",
+        "dtype": "category",
+        "missing_rate": 0.0
+      }
+    ],
+    "target": {
+      "name": "churn",
+      "task": "binary",
+      "positive_label": "Yes",
+      "class_counts": {
+        "No": 5174,
+        "Yes": 1869
+      }
+    },
+    "warnings": [
+      "W-COERCED:totalcharges:11"
+    ]
+  },
+  "split_spec_ref": "split_spec.json",
+  "profile_compact": {
+    "schema_version": "compact_profile/1.0",
+    "task": "binary",
+    "n_rows_dev": 5634,
+    "n_features": 19,
+    "target": {
+      "positive_share": 0.265,
+      "imbalance_ratio": 2.77
+    },
+    "columns": [
+      {
+        "name": "tenure",
+        "type": "numeric",
+        "level": "full",
+        "missing": 0.0,
+        "q": [
+          0,
+          2,
+          9,
+          29,
+          55,
+          72,
+          72
+        ],
+        "skew": 0.24,
+        "distinct": 73,
+        "assoc": {
+          "kind": "auc",
+          "value": 0.74
+        },
+        "flags": []
+      },
+      {
+        "name": "contract",
+        "type": "categorical",
+        "level": "full",
+        "missing": 0.0,
+        "distinct": 3,
+        "entropy_bits": 1.48,
+        "top_shares": [
+          0.55,
+          0.24,
+          0.21
+        ],
+        "assoc": {
+          "kind": "mi",
+          "value": 0.1
+        },
+        "flags": []
+      }
+    ],
+    "rest_summary": null,
+    "warnings": [
+      "W-IMBALANCE"
+    ],
+    "truncated": false
+  },
+  "plan": {
+    "schema_version": "plan/1.0",
+    "column_decisions": [
+      {
+        "column": "seniorcitizen",
+        "action": "treat_as_categorical",
+        "reason": "Binary flag stored as integer."
+      }
+    ],
+    "imputation": {
+      "numeric": "median",
+      "categorical": "most_frequent",
+      "add_missing_indicators": true
+    },
+    "encoding": {
+      "low_cardinality": "onehot",
+      "high_cardinality": "frequency"
+    },
+    "features": [
+      {
+        "id": "f01",
+        "name": "avg_monthly_spend",
+        "op": "ratio",
+        "inputs": [
+          "totalcharges",
+          "tenure"
+        ],
+        "params": {
+          "eps": 1e-06
+        },
+        "rationale": "Spend per month of tenure."
+      }
+    ],
+    "models": [
+      {
+        "name": "lightgbm",
+        "priority": 1,
+        "class_weight": "balanced"
+      },
+      {
+        "name": "linear",
+        "priority": 2,
+        "class_weight": "balanced"
+      }
+    ],
+    "tuning_allocation": {
+      "lightgbm": 0.75,
+      "linear": 0.25
+    },
+    "target_transform": "none",
+    "cv_folds": 5,
+    "metric_recommendation": "roc_auc",
+    "rationale": "Contract type and tenure dominate churn; spend per month adds signal."
+  },
+  "plan_source": "llm",
+  "leaderboard": [
+    {
+      "schema_version": "leaderboard_entry/1.0",
+      "entry_id": "0-lightgbm-3c9e1a20",
+      "experiment_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+      "iteration": 0,
+      "model": "lightgbm",
+      "feature_set": "baseline+llm",
+      "params": {},
+      "metric": {
+        "name": "roc_auc",
+        "direction": "maximize"
+      },
+      "fold_scores": [
+        0.846,
+        0.851,
+        0.839,
+        0.857,
+        0.844
+      ],
+      "mean": 0.8474,
+      "std": 0.006877499545619766,
+      "sem": 0.0030757112998459424,
+      "secondary": {
+        "average_precision": 0.66
+      },
+      "fit_seconds": 1.9,
+      "predict_seconds": 0.05,
+      "model_size_bytes": 1840221,
+      "n_features_out": 31,
+      "status": "ok",
+      "comparable": true,
+      "warnings": [],
+      "split_id": "a91f000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "schema_version": "leaderboard_entry/1.0",
+      "entry_id": "0-linear-77ab0c11",
+      "experiment_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+      "iteration": 0,
+      "model": "linear",
+      "feature_set": "baseline+llm",
+      "params": {},
+      "metric": {
+        "name": "roc_auc",
+        "direction": "maximize"
+      },
+      "fold_scores": [
+        0.842,
+        0.848,
+        0.836,
+        0.851,
+        0.838
+      ],
+      "mean": 0.843,
+      "std": 0.006403124237432854,
+      "sem": 0.002863564212655273,
+      "secondary": {
+        "average_precision": 0.66
+      },
+      "fit_seconds": 1.9,
+      "predict_seconds": 0.05,
+      "model_size_bytes": 1840221,
+      "n_features_out": 31,
+      "status": "ok",
+      "comparable": true,
+      "warnings": [],
+      "split_id": "a91f000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "budget": {
+    "schema_version": "budget_ledger/1.0",
+    "time_budget_s": 960,
+    "elapsed_s": 12.5,
+    "stage_seconds": {
+      "ingest": 2.1,
+      "split": 0.3,
+      "profile": 10.1
+    },
+    "trials_max": 60
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": "manifest/1.0",
+  "run_id": "01JAB3K8X2V7Q9M4T6R1Z0YH5C",
+  "tabpilot_version": "0.1.0",
+  "created_at": "2026-10-19T10:24:05Z",
+  "python": "3.11.9",
+  "platform": "linux-x86_64",
+  "files": [
+    {
+      "path": "model/model.joblib",
+      "sha256": "9f2caaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bytes": 1840221,
+      "role": "model"
+    },
+    {
+      "path": "pipeline.py",
+      "sha256": "41aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "bytes": 18211,
+      "role": "code"
+    }
+  ],
+  "reproducibility": {
+    "r1_verified": true,
+    "parity_max_abs_diff": 0.0
+  },
+  "warnings": [
+    "joblib files execute code when loaded; load only from trusted sources"
+  ]
+}

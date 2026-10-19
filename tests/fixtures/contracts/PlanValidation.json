@@ -1,0 +1,12 @@
+{
+  "schema_version": "plan_validation/1.0",
+  "status": "repaired",
+  "issues": [
+    {
+      "code": "unknown_column",
+      "severity": "repair",
+      "message": "Feature f02 references column 'customerid', which is excluded.",
+      "path": "features[1].inputs[0]"
+    }
+  ]
+}

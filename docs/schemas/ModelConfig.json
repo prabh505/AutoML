@@ -1,0 +1,98 @@
+{
+  "$defs": {
+    "ClassWeight": {
+      "description": "Class-weight setting for classification models (PRD §12.3, §16.2).",
+      "enum": [
+        "none",
+        "balanced"
+      ],
+      "title": "ClassWeight",
+      "type": "string"
+    },
+    "ModelName": {
+      "description": "Model zoo entries (PRD §16.1).",
+      "enum": [
+        "linear",
+        "random_forest",
+        "lightgbm",
+        "xgboost",
+        "catboost",
+        "hist_gb"
+      ],
+      "title": "ModelName",
+      "type": "string"
+    },
+    "Task": {
+      "description": "Supported prediction tasks (PRD §2.2, §10.1).",
+      "enum": [
+        "binary",
+        "multiclass",
+        "regression"
+      ],
+      "title": "Task",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A concrete model configuration (`model_config/1.0`, PRD §26.6).",
+  "properties": {
+    "class_weight": {
+      "$ref": "#/$defs/ClassWeight",
+      "default": "none"
+    },
+    "n_jobs": {
+      "minimum": 1,
+      "title": "N Jobs",
+      "type": "integer"
+    },
+    "name": {
+      "$ref": "#/$defs/ModelName"
+    },
+    "params": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Params",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "model_config/1.0",
+      "default": "model_config/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "seed": {
+      "minimum": 0,
+      "title": "Seed",
+      "type": "integer"
+    },
+    "task": {
+      "$ref": "#/$defs/Task"
+    }
+  },
+  "required": [
+    "name",
+    "task",
+    "seed",
+    "n_jobs"
+  ],
+  "title": "ModelConfig",
+  "type": "object",
+  "x-schema-version": "model_config/1.0"
+}

@@ -1,0 +1,5 @@
+{
+  "type": "toggle_class_weight",
+  "model": "linear",
+  "value": "none"
+}

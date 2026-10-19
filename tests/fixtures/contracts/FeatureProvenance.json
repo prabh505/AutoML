@@ -1,0 +1,21 @@
+{
+  "schema_version": "feature_provenance/1.0",
+  "id": "f01",
+  "name": "avg_monthly_spend",
+  "spec": {
+    "id": "f01",
+    "name": "avg_monthly_spend",
+    "op": "ratio",
+    "inputs": [
+      "totalcharges",
+      "tenure"
+    ],
+    "params": {
+      "eps": 1e-06
+    },
+    "rationale": "Spend per month of tenure."
+  },
+  "source": "llm_plan",
+  "iteration": 0,
+  "status": "active"
+}

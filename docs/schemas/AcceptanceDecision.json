@@ -1,0 +1,69 @@
+{
+  "additionalProperties": false,
+  "description": "Paired-fold acceptance outcome (`acceptance/1.0`, PRD §19.5, §20.4).",
+  "properties": {
+    "accepted": {
+      "title": "Accepted",
+      "type": "boolean"
+    },
+    "child_entry_id": {
+      "title": "Child Entry Id",
+      "type": "string"
+    },
+    "fold_deltas": {
+      "items": {
+        "type": "number"
+      },
+      "minItems": 1,
+      "title": "Fold Deltas",
+      "type": "array"
+    },
+    "folds_better": {
+      "minimum": 0,
+      "title": "Folds Better",
+      "type": "integer"
+    },
+    "folds_required": {
+      "minimum": 0,
+      "title": "Folds Required",
+      "type": "integer"
+    },
+    "mean_gain": {
+      "title": "Mean Gain",
+      "type": "number"
+    },
+    "parent_entry_id": {
+      "title": "Parent Entry Id",
+      "type": "string"
+    },
+    "reason": {
+      "maxLength": 300,
+      "title": "Reason",
+      "type": "string"
+    },
+    "rel_gain": {
+      "title": "Rel Gain",
+      "type": "number"
+    },
+    "schema_version": {
+      "const": "acceptance/1.0",
+      "default": "acceptance/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "parent_entry_id",
+    "child_entry_id",
+    "fold_deltas",
+    "mean_gain",
+    "rel_gain",
+    "folds_better",
+    "folds_required",
+    "accepted",
+    "reason"
+  ],
+  "title": "AcceptanceDecision",
+  "type": "object",
+  "x-schema-version": "acceptance/1.0"
+}

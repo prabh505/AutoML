@@ -1,0 +1,4 @@
+{
+  "schema_version": "llm_budget/1.0",
+  "max_wall_s": 192.0
+}

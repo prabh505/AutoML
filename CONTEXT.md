@@ -45,11 +45,11 @@
 
 | Field | Value |
 | --- | --- |
-| Last completed prompt | **P01** Repository scaffold, toolchain, CI skeleton |
-| Next prompt | **P02** Data contracts, configuration, logging |
+| Last completed prompt | **P02** Data contracts, configuration, logging |
+| Next prompt | **P03** Deterministic fixtures and test harness |
 | Current milestone | Milestone 0 — Foundations |
-| Test suite | `make check` green: ruff, format, mypy, import-linter (5 contracts), pytest 8 passed, coverage 100% (10 statements) |
-| Last green commit | P01 commit (`git log --grep '^P01:'`) |
+| Test suite | `make check` green: ruff, format, mypy (strict on schemas), import-linter 5/5, pytest 334 passed, coverage 94.28%; `make schemas-check` green |
+| Last green commit | P02 commit (`git log --grep '^P02:'`) |
 | Blockers | None. Owner answered Q-04…Q-16 (ADR-0003) |
 
 ---
@@ -62,7 +62,7 @@ Status values: `pending` · `in_progress` · `complete` · `complete_with_issues
 | --- | --- | --- | --- | --- | --- | --- |
 | P00 | Project charter and context bootstrap | All (§1–§40) | M0 | complete | see `git log --grep '^P00:'` | 2026-10-19 |
 | P01 | Repository scaffold, toolchain, CI skeleton | §25, §34.1–34.2, §34.5 | M0 | complete | see `git log --grep '^P01:'` | 2026-10-19 |
-| P02 | Data contracts, configuration, logging | §26, §8.9, §14.3, §28.2, §29.1, §30.2–30.3 | M0 | pending | | |
+| P02 | Data contracts, configuration, logging | §26, §8.9, §14.3, §28.2, §29.1, §30.2–30.3 | M0 | complete | see `git log --grep '^P02:'` | 2026-10-19 |
 | P03 | Deterministic fixtures and test harness | §31.1–31.4 | M0 | pending | | |
 | P04 | Ingestion, validation, feasibility | §8, §29.4–29.5, FR-ING-*, FR-TGT-01 | M1 | pending | | |
 | P05 | Task detection, metrics, splitting, holdout guard | §10, §11.1–11.6 | M1 | pending | | |
@@ -109,8 +109,8 @@ Utility prompts (run any time): U1 Independent audit · U2 Course correction · 
 | Module | Owner prompt | Status | Notes |
 | --- | --- | --- | --- |
 | Package skeleton (all §25.1 packages + `tabpilot_runtime`) | P01 | complete | docstrings with responsibilities/forbidden; `tabpilot.ui.main()` shell |
-| `tabpilot.schemas` | P02 | not started | |
-| `tabpilot.config`, `tabpilot.logging` | P02 | not started | |
+| `tabpilot.schemas` | P02 | complete | 39 contracts + `FeatureSpec`/`ReflectionChange` unions; `ErrorCode` (21), `WarningCode` (15), `EventType`; JSON Schemas in `docs/schemas/` |
+| `tabpilot.config`, `tabpilot.logging` | P02 | complete | `load_settings()`; stdlib JSON logging with key scrubber and dataset-content guard |
 | `tabpilot.ingestion` | P04 | not started | |
 | `tabpilot.resources` (estimator) | P04 / P09 | not started | |
 | `tabpilot.evaluation.metrics` | P05 | not started | |
@@ -198,6 +198,8 @@ Format: `ID | Date | Prompt | Decision | Rationale | Status (proposed/accepted/s
 | DEC-020 | 2026-10-19 | P01 | Dependencies beyond §34.2: `pyyaml` (runtime; config YAML loading, PI-26) and dev-only type stubs `pandas-stubs`, `types-PyYAML`, `types-psutil` | Needed for config loading and strict mypy; no runtime behavior change | accepted | PI-26 |
 | DEC-021 | 2026-10-19 | P01 | Scaffold details: (1) no `tabpilot/sandbox/` (D-09, PI-35); §25.4 rule 4 is enforced by a smoke test now and T-SEC-08 later, because import-linter can't target a missing module; (2) contract R2 forbids all of `tabpilot.splitting` outside `evaluation` and `orchestration` until P05 creates `splitting.guard` and narrows it (PI-13); (3) `config`/`logging` are optional layers until P02 creates them; (4) ruff excludes Markdown, because ruff 0.17 formats code blocks in `.md` and would rewrite the immutable PRD; (5) `tabpilot.config`/`tabpilot.logging` modules are left to P02 (no placeholder files) | Implementation details; no behavior change | accepted | ADR n/a |
 | DEC-022 | 2026-10-19 | P01 | D-02 spike (DEC-018) in this Linux container: spawn child started and sent its first message in 0.05 s, heartbeats over `multiprocessing.Queue` worked, cooperative stop exited 0, a SIGTERM-ignoring child was killed by SIGKILL (exit -9) instantly. The only remaining child was the multiprocessing `resource_tracker`, so P15's no-orphan check (T-RUN-02) must exclude it | Process mode is viable here; Streamlit Cloud still unverified (Q-01/D-01) | accepted | R-16 |
+| DEC-023 | 2026-10-19 | P02 | Logging uses the stdlib with a JSON formatter (no `structlog`). Dataset content (`data_value(...)`, pandas DataFrame/Series/Index, numpy arrays) is never formatted: it raises `LoggingPolicyError` in strict mode (autouse in tests) and becomes `[REDACTED-DATA]` otherwise. Unknown objects log as `<TypeName>` only. Tracebacks only with `include_tracebacks=True` (local debug) | §30.2 allows either; no new dependency; `tabpilot.logging` must not import pandas (llm uses it) | accepted | PI-26 |
+| DEC-024 | 2026-10-19 | P02 | Contract details. (1) Top-level contracts carry `schema_version`; nested components (e.g. `ColumnInfo`, `SourceInfo`) are versioned through their parent. (2) `schema_version` has a default, so LLM output may omit it. (3) `LeaderboardEntry.std` is the sample std (ddof=1, 0 for one fold), and mean/std/sem are validated against `fold_scores` (G-09). (4) Feature `rationale` ≤ 300 chars and `id` `^[a-z][a-z0-9_]{0,15}$` (not set by PRD). (5) DSL params use strict floats/ints (no strings or booleans). (6) `RunConfig.llm_mode` ∈ {providers, off, stub}; `time_budget_s` 240–7200 (A-004), profile max checked on start. (7) `RunResult` with status failed must carry an `ErrorCode` (T-E2E-05). (8) `LLMRequest`/`LLMResponse`/`LLMBudget` gained `schema_version`. (9) The schema check (`make schemas-check SCHEMA_BASE=HEAD^` in CI) fails on stale `docs/schemas` or a changed contract without a version bump. (10) Config placeholders must be the whole (quoted) value; unset → `None`; `Settings` never holds key values | Implementation details within the PRD contracts; no behavior change | accepted | `docs/schemas/` |
 
 ---
 
@@ -232,8 +234,8 @@ Each amendment overrides the PRD only for the exact item named.
 | PI-06 | §11.1 vs §11.3, §11.5 | Holdout row basis. §11.1 bases the holdout on all valid rows ("rows ≥ holdout_min_rows (2,000)"). §11.3 uses "DEV rows < 2,000 (no holdout)". With 2,000–2,499 valid rows, a holdout is created, DEV has 1,600–1,999 rows, and §11.3 then calls for repeated CV with no holdout — a contradiction. | Evaluate every small-data threshold on **valid rows before splitting** (n_valid): n_valid ≥ 2,000 → 20% holdout + single K-fold; otherwise no holdout + repeated 3×5 CV. W-SMALL-DATA stays on DEV rows (§9.3). | accepted (A-003) |
 | PI-07 | FR-PRF-02 AC, §31.2, T-LEAK-05 vs §11.7 | `leaky_binary.csv` "contains a copy of the target with 0.5% noise". The univariate AUC of a binary copy with flip rate p is ≈ 1 − p = 0.995 (computed analytically in P00). That is below the near-deterministic threshold "≥ 0.999", so the column is only "strong" and **T-LEAK-05 cannot pass as specified**. | Keep the §11.7 thresholds (D-15 default). Generate the copy with ≤ 0.05% flips (AUC ≈ 0.9995). The strong-but-legitimate column (AUC 0.95–0.99, P03) still covers T-LEAK-06. Alternative (owner): lower the classification threshold to 0.99. | accepted (A-002) |
 | PI-08 | T-LEAK-08 (§31.3) | The wording is unclear: "Feature = target mean of rows *not* in training fold would score high if leaked". It doesn't say the row count, the category cardinality, or whether "≤ 0.55 (5 seeds)" applies per seed or to the mean. Also, the rule-based plan disables target encoding (§12.8), so the canary must force it. | Pure-noise binary target, n_dev = 2,000, one categorical with 500 levels (> 50, so target encoding applies) + 3 noise numerics. Candidate forced to `high_cardinality = target`. Assert OOF ROC-AUC ≤ 0.55 for **each** of seeds 0–4. Positive control: an encoder fitted on all of DEV outside the folds must score > 0.55, which proves the test can fail. | proposed, no behavior change (P08 adopts; non-blocking) |
-| PI-09 | §8.9, §8.7 | E-codes. All 16 specific codes used in the PRD appear in §8.9, and the wildcards (E-FILE-\*, E-PARSE-\*, E-TARGET-\*) resolve to them. But the six E-TARGET-\* codes have no message template ("Specific per §8.7"). E-TARGET-TOO-FEW-ROWS is also used two ways: as a hard error (< 50 rows) and as a "warning requiring confirmation" (> 50% target missing). | P02 writes what/where/fix templates for each E-TARGET-\* code from §8.7. > 50% missing target becomes W-TARGET-MISSING with required confirmation. E-TARGET-TOO-FEW-ROWS is kept for < 50 rows only. | accepted (A-008) |
-| PI-10 | §9.3 vs §8.2, §8.5–§8.7, §11.1 | W-ENCODING-FALLBACK, W-COERCED, W-INF, W-TARGET-MISSING and W-NO-HOLDOUT are used but not catalogued (§9.3 lists 10 of the 15 W-codes). | The P02 `WarningCode` enum covers all 15 (list in `docs/TRACEABILITY.md` App. B). | proposed, no behavior change (P02) |
+| PI-09 | §8.9, §8.7 | E-codes. All 16 specific codes used in the PRD appear in §8.9, and the wildcards (E-FILE-\*, E-PARSE-\*, E-TARGET-\*) resolve to them. But the six E-TARGET-\* codes have no message template ("Specific per §8.7"). E-TARGET-TOO-FEW-ROWS is also used two ways: as a hard error (< 50 rows) and as a "warning requiring confirmation" (> 50% target missing). | P02 writes what/where/fix templates for each E-TARGET-\* code from §8.7. > 50% missing target becomes W-TARGET-MISSING with required confirmation. E-TARGET-TOO-FEW-ROWS is kept for < 50 rows only. | applied in P02 (templates; W-TARGET-MISSING per A-008) |
+| PI-10 | §9.3 vs §8.2, §8.5–§8.7, §11.1 | W-ENCODING-FALLBACK, W-COERCED, W-INF, W-TARGET-MISSING and W-NO-HOLDOUT are used but not catalogued (§9.3 lists 10 of the 15 W-codes). | The P02 `WarningCode` enum covers all 15 (list in `docs/TRACEABILITY.md` App. B). | applied in P02 (`WarningCode`, 15 codes) |
 | PI-11 | §8.6 vs §14.2, §12.8 | Missing indicators. §8.6: "Missing rate 30–95% → Warning; missing indicator added by default". §14.2 and §12.8: indicators for missing ≥ 5%. | Missing indicator at ≥ 5% (baseline transform and fallback plan agree). 30% only triggers the W-HIGH-MISSING warning. | accepted (A-006) |
 | PI-12 | §14.3 vs §14.5 | `log1p` with negatives. §14.3: "requires profile min ≥ 0; else clipped at 0 and flagged". §14.5: "log1p/sqrt of negative → NaN with counter". | No silent clipping. Static validation flags the spec when the profile min is < 0 (recorded in provenance). At transform, negative inputs → NaN with a counter (§14.5), handled by the imputer downstream. | accepted (A-007) |
 | PI-13 | §11.2 L-2, §7.1 vs §21.4, §25.4 rule 2 | Holdout access. L-2 and §7.1 let the "post-freeze Explainer" read HOLD for error analysis. §21.4 says error analysis is "computed on DEV OOF predictions (no holdout use)", and §25.4 rule 2 lets only `evaluation.holdout` and `orchestration.nodes.finalize` import the guard. The module that **constructs** the guard (worker pre-graph setup; P09 CLI) is not allowed either. | The Explainer never touches HOLD (§21.4 wins; this is stricter). Contract rule 2 allows `splitting` (definition), `evaluation.holdout`, `orchestration.nodes.finalize`, and one named construction site (the run-context builder used by the P09 CLI and the P15 worker). P01 encodes this. | partly applied in P01 (contract R2); P05 narrows to `splitting.guard` |
@@ -248,13 +250,13 @@ Each amendment overrides the PRD only for the exact item named.
 | PI-22 | §3.2 stage 7 vs §24.7 | "Re-run with changes" after results needs the data, but §24.7 deletes "Raw input and `normalized.parquet` … immediately after export". | Re-run requires re-upload; the UI keeps the previous configuration and says why. (Alternative: keep normalized input until idle TTL.) | accepted (DEC-011) |
 | PI-23 | US-08 vs §12, §16, §39 | US-08 wants "with LLM features" vs "without" leaderboard rows for the best model family, but no section says which candidates get both variants. That affects budget and the §19.4 retraining scope. | In iteration 0, train the baseline-only variant for the highest-priority model family only. All other families use the plan's features. | accepted (A-009) |
 | PI-24 | §18.1 | `entry_id = {iteration}-{model}-{feature_set_hash[:8]}` ignores encoding, class weight and target transform. Two candidates of one model with the same features but different preprocessing in one iteration would collide. | The hash covers the full candidate configuration (features + preprocessing + class weight + target transform); the format stays the same. | proposed, no behavior change (P09) |
-| PI-25 | §23.1, §13.3, §26 | Pydantic v2 details. Fields `model_id`, `model_ids` and `model_size_bytes` hit the protected `model_` namespace (warnings). `LLMRequest.response_schema: type[BaseModel]` is not JSON-serializable, which breaks the JSON Schema export step. `RunState.warnings: list[Warning]` shadows the builtin `Warning`. | `protected_namespaces=()` on affected models; exclude `response_schema` from serialization/schema export (or carry the schema name); name the class `RunWarning`. | proposed, no behavior change (P02) |
-| PI-26 | §34.2 vs §16.1, §23.3, §30.2, FR-RUN-03 | Dependencies. YAML config files need PyYAML, which is not in §34.2. §30.2 allows `structlog`, also not listed. FR-RUN-03 needs an OS file lock. | P01 adds `pyyaml` with a Decision Log entry. P02 uses the stdlib JSON logging formatter unless `structlog` is approved. P15 uses stdlib `fcntl` (Linux/macOS targets). | accepted (DEC-020); structlog/fcntl choices remain for P02/P15 |
+| PI-25 | §23.1, §13.3, §26 | Pydantic v2 details. Fields `model_id`, `model_ids` and `model_size_bytes` hit the protected `model_` namespace (warnings). `LLMRequest.response_schema: type[BaseModel]` is not JSON-serializable, which breaks the JSON Schema export step. `RunState.warnings: list[Warning]` shadows the builtin `Warning`. | `protected_namespaces=()` on affected models; exclude `response_schema` from serialization/schema export (or carry the schema name); name the class `RunWarning`. | applied in P02 |
+| PI-26 | §34.2 vs §16.1, §23.3, §30.2, FR-RUN-03 | Dependencies. YAML config files need PyYAML, which is not in §34.2. §30.2 allows `structlog`, also not listed. FR-RUN-03 needs an OS file lock. | P01 adds `pyyaml` with a Decision Log entry. P02 uses the stdlib JSON logging formatter unless `structlog` is approved. P15 uses stdlib `fcntl` (Linux/macOS targets). | applied (DEC-020 pyyaml; DEC-023 stdlib logging); `fcntl` choice remains for P15 |
 | PI-27 | FR-PRF-01 vs §29.3, §9.5, §9.2 | Profiling time. FR-PRF-01 gives **profiling** "≤ 5% of run budget or ≤ 30 s, whichever is larger". §29.3 gives 5% to ingest + split + profile together. The §9.5 per-group caps (10 s hosted × ~10 groups) plus the 30 s leakage-scan cap can add up to more. | Profile total ≤ max(5% budget, 30 s), with per-group caps scaled down to fit (the leakage scan counts inside it). | accepted (A-004) |
 | PI-28 | §8.10 vs §11.5, §17.3 | Small-data tuning cap: "50–200 rows … tuning trials capped at 20" vs "below 2,000 rows … ≤ 20" vs "≤ 20 trials per model". | ≤ 20 trials **per model** whenever there is no holdout (n_valid < 2,000). | accepted (A-003) |
 | PI-29 | §11.3, §8.7 | With n_valid ≥ 2,000 and a class of 2–4 rows, the stratified holdout can leave < 2 rows of that class in DEV, so K-fold is impossible. §11.3 only handles "smallest class count < K". | Compute K reduction on DEV counts after the holdout. If DEV's smallest class is < 2 → E-TARGET-CLASS-TOO-SMALL with the §8.7 remove-rows offer. | proposed, no behavior change (P05) |
 | PI-30 | §22.2 vs §26.11, §30.1 | `metadata/facts.json` (§26.11 `facts_ref`) and the §30.1 records ("included (sanitized) in the bundle's metadata/") are missing from the §22.2 contents table that T-ART-01 checks. | The bundle file list = §22.2 + `metadata/facts.json` + sanitized §30.1 records + `tabpilot_runtime/` (A-001). | proposed, no behavior change (P14) |
-| PI-31 | §26.13, US-07, §12.9, §19.4, §23.9 | Event types are named across many sections (`stage_completed`, `candidate_completed`, `planner_fallback`, `reflection_skipped`, `llm_*`, …) but never catalogued. T-RUN-01 needs a closed list. | P02 defines `RunEvent.type` as an enum. Prompts that add events extend it. | proposed, no behavior change (P02) |
+| PI-31 | §26.13, US-07, §12.9, §19.4, §23.9 | Event types are named across many sections (`stage_completed`, `candidate_completed`, `planner_fallback`, `reflection_skipped`, `llm_*`, …) but never catalogued. T-RUN-01 needs a closed list. | P02 defines `RunEvent.type` as an enum. Prompts that add events extend it. | applied in P02 (`EventType`) |
 | PI-32 | §14.4, §29.7, §12.2 | "≤ 12 per plan; ≤ 6 new in a reflection round" lets active LLM features reach 24 after two rounds. There is no total cap. | Active LLM features per candidate ≤ 12 at all times; a reflection that adds features must stay within 12. | accepted (A-010) |
 | PI-33 | §37.1 D-02 vs PROMPTS P15 | D-02 (worker process viability) is "required before implementation … spike in Phase 1", but the build plan first spikes it in P15 (risk R-16, late discovery). | Optional early spike (a few lines in P01 or P09). Otherwise keep the P15 "spike first" step. | accepted (DEC-018) |
 | PI-34 | §37.1 D-13 vs PROMPTS P01 | The repository license is "required before implementation", but P01 has no LICENSE deliverable. | P01 adds an MIT `LICENSE` (D-13 default, DEC-002). | resolved in P01 (MIT `LICENSE`) |
@@ -328,22 +330,24 @@ Things that could not be verified in a session (no Docker, no network, no provid
 | 2026-10-19 | P00 | Ownership assigned where no prompt, or more than one, claimed an item: T-SEC-05 → P17 (no prompt listed it individually); T-SEC-08 and FR-FE-03 → P17; NFR-DEF-01, NFR-POR-02, NFR-COST-01 → P20; T-FE-08 → P08 (fold restart lives in the CV runner); T-EVL-06 → P13 (P09 contributes); T-LLM-05 → P15 (P11 contributes); T-TGT-11 → P11 (P05 contributes); T-LEAK-03 → P09 (P05 guard-level); T-LEAK-07 → P08 (P07 DSL ops); T-SEC-02 → P13 (P11 plan part); T-RFL-02 → P15; T-ENS-04 → P12 (P14 contributes) |
 | 2026-10-19 | P00 follow-up | Owner answered Q-04…Q-16: DEC-007…DEC-019, amendments A-002…A-010, ADR-0003, KI-001; PI statuses updated. Work mode: each prompt is committed and pushed directly to `main`, then the next starts (stop at gates, failures, or new questions) |
 | 2026-10-19 | P01 | Scaffold: `pyproject.toml` (deps, extras, ruff/mypy/pytest/coverage/import-linter config), `uv.lock`, `requirements.txt` + `scripts/export_requirements.sh`, `Makefile`, `config/{profiles,models,providers}.yaml`, `.github/workflows/ci.yml`, `.pre-commit-config.yaml`, `.gitignore`, `.env.example`, MIT `LICENSE`, package tree with docstrings, `streamlit_app.py` + UI shell, smoke + UI tests; DEC-020…022; PI-40; UV-001 |
+| 2026-10-19 | P02 | `tabpilot.schemas` (_base, dataset, split, profile, features, plan, experiment, reflection, report, llm, run, errors), `tabpilot.config`, `tabpilot.logging`, `scripts/export_schemas.py`, `docs/schemas/` (41 files), `tests/fixtures/contracts/` (41 incl. 12 concrete PRD §26 examples), `tests/conftest.py` (strict logging), unit tests (334 passing); Makefile `schemas-check`; CI schema step (fetch-depth 2); ruff ignores RUF001–003 (PRD notation); DEC-023, DEC-024 |
 
 ---
 
 ## 18. Handoff note  *(replace at the end of every session)*
 
-**Latest (P01, 2026-10-19):** P01 is complete and pushed to `main`. `make check` is green (8 tests).
+**Latest (P02, 2026-10-19):** P02 is complete and pushed to `main`. `make check` is green (334 tests, 94% coverage) and `make schemas-check` is green.
 
-- **Next:** P02 (data contracts, configuration, logging). It creates `tabpilot.config` and `tabpilot.logging`; the optional layers in contract R1 then become real.
-- **P02 must apply:**
-  - A-008: add W-TARGET-MISSING and give E-TARGET-TOO-FEW-ROWS its single meaning.
-  - PI-09: E-TARGET-\* message templates.
-  - PI-10: the full list of 15 W-codes.
-  - PI-25: Pydantic `model_` namespace, `response_schema` serialization, `RunWarning` name.
-  - PI-31: event-type enum.
-  - DEC-021: config values live in `config/*.yaml`; placeholders are quoted strings (PI-40).
-  - Time values come from A-004 / ADR-0003.
-- **Environment:** Python 3.11 at `/usr/bin/python3.11`; always run tools through `uv run --frozen` or `make`. Never let ruff touch Markdown (excluded in `pyproject.toml`).
-- **CI:** the first GitHub Actions run on `main` is green (UV-001 verified). Owner decisions are all recorded (ADR-0003).
+- **Next:** P03 (fixtures and test harness). Extend `tests/conftest.py` (it already turns on strict logging); don't replace it.
+- **P03 must apply:**
+  - A-002: in `leaky_binary.csv`, the target copy keeps 0.5% flips (AUC ≈ 0.995 → excluded at ≥ 0.95), and the legitimate strong predictor must have AUC in [0.90, 0.95), so it is warned, not excluded.
+  - A-003: `binary_small.csv` and `multiclass_rare.csv` take the no-holdout path on n_valid < 2,000.
+  - PI-08: T-LEAK-08 canary data (2,000 rows, a 500-level categorical, pure noise target).
+  - PI-20: plan fixtures carry their expected outcomes in `MANIFEST.yaml`.
+- **How the contracts behave:**
+  - Contracts validate structure only. Dataset-dependent checks live in later validators.
+  - `FeatureSpec` is a discriminated union; use `FEATURE_SPEC_ADAPTER` to validate a single spec.
+  - Config lives in `config/*.yaml` and is loaded by `tabpilot.config.load_settings(env)`.
+  - Log with `tabpilot.logging.get_logger(stage).info("event", **fields)`, and wrap any dataset value in `data_value(...)`.
+- **Environment:** always run tools via `uv run --frozen` or `make`. Ruff never touches Markdown.
 - **Work mode:** commit and push each prompt to `main`, then continue (stop at gates, failures, or new questions).

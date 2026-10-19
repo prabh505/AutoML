@@ -1,0 +1,132 @@
+{
+  "$defs": {
+    "RunnerUpPaired": {
+      "additionalProperties": false,
+      "description": "Paired fold differences winner − runner-up, in selection-score units (PRD §18.3).",
+      "properties": {
+        "folds_won": {
+          "minimum": 0,
+          "title": "Folds Won",
+          "type": "integer"
+        },
+        "max_diff": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Diff"
+        },
+        "mean_diff": {
+          "title": "Mean Diff",
+          "type": "number"
+        },
+        "min_diff": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Diff"
+        },
+        "n_folds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N Folds"
+        },
+        "runner_up": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Runner Up"
+        }
+      },
+      "required": [
+        "mean_diff",
+        "folds_won"
+      ],
+      "title": "RunnerUpPaired",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Model-selection outcome (`selection/1.0`, PRD §18.2).",
+  "properties": {
+    "near_ties": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Near Ties",
+      "type": "array"
+    },
+    "rule": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Rule",
+      "type": "string"
+    },
+    "runner_up_paired": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RunnerUpPaired"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "schema_version": {
+      "const": "selection/1.0",
+      "default": "selection/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tie_break": {
+      "anyOf": [
+        {
+          "maxLength": 80,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tie Break"
+    },
+    "winner": {
+      "title": "Winner",
+      "type": "string"
+    }
+  },
+  "required": [
+    "winner",
+    "rule"
+  ],
+  "title": "SelectionRecord",
+  "type": "object",
+  "x-schema-version": "selection/1.0"
+}

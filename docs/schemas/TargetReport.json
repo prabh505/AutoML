@@ -1,0 +1,126 @@
+{
+  "$defs": {
+    "NumericSummary": {
+      "additionalProperties": false,
+      "description": "Distribution summary for a numeric target.",
+      "properties": {
+        "max": {
+          "title": "Max",
+          "type": "number"
+        },
+        "mean": {
+          "title": "Mean",
+          "type": "number"
+        },
+        "min": {
+          "title": "Min",
+          "type": "number"
+        },
+        "skew": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skew"
+        },
+        "std": {
+          "minimum": 0.0,
+          "title": "Std",
+          "type": "number"
+        }
+      },
+      "required": [
+        "mean",
+        "std",
+        "min",
+        "max"
+      ],
+      "title": "NumericSummary",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Target validation outcome (`target_report/1.0`, FR-TGT-01, §8.7, A-008).",
+  "properties": {
+    "class_counts": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Class Counts"
+    },
+    "distribution": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NumericSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "n_missing": {
+      "minimum": 0,
+      "title": "N Missing",
+      "type": "integer"
+    },
+    "n_rows_removed": {
+      "minimum": 0,
+      "title": "N Rows Removed",
+      "type": "integer"
+    },
+    "n_unique": {
+      "minimum": 0,
+      "title": "N Unique",
+      "type": "integer"
+    },
+    "requires_confirmation": {
+      "default": false,
+      "title": "Requires Confirmation",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": "target_report/1.0",
+      "default": "target_report/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "target": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Target",
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "target",
+    "n_missing",
+    "n_rows_removed",
+    "n_unique"
+  ],
+  "title": "TargetReport",
+  "type": "object",
+  "x-schema-version": "target_report/1.0"
+}

@@ -1,0 +1,98 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "additionalProperties": false,
+  "description": "One normalized LLM response (`llm_response/1.0`, PRD §23.1, §23.6).",
+  "properties": {
+    "attempts": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Attempts",
+      "type": "integer"
+    },
+    "cached": {
+      "default": false,
+      "title": "Cached",
+      "type": "boolean"
+    },
+    "content": {
+      "title": "Content",
+      "type": "string"
+    },
+    "input_tokens": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Input Tokens"
+    },
+    "latency_s": {
+      "minimum": 0.0,
+      "title": "Latency S",
+      "type": "number"
+    },
+    "model_id": {
+      "title": "Model Id",
+      "type": "string"
+    },
+    "output_tokens": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Output Tokens"
+    },
+    "parsed": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parsed"
+    },
+    "provider": {
+      "title": "Provider",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "llm_response/1.0",
+      "default": "llm_response/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tokens_estimated": {
+      "default": false,
+      "title": "Tokens Estimated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "provider",
+    "model_id",
+    "content",
+    "latency_s"
+  ],
+  "title": "LLMResponse",
+  "type": "object",
+  "x-schema-version": "llm_response/1.0"
+}

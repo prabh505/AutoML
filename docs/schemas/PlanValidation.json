@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "PlanIssue": {
+      "additionalProperties": false,
+      "description": "One validator finding (PRD §12.6).",
+      "properties": {
+        "code": {
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 300,
+          "title": "Message",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "repair",
+            "severe"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "message"
+      ],
+      "title": "PlanIssue",
+      "type": "object"
+    },
+    "Simplification": {
+      "description": "Resource simplifications, applied in this order (PRD §29.5).",
+      "enum": [
+        "reduce_tuning_trials",
+        "within_fold_subsample",
+        "disable_random_forest",
+        "reduce_folds",
+        "cap_onehot",
+        "disable_ensemble"
+      ],
+      "title": "Simplification",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Outcome of plan validation (`plan_validation/1.0`, PRD §12.6–§12.7).",
+  "properties": {
+    "cv_folds_ignored": {
+      "default": false,
+      "title": "Cv Folds Ignored",
+      "type": "boolean"
+    },
+    "issues": {
+      "items": {
+        "$ref": "#/$defs/PlanIssue"
+      },
+      "title": "Issues",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "plan_validation/1.0",
+      "default": "plan_validation/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "simplifications": {
+      "items": {
+        "$ref": "#/$defs/Simplification"
+      },
+      "title": "Simplifications",
+      "type": "array"
+    },
+    "status": {
+      "enum": [
+        "valid",
+        "repaired",
+        "invalid"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "title": "PlanValidation",
+  "type": "object",
+  "x-schema-version": "plan_validation/1.0"
+}

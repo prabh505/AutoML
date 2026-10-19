@@ -1,0 +1,56 @@
+{
+  "schema_version": "reflection_record/1.0",
+  "round": 1,
+  "status": "rejected",
+  "reason": "no change met the paired-fold rule",
+  "proposal": {
+    "schema_version": "reflection/1.0",
+    "changes": [
+      {
+        "type": "add_features",
+        "features": [
+          {
+            "id": "r01",
+            "name": "charges_per_service",
+            "op": "ratio",
+            "inputs": [
+              "monthlycharges",
+              "n_services"
+            ],
+            "params": {
+              "eps": 1e-06
+            },
+            "rationale": "Price per service."
+          }
+        ]
+      },
+      {
+        "type": "toggle_class_weight",
+        "model": "linear",
+        "value": "none"
+      }
+    ],
+    "expected_effect": "Small AUC gain from price-sensitivity features.",
+    "rationale": "Top features are tenure and contract; pricing interactions untested."
+  },
+  "decisions": [
+    {
+      "schema_version": "acceptance/1.0",
+      "parent_entry_id": "0-linear-77ab0c11",
+      "child_entry_id": "1-linear-5d2e9f00",
+      "fold_deltas": [
+        0.001,
+        -0.002,
+        0.0005,
+        0.001,
+        -0.001
+      ],
+      "mean_gain": 0.0001,
+      "rel_gain": 0.000118,
+      "folds_better": 3,
+      "folds_required": 3,
+      "accepted": false,
+      "reason": "relative gain 0.01% is below 0.2%"
+    }
+  ]
+}

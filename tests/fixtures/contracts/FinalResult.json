@@ -1,0 +1,22 @@
+{
+  "schema_version": "final_result/1.0",
+  "selected_entry_id": "0-lightgbm-3c9e1a20",
+  "holdout": {
+    "present": true,
+    "final": {
+      "roc_auc": 0.843,
+      "ci95": [
+        0.82,
+        0.866
+      ]
+    },
+    "baseline": {
+      "roc_auc": 0.836
+    },
+    "accessed_at": "2026-10-19T10:22:31Z"
+  },
+  "explanation_method": "shap_tree",
+  "report_paths": [
+    "report/report.html"
+  ]
+}

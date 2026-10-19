@@ -1,0 +1,243 @@
+{
+  "$defs": {
+    "ColumnOverride": {
+      "additionalProperties": false,
+      "description": "A user override from the configure page (PRD §3.2 stage 2, FR-ING-04).",
+      "properties": {
+        "column": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Column",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "feature",
+                "excluded"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "semantic_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SemanticType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "column"
+      ],
+      "title": "ColumnOverride",
+      "type": "object"
+    },
+    "ExecutionProfileName": {
+      "description": "Execution profiles (PRD §29.1).",
+      "enum": [
+        "hosted",
+        "local"
+      ],
+      "title": "ExecutionProfileName",
+      "type": "string"
+    },
+    "MetricName": {
+      "description": "Metric names (PRD §10.2).",
+      "enum": [
+        "roc_auc",
+        "average_precision",
+        "log_loss",
+        "brier",
+        "accuracy",
+        "f1",
+        "macro_f1",
+        "balanced_accuracy",
+        "ovr_macro_roc_auc",
+        "rmse",
+        "mae",
+        "rmsle",
+        "r2"
+      ],
+      "title": "MetricName",
+      "type": "string"
+    },
+    "ProviderName": {
+      "description": "LLM providers (PRD §23.2).",
+      "enum": [
+        "groq",
+        "gemini",
+        "openrouter",
+        "ollama"
+      ],
+      "title": "ProviderName",
+      "type": "string"
+    },
+    "SemanticType": {
+      "description": "Column semantic types (FR-ING-04, §8.5).",
+      "enum": [
+        "numeric",
+        "categorical",
+        "boolean",
+        "datetime",
+        "text",
+        "identifier",
+        "constant"
+      ],
+      "title": "SemanticType",
+      "type": "string"
+    },
+    "Task": {
+      "description": "Supported prediction tasks (PRD §2.2, §10.1).",
+      "enum": [
+        "binary",
+        "multiclass",
+        "regression"
+      ],
+      "title": "Task",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "User-confirmed run configuration (`run_config/1.0`, PRD §28.2).",
+  "properties": {
+    "column_overrides": {
+      "items": {
+        "$ref": "#/$defs/ColumnOverride"
+      },
+      "title": "Column Overrides",
+      "type": "array"
+    },
+    "consented_providers": {
+      "items": {
+        "$ref": "#/$defs/ProviderName"
+      },
+      "title": "Consented Providers",
+      "type": "array"
+    },
+    "enable_ensemble": {
+      "default": true,
+      "title": "Enable Ensemble",
+      "type": "boolean"
+    },
+    "execution_profile": {
+      "$ref": "#/$defs/ExecutionProfileName"
+    },
+    "group_column": {
+      "anyOf": [
+        {
+          "maxLength": 80,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Group Column"
+    },
+    "llm_mode": {
+      "default": "providers",
+      "enum": [
+        "providers",
+        "off",
+        "stub"
+      ],
+      "title": "Llm Mode",
+      "type": "string"
+    },
+    "positive_label": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Positive Label"
+    },
+    "primary_metric": {
+      "$ref": "#/$defs/MetricName"
+    },
+    "profile_mode": {
+      "default": "standard",
+      "enum": [
+        "standard",
+        "minimal"
+      ],
+      "title": "Profile Mode",
+      "type": "string"
+    },
+    "provider_order": {
+      "items": {
+        "$ref": "#/$defs/ProviderName"
+      },
+      "title": "Provider Order",
+      "type": "array"
+    },
+    "reflection_max_rounds": {
+      "default": 1,
+      "maximum": 2,
+      "minimum": 0,
+      "title": "Reflection Max Rounds",
+      "type": "integer"
+    },
+    "run_id": {
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "run_config/1.0",
+      "default": "run_config/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "seed_root": {
+      "default": 42,
+      "minimum": 0,
+      "title": "Seed Root",
+      "type": "integer"
+    },
+    "target": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Target",
+      "type": "string"
+    },
+    "task": {
+      "$ref": "#/$defs/Task"
+    },
+    "time_budget_s": {
+      "maximum": 7200,
+      "minimum": 240,
+      "title": "Time Budget S",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "run_id",
+    "target",
+    "task",
+    "primary_metric",
+    "time_budget_s",
+    "execution_profile"
+  ],
+  "title": "RunConfig",
+  "type": "object",
+  "x-schema-version": "run_config/1.0"
+}

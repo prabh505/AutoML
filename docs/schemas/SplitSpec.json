@@ -1,0 +1,124 @@
+{
+  "additionalProperties": false,
+  "description": "Holdout indices plus one fixed fold assignment per repeat (PRD §11.1–§11.6, A-003).\n\n`fold_assignment[r][i]` is the validation fold of DEV row `dev_indices[i]` in repeat `r`.",
+  "properties": {
+    "dev_indices": {
+      "items": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "title": "Dev Indices",
+      "type": "array"
+    },
+    "duplicate_grouping": {
+      "default": false,
+      "title": "Duplicate Grouping",
+      "type": "boolean"
+    },
+    "fold_assignment": {
+      "items": {
+        "items": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "type": "array"
+      },
+      "title": "Fold Assignment",
+      "type": "array"
+    },
+    "group_column": {
+      "anyOf": [
+        {
+          "maxLength": 80,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Group Column"
+    },
+    "holdout_fraction": {
+      "maximum": 0.5,
+      "minimum": 0.0,
+      "title": "Holdout Fraction",
+      "type": "number"
+    },
+    "holdout_indices": {
+      "items": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "title": "Holdout Indices",
+      "type": "array"
+    },
+    "holdout_present": {
+      "title": "Holdout Present",
+      "type": "boolean"
+    },
+    "k": {
+      "maximum": 5,
+      "minimum": 2,
+      "title": "K",
+      "type": "integer"
+    },
+    "n_repeats": {
+      "default": 1,
+      "enum": [
+        1,
+        3
+      ],
+      "title": "N Repeats",
+      "type": "integer"
+    },
+    "n_valid": {
+      "minimum": 0,
+      "title": "N Valid",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "split_spec/1.0",
+      "default": "split_spec/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "seed": {
+      "minimum": 0,
+      "title": "Seed",
+      "type": "integer"
+    },
+    "split_id": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Split Id",
+      "type": "string"
+    },
+    "strategy": {
+      "enum": [
+        "stratified_kfold",
+        "kfold",
+        "stratified_group_kfold",
+        "group_kfold",
+        "repeated_stratified_kfold",
+        "repeated_kfold"
+      ],
+      "title": "Strategy",
+      "type": "string"
+    }
+  },
+  "required": [
+    "split_id",
+    "strategy",
+    "k",
+    "seed",
+    "n_valid",
+    "holdout_present",
+    "holdout_fraction",
+    "dev_indices",
+    "fold_assignment"
+  ],
+  "title": "SplitSpec",
+  "type": "object",
+  "x-schema-version": "split_spec/1.0"
+}

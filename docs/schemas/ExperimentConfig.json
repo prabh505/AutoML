@@ -1,0 +1,346 @@
+{
+  "$defs": {
+    "Budgets": {
+      "additionalProperties": false,
+      "description": "Run budgets recorded in `ExperimentConfig` (PRD §26.7).",
+      "properties": {
+        "llm_calls": {
+          "maximum": 25,
+          "minimum": 0,
+          "title": "Llm Calls",
+          "type": "integer"
+        },
+        "max_trials": {
+          "minimum": 0,
+          "title": "Max Trials",
+          "type": "integer"
+        },
+        "reflection_rounds": {
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Reflection Rounds",
+          "type": "integer"
+        },
+        "time_s": {
+          "exclusiveMinimum": 0,
+          "title": "Time S",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "time_s",
+        "max_trials",
+        "llm_calls",
+        "reflection_rounds"
+      ],
+      "title": "Budgets",
+      "type": "object"
+    },
+    "Direction": {
+      "description": "Metric optimization direction (PRD §10.4).",
+      "enum": [
+        "maximize",
+        "minimize"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "ExecutionProfileName": {
+      "description": "Execution profiles (PRD §29.1).",
+      "enum": [
+        "hosted",
+        "local"
+      ],
+      "title": "ExecutionProfileName",
+      "type": "string"
+    },
+    "LLMSettingsSummary": {
+      "additionalProperties": false,
+      "description": "LLM settings recorded in `ExperimentConfig` (PRD §26.7).",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "order": {
+          "items": {
+            "$ref": "#/$defs/ProviderName"
+          },
+          "title": "Order",
+          "type": "array"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "title": "LLMSettingsSummary",
+      "type": "object"
+    },
+    "MetricName": {
+      "description": "Metric names (PRD §10.2).",
+      "enum": [
+        "roc_auc",
+        "average_precision",
+        "log_loss",
+        "brier",
+        "accuracy",
+        "f1",
+        "macro_f1",
+        "balanced_accuracy",
+        "ovr_macro_roc_auc",
+        "rmse",
+        "mae",
+        "rmsle",
+        "r2"
+      ],
+      "title": "MetricName",
+      "type": "string"
+    },
+    "MetricSpec": {
+      "additionalProperties": false,
+      "description": "A metric and its direction (`metric_spec/1.0`, PRD §10.2, §10.4).",
+      "properties": {
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "name": {
+          "$ref": "#/$defs/MetricName"
+        },
+        "schema_version": {
+          "const": "metric_spec/1.0",
+          "default": "metric_spec/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "direction"
+      ],
+      "title": "MetricSpec",
+      "type": "object"
+    },
+    "ProviderName": {
+      "description": "LLM providers (PRD §23.2).",
+      "enum": [
+        "groq",
+        "gemini",
+        "openrouter",
+        "ollama"
+      ],
+      "title": "ProviderName",
+      "type": "string"
+    },
+    "Seeds": {
+      "additionalProperties": false,
+      "description": "Seeds derived from `root` (PRD §11.3; invariant I-13).",
+      "properties": {
+        "explain": {
+          "minimum": 0,
+          "title": "Explain",
+          "type": "integer"
+        },
+        "model": {
+          "minimum": 0,
+          "title": "Model",
+          "type": "integer"
+        },
+        "optuna": {
+          "minimum": 0,
+          "title": "Optuna",
+          "type": "integer"
+        },
+        "profile": {
+          "minimum": 0,
+          "title": "Profile",
+          "type": "integer"
+        },
+        "root": {
+          "minimum": 0,
+          "title": "Root",
+          "type": "integer"
+        },
+        "split": {
+          "minimum": 0,
+          "title": "Split",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "root",
+        "split",
+        "model",
+        "optuna",
+        "profile",
+        "explain"
+      ],
+      "title": "Seeds",
+      "type": "object"
+    },
+    "SplitSummary": {
+      "additionalProperties": false,
+      "description": "Split facts recorded in `ExperimentConfig` (PRD §26.7).",
+      "properties": {
+        "duplicate_grouping": {
+          "default": false,
+          "title": "Duplicate Grouping",
+          "type": "boolean"
+        },
+        "group_column": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group Column"
+        },
+        "holdout_fraction": {
+          "maximum": 0.5,
+          "minimum": 0.0,
+          "title": "Holdout Fraction",
+          "type": "number"
+        },
+        "holdout_present": {
+          "title": "Holdout Present",
+          "type": "boolean"
+        },
+        "k": {
+          "maximum": 5,
+          "minimum": 2,
+          "title": "K",
+          "type": "integer"
+        },
+        "n_repeats": {
+          "default": 1,
+          "enum": [
+            1,
+            3
+          ],
+          "title": "N Repeats",
+          "type": "integer"
+        },
+        "split_id": {
+          "minLength": 1,
+          "title": "Split Id",
+          "type": "string"
+        },
+        "strategy": {
+          "title": "Strategy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "split_id",
+        "strategy",
+        "k",
+        "holdout_fraction",
+        "holdout_present"
+      ],
+      "title": "SplitSummary",
+      "type": "object"
+    },
+    "Task": {
+      "description": "Supported prediction tasks (PRD §2.2, §10.1).",
+      "enum": [
+        "binary",
+        "multiclass",
+        "regression"
+      ],
+      "title": "Task",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Frozen experiment configuration (`experiment_config/1.0`, PRD §26.7).",
+  "properties": {
+    "budgets": {
+      "$ref": "#/$defs/Budgets"
+    },
+    "execution_profile": {
+      "$ref": "#/$defs/ExecutionProfileName"
+    },
+    "library_versions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Library Versions",
+      "type": "object"
+    },
+    "llm": {
+      "$ref": "#/$defs/LLMSettingsSummary"
+    },
+    "positive_label": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Positive Label"
+    },
+    "primary_metric": {
+      "$ref": "#/$defs/MetricSpec"
+    },
+    "prompt_template_versions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Prompt Template Versions",
+      "type": "object"
+    },
+    "run_id": {
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "experiment_config/1.0",
+      "default": "experiment_config/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "seeds": {
+      "$ref": "#/$defs/Seeds"
+    },
+    "split": {
+      "$ref": "#/$defs/SplitSummary"
+    },
+    "tabpilot_version": {
+      "title": "Tabpilot Version",
+      "type": "string"
+    },
+    "target": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Target",
+      "type": "string"
+    },
+    "task": {
+      "$ref": "#/$defs/Task"
+    }
+  },
+  "required": [
+    "run_id",
+    "tabpilot_version",
+    "execution_profile",
+    "task",
+    "target",
+    "primary_metric",
+    "split",
+    "seeds",
+    "budgets",
+    "llm"
+  ],
+  "title": "ExperimentConfig",
+  "type": "object",
+  "x-schema-version": "experiment_config/1.0"
+}

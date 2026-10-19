@@ -1,0 +1,22 @@
+{
+  "schema_version": "training_result/1.0",
+  "entry_id": "0-lightgbm-3c9e1a20",
+  "status": "ok",
+  "fold_scores": [
+    0.846,
+    0.851,
+    0.839,
+    0.857,
+    0.844
+  ],
+  "fit_seconds_mean": 1.9,
+  "predict_seconds_mean": 0.05,
+  "oof_ref": "oof/0-lightgbm-3c9e1a20.npy",
+  "best_params": {
+    "num_leaves": 31
+  },
+  "trials_completed": 24,
+  "trials_pruned": 9,
+  "trials_failed": 0,
+  "error": null
+}

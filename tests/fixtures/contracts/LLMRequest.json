@@ -1,0 +1,97 @@
+{
+  "schema_version": "llm_request/1.0",
+  "purpose": "plan",
+  "system": "planner_system@1.0",
+  "user_json": {
+    "schema_version": "planner_input/1.0",
+    "task": "binary",
+    "primary_metric": "roc_auc",
+    "profile": {
+      "schema_version": "compact_profile/1.0",
+      "task": "binary",
+      "n_rows_dev": 5634,
+      "n_features": 19,
+      "target": {
+        "positive_share": 0.265,
+        "imbalance_ratio": 2.77
+      },
+      "columns": [
+        {
+          "name": "tenure",
+          "type": "numeric",
+          "level": "full",
+          "missing": 0.0,
+          "q": [
+            0,
+            2,
+            9,
+            29,
+            55,
+            72,
+            72
+          ],
+          "skew": 0.24,
+          "distinct": 73,
+          "assoc": {
+            "kind": "auc",
+            "value": 0.74
+          },
+          "flags": []
+        },
+        {
+          "name": "contract",
+          "type": "categorical",
+          "level": "full",
+          "missing": 0.0,
+          "distinct": 3,
+          "entropy_bits": 1.48,
+          "top_shares": [
+            0.55,
+            0.24,
+            0.21
+          ],
+          "assoc": {
+            "kind": "mi",
+            "value": 0.1
+          },
+          "flags": []
+        }
+      ],
+      "rest_summary": null,
+      "warnings": [
+        "W-IMBALANCE"
+      ],
+      "truncated": false
+    },
+    "available_models": [
+      "linear",
+      "random_forest",
+      "lightgbm"
+    ],
+    "dsl_catalog": [
+      {
+        "op": "ratio",
+        "inputs": [
+          "numeric",
+          "numeric"
+        ],
+        "params": {
+          "eps": [
+            1e-09,
+            1
+          ]
+        }
+      }
+    ],
+    "budget": {
+      "train_seconds": 300,
+      "max_features": 12,
+      "max_models": 5
+    },
+    "constraints": [
+      "Reference only listed columns.",
+      "Respond with JSON only."
+    ]
+  },
+  "max_output_tokens": 2000
+}

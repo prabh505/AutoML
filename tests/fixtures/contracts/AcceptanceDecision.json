@@ -1,0 +1,18 @@
+{
+  "schema_version": "acceptance/1.0",
+  "parent_entry_id": "0-linear-77ab0c11",
+  "child_entry_id": "1-linear-5d2e9f00",
+  "fold_deltas": [
+    0.001,
+    -0.002,
+    0.0005,
+    0.001,
+    -0.001
+  ],
+  "mean_gain": 0.0001,
+  "rel_gain": 0.000118,
+  "folds_better": 3,
+  "folds_required": 3,
+  "accepted": false,
+  "reason": "relative gain 0.01% is below 0.2%"
+}

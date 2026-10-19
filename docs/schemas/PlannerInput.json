@@ -1,0 +1,537 @@
+{
+  "$defs": {
+    "Association": {
+      "additionalProperties": false,
+      "description": "Feature–target association score (PRD §9.2).",
+      "properties": {
+        "kind": {
+          "enum": [
+            "auc",
+            "mi",
+            "spearman",
+            "r2"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "Association",
+      "type": "object"
+    },
+    "CompactColumn": {
+      "additionalProperties": false,
+      "description": "One column in the compact profile: aggregates only, no cell labels (PRD §9.4, A-005).\n\n`q` = [min, p5, p25, p50, p75, p95, max]; absent in minimal mode.",
+      "properties": {
+        "assoc": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Association"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "distinct": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distinct"
+        },
+        "entropy_bits": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entropy Bits"
+        },
+        "flags": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Flags",
+          "type": "array"
+        },
+        "level": {
+          "enum": [
+            "full",
+            "short"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "missing": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Missing",
+          "type": "number"
+        },
+        "name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "q": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 7,
+              "minItems": 7,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Q"
+        },
+        "skew": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skew"
+        },
+        "top_shares": {
+          "anyOf": [
+            {
+              "items": {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "maxItems": 10,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top Shares"
+        },
+        "type": {
+          "$ref": "#/$defs/SemanticType"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "level",
+        "missing"
+      ],
+      "title": "CompactColumn",
+      "type": "object"
+    },
+    "CompactProfile": {
+      "additionalProperties": false,
+      "description": "LLM-safe bounded profile (`compact_profile/1.0`, PRD §9.4, §26.2).",
+      "properties": {
+        "columns": {
+          "items": {
+            "$ref": "#/$defs/CompactColumn"
+          },
+          "title": "Columns",
+          "type": "array"
+        },
+        "mode": {
+          "default": "standard",
+          "enum": [
+            "standard",
+            "minimal"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "n_features": {
+          "minimum": 0,
+          "title": "N Features",
+          "type": "integer"
+        },
+        "n_rows_dev": {
+          "minimum": 0,
+          "title": "N Rows Dev",
+          "type": "integer"
+        },
+        "rest_summary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RestSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": "compact_profile/1.0",
+          "default": "compact_profile/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/CompactTarget"
+        },
+        "task": {
+          "$ref": "#/$defs/Task"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "task",
+        "n_rows_dev",
+        "n_features",
+        "target",
+        "columns"
+      ],
+      "title": "CompactProfile",
+      "type": "object"
+    },
+    "CompactTarget": {
+      "additionalProperties": false,
+      "description": "Target aggregates in the compact profile (PRD §26.2).",
+      "properties": {
+        "imbalance_ratio": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Imbalance Ratio"
+        },
+        "n_classes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N Classes"
+        },
+        "nonnegative": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nonnegative"
+        },
+        "positive_share": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Positive Share"
+        },
+        "skew": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skew"
+        }
+      },
+      "title": "CompactTarget",
+      "type": "object"
+    },
+    "DslCatalogEntry": {
+      "additionalProperties": false,
+      "description": "One DSL op as described to the planner (PRD §26.3).",
+      "properties": {
+        "inputs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Inputs",
+          "type": "array"
+        },
+        "op": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "op",
+        "inputs"
+      ],
+      "title": "DslCatalogEntry",
+      "type": "object"
+    },
+    "MetricName": {
+      "description": "Metric names (PRD §10.2).",
+      "enum": [
+        "roc_auc",
+        "average_precision",
+        "log_loss",
+        "brier",
+        "accuracy",
+        "f1",
+        "macro_f1",
+        "balanced_accuracy",
+        "ovr_macro_roc_auc",
+        "rmse",
+        "mae",
+        "rmsle",
+        "r2"
+      ],
+      "title": "MetricName",
+      "type": "string"
+    },
+    "ModelName": {
+      "description": "Model zoo entries (PRD §16.1).",
+      "enum": [
+        "linear",
+        "random_forest",
+        "lightgbm",
+        "xgboost",
+        "catboost",
+        "hist_gb"
+      ],
+      "title": "ModelName",
+      "type": "string"
+    },
+    "PlannerBudget": {
+      "additionalProperties": false,
+      "description": "Budget facts given to the planner (PRD §12.2).",
+      "properties": {
+        "max_features": {
+          "default": 12,
+          "maximum": 12,
+          "minimum": 0,
+          "title": "Max Features",
+          "type": "integer"
+        },
+        "max_models": {
+          "default": 5,
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Max Models",
+          "type": "integer"
+        },
+        "train_seconds": {
+          "exclusiveMinimum": 0,
+          "title": "Train Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "train_seconds"
+      ],
+      "title": "PlannerBudget",
+      "type": "object"
+    },
+    "RestSummary": {
+      "additionalProperties": false,
+      "description": "Summary of columns beyond the detailed list (PRD §9.4).",
+      "properties": {
+        "counts_by_type": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/SemanticType"
+          },
+          "title": "Counts By Type",
+          "type": "object"
+        },
+        "mean_missing": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Mean Missing",
+          "type": "number"
+        },
+        "n_columns": {
+          "minimum": 0,
+          "title": "N Columns",
+          "type": "integer"
+        },
+        "names": {
+          "anyOf": [
+            {
+              "items": {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 50,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Names"
+        }
+      },
+      "required": [
+        "n_columns",
+        "counts_by_type",
+        "mean_missing"
+      ],
+      "title": "RestSummary",
+      "type": "object"
+    },
+    "SemanticType": {
+      "description": "Column semantic types (FR-ING-04, §8.5).",
+      "enum": [
+        "numeric",
+        "categorical",
+        "boolean",
+        "datetime",
+        "text",
+        "identifier",
+        "constant"
+      ],
+      "title": "SemanticType",
+      "type": "string"
+    },
+    "Task": {
+      "description": "Supported prediction tasks (PRD §2.2, §10.1).",
+      "enum": [
+        "binary",
+        "multiclass",
+        "regression"
+      ],
+      "title": "Task",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Exactly what the planner LLM receives (`planner_input/1.0`, PRD §12.2, §26.3).",
+  "properties": {
+    "available_models": {
+      "items": {
+        "$ref": "#/$defs/ModelName"
+      },
+      "minItems": 1,
+      "title": "Available Models",
+      "type": "array"
+    },
+    "budget": {
+      "$ref": "#/$defs/PlannerBudget"
+    },
+    "constraints": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Constraints",
+      "type": "array"
+    },
+    "dsl_catalog": {
+      "items": {
+        "$ref": "#/$defs/DslCatalogEntry"
+      },
+      "title": "Dsl Catalog",
+      "type": "array"
+    },
+    "primary_metric": {
+      "$ref": "#/$defs/MetricName"
+    },
+    "profile": {
+      "$ref": "#/$defs/CompactProfile"
+    },
+    "schema_version": {
+      "const": "planner_input/1.0",
+      "default": "planner_input/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "task": {
+      "$ref": "#/$defs/Task"
+    }
+  },
+  "required": [
+    "task",
+    "primary_metric",
+    "profile",
+    "available_models",
+    "dsl_catalog",
+    "budget"
+  ],
+  "title": "PlannerInput",
+  "type": "object",
+  "x-schema-version": "planner_input/1.0"
+}

@@ -1,0 +1,113 @@
+{
+  "$defs": {
+    "Stage": {
+      "description": "Run stages and graph nodes used for events, timings, and errors (PRD §13.2, §13.4).",
+      "enum": [
+        "run",
+        "ingest",
+        "split",
+        "profile",
+        "plan",
+        "validate_plan",
+        "build_features",
+        "train_candidates",
+        "evaluate",
+        "reflect",
+        "apply_changes",
+        "ensemble",
+        "finalize",
+        "explain",
+        "report",
+        "export",
+        "recover"
+      ],
+      "title": "Stage",
+      "type": "string"
+    },
+    "WarningCode": {
+      "description": "Every warning code used in the PRD (§8.2, §8.5–§8.7, §9.3, §11.1; A-008).",
+      "enum": [
+        "W-SMALL-DATA",
+        "W-IMBALANCE",
+        "W-HIGH-MISSING",
+        "W-LEAK-STRONG",
+        "W-LEAK-NEAR-DETERMINISTIC",
+        "W-GROUP-SUSPECTED",
+        "W-TEMPORAL",
+        "W-DUPLICATES",
+        "W-CONFLICTING-DUPLICATES",
+        "W-WIDE",
+        "W-ENCODING-FALLBACK",
+        "W-COERCED",
+        "W-INF",
+        "W-TARGET-MISSING",
+        "W-NO-HOLDOUT"
+      ],
+      "title": "WarningCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A structured warning (`warning/1.0`; named `RunWarning` to avoid the builtin, PI-25).",
+  "properties": {
+    "code": {
+      "$ref": "#/$defs/WarningCode"
+    },
+    "column": {
+      "anyOf": [
+        {
+          "maxLength": 80,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Column"
+    },
+    "count": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Count"
+    },
+    "message": {
+      "maxLength": 500,
+      "title": "Message",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "warning/1.0",
+      "default": "warning/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "stage": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Stage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "code",
+    "message"
+  ],
+  "title": "RunWarning",
+  "type": "object",
+  "x-schema-version": "warning/1.0"
+}

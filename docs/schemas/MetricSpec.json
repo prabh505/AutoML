@@ -1,0 +1,56 @@
+{
+  "$defs": {
+    "Direction": {
+      "description": "Metric optimization direction (PRD §10.4).",
+      "enum": [
+        "maximize",
+        "minimize"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "MetricName": {
+      "description": "Metric names (PRD §10.2).",
+      "enum": [
+        "roc_auc",
+        "average_precision",
+        "log_loss",
+        "brier",
+        "accuracy",
+        "f1",
+        "macro_f1",
+        "balanced_accuracy",
+        "ovr_macro_roc_auc",
+        "rmse",
+        "mae",
+        "rmsle",
+        "r2"
+      ],
+      "title": "MetricName",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A metric and its direction (`metric_spec/1.0`, PRD §10.2, §10.4).",
+  "properties": {
+    "direction": {
+      "$ref": "#/$defs/Direction"
+    },
+    "name": {
+      "$ref": "#/$defs/MetricName"
+    },
+    "schema_version": {
+      "const": "metric_spec/1.0",
+      "default": "metric_spec/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "direction"
+  ],
+  "title": "MetricSpec",
+  "type": "object",
+  "x-schema-version": "metric_spec/1.0"
+}

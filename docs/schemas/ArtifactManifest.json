@@ -1,0 +1,151 @@
+{
+  "$defs": {
+    "ManifestFile": {
+      "additionalProperties": false,
+      "description": "One bundle file with its checksum (PRD §22.3).",
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "path": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "model",
+            "code",
+            "requirements",
+            "metadata",
+            "report",
+            "figure",
+            "parity",
+            "docs",
+            "runtime",
+            "oof"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "role"
+      ],
+      "title": "ManifestFile",
+      "type": "object"
+    },
+    "Reproducibility": {
+      "additionalProperties": false,
+      "description": "Reproducibility facts (PRD §22.6).",
+      "properties": {
+        "parity_max_abs_diff": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parity Max Abs Diff"
+        },
+        "r1_verified": {
+          "title": "R1 Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "r1_verified"
+      ],
+      "title": "Reproducibility",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Bundle manifest (`manifest/1.0`, PRD §22.3, §26.12).",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/ManifestFile"
+      },
+      "title": "Files",
+      "type": "array"
+    },
+    "platform": {
+      "title": "Platform",
+      "type": "string"
+    },
+    "python": {
+      "title": "Python",
+      "type": "string"
+    },
+    "reproducibility": {
+      "$ref": "#/$defs/Reproducibility"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "manifest/1.0",
+      "default": "manifest/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "seed_root": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Seed Root"
+    },
+    "tabpilot_version": {
+      "title": "Tabpilot Version",
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "run_id",
+    "tabpilot_version",
+    "created_at",
+    "python",
+    "platform",
+    "files",
+    "reproducibility"
+  ],
+  "title": "ArtifactManifest",
+  "type": "object",
+  "x-schema-version": "manifest/1.0"
+}

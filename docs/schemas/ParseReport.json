@@ -1,0 +1,88 @@
+{
+  "additionalProperties": false,
+  "description": "Parsing outcome (`parse_report/1.0`, FR-ING-02).",
+  "properties": {
+    "decimal_comma_columns": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Decimal Comma Columns",
+      "type": "array"
+    },
+    "delimiter": {
+      "anyOf": [
+        {
+          "maxLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Delimiter"
+    },
+    "encoding": {
+      "title": "Encoding",
+      "type": "string"
+    },
+    "encoding_fallback": {
+      "default": false,
+      "title": "Encoding Fallback",
+      "type": "boolean"
+    },
+    "malformed_line_numbers": {
+      "items": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "maxItems": 5,
+      "title": "Malformed Line Numbers",
+      "type": "array"
+    },
+    "malformed_lines": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Malformed Lines",
+      "type": "integer"
+    },
+    "quote_char": {
+      "anyOf": [
+        {
+          "maxLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": "\"",
+      "title": "Quote Char"
+    },
+    "rows_read": {
+      "minimum": 0,
+      "title": "Rows Read",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "parse_report/1.0",
+      "default": "parse_report/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "encoding",
+    "rows_read"
+  ],
+  "title": "ParseReport",
+  "type": "object",
+  "x-schema-version": "parse_report/1.0"
+}

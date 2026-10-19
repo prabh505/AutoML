@@ -1,0 +1,55 @@
+{
+  "additionalProperties": false,
+  "description": "Hard per-run LLM ceilings (`llm_budget/1.0`, PRD §23.7; A-004; DEC-017).",
+  "properties": {
+    "max_calls": {
+      "default": 12,
+      "maximum": 25,
+      "minimum": 0,
+      "title": "Max Calls",
+      "type": "integer"
+    },
+    "max_input_tokens": {
+      "default": 40000,
+      "minimum": 0,
+      "title": "Max Input Tokens",
+      "type": "integer"
+    },
+    "max_input_tokens_per_call": {
+      "default": 6000,
+      "minimum": 0,
+      "title": "Max Input Tokens Per Call",
+      "type": "integer"
+    },
+    "max_output_tokens": {
+      "default": 8000,
+      "minimum": 0,
+      "title": "Max Output Tokens",
+      "type": "integer"
+    },
+    "max_wall_s": {
+      "minimum": 0.0,
+      "title": "Max Wall S",
+      "type": "number"
+    },
+    "per_call_timeout_s": {
+      "default": 90.0,
+      "maximum": 240.0,
+      "minimum": 20.0,
+      "title": "Per Call Timeout S",
+      "type": "number"
+    },
+    "schema_version": {
+      "const": "llm_budget/1.0",
+      "default": "llm_budget/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "max_wall_s"
+  ],
+  "title": "LLMBudget",
+  "type": "object",
+  "x-schema-version": "llm_budget/1.0"
+}

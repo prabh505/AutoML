@@ -1,0 +1,95 @@
+{
+  "schema_version": "reflection_input/1.0",
+  "task": "binary",
+  "primary_metric": {
+    "name": "roc_auc",
+    "direction": "maximize"
+  },
+  "leaderboard_top": [
+    {
+      "entry_id": "0-lightgbm-3c9e1a20",
+      "model": "lightgbm",
+      "feature_set": "baseline+llm",
+      "mean": 0.8474,
+      "std": 0.006877499545619766,
+      "fold_scores": [
+        0.846,
+        0.851,
+        0.839,
+        0.857,
+        0.844
+      ],
+      "fit_seconds": 1.9
+    }
+  ],
+  "top_features": [
+    {
+      "name": "contract",
+      "importance": 0.41
+    },
+    {
+      "name": "tenure",
+      "importance": 0.22
+    }
+  ],
+  "current_plan": {
+    "schema_version": "plan/1.0",
+    "column_decisions": [
+      {
+        "column": "seniorcitizen",
+        "action": "treat_as_categorical",
+        "reason": "Binary flag stored as integer."
+      }
+    ],
+    "imputation": {
+      "numeric": "median",
+      "categorical": "most_frequent",
+      "add_missing_indicators": true
+    },
+    "encoding": {
+      "low_cardinality": "onehot",
+      "high_cardinality": "frequency"
+    },
+    "features": [
+      {
+        "id": "f01",
+        "name": "avg_monthly_spend",
+        "op": "ratio",
+        "inputs": [
+          "totalcharges",
+          "tenure"
+        ],
+        "params": {
+          "eps": 1e-06
+        },
+        "rationale": "Spend per month of tenure."
+      }
+    ],
+    "models": [
+      {
+        "name": "lightgbm",
+        "priority": 1,
+        "class_weight": "balanced"
+      },
+      {
+        "name": "linear",
+        "priority": 2,
+        "class_weight": "balanced"
+      }
+    ],
+    "tuning_allocation": {
+      "lightgbm": 0.75,
+      "linear": 0.25
+    },
+    "target_transform": "none",
+    "cv_folds": 5,
+    "metric_recommendation": "roc_auc",
+    "rationale": ""
+  },
+  "remaining_budget": {
+    "seconds": 120.0,
+    "trials": 18,
+    "features_allowed": 6
+  },
+  "warnings": []
+}

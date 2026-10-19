@@ -1,0 +1,168 @@
+{
+  "$defs": {
+    "HoldoutResult": {
+      "additionalProperties": false,
+      "description": "One-time holdout scores (PRD §18.3, §26.9; L-7). `ci95` is [low, high] when present.",
+      "properties": {
+        "accessed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accessed At"
+        },
+        "baseline": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline"
+        },
+        "final": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Final"
+        },
+        "present": {
+          "title": "Present",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "present"
+      ],
+      "title": "HoldoutResult",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Frozen selection and its outputs (`final_result/1.0`, PRD §13.3, L-8).",
+  "properties": {
+    "bundle_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Bundle Path"
+    },
+    "bundle_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Bundle Sha256"
+    },
+    "explanation_method": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Explanation Method"
+    },
+    "holdout": {
+      "$ref": "#/$defs/HoldoutResult"
+    },
+    "is_ensemble": {
+      "default": false,
+      "title": "Is Ensemble",
+      "type": "boolean"
+    },
+    "report_paths": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Report Paths",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "final_result/1.0",
+      "default": "final_result/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selected_entry_id": {
+      "title": "Selected Entry Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "selected_entry_id",
+    "holdout"
+  ],
+  "title": "FinalResult",
+  "type": "object",
+  "x-schema-version": "final_result/1.0"
+}

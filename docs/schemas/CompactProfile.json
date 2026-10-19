@@ -1,0 +1,383 @@
+{
+  "$defs": {
+    "Association": {
+      "additionalProperties": false,
+      "description": "Feature–target association score (PRD §9.2).",
+      "properties": {
+        "kind": {
+          "enum": [
+            "auc",
+            "mi",
+            "spearman",
+            "r2"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "Association",
+      "type": "object"
+    },
+    "CompactColumn": {
+      "additionalProperties": false,
+      "description": "One column in the compact profile: aggregates only, no cell labels (PRD §9.4, A-005).\n\n`q` = [min, p5, p25, p50, p75, p95, max]; absent in minimal mode.",
+      "properties": {
+        "assoc": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Association"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "distinct": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distinct"
+        },
+        "entropy_bits": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entropy Bits"
+        },
+        "flags": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Flags",
+          "type": "array"
+        },
+        "level": {
+          "enum": [
+            "full",
+            "short"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "missing": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Missing",
+          "type": "number"
+        },
+        "name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "q": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 7,
+              "minItems": 7,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Q"
+        },
+        "skew": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skew"
+        },
+        "top_shares": {
+          "anyOf": [
+            {
+              "items": {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "maxItems": 10,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top Shares"
+        },
+        "type": {
+          "$ref": "#/$defs/SemanticType"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "level",
+        "missing"
+      ],
+      "title": "CompactColumn",
+      "type": "object"
+    },
+    "CompactTarget": {
+      "additionalProperties": false,
+      "description": "Target aggregates in the compact profile (PRD §26.2).",
+      "properties": {
+        "imbalance_ratio": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Imbalance Ratio"
+        },
+        "n_classes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N Classes"
+        },
+        "nonnegative": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nonnegative"
+        },
+        "positive_share": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Positive Share"
+        },
+        "skew": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skew"
+        }
+      },
+      "title": "CompactTarget",
+      "type": "object"
+    },
+    "RestSummary": {
+      "additionalProperties": false,
+      "description": "Summary of columns beyond the detailed list (PRD §9.4).",
+      "properties": {
+        "counts_by_type": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/SemanticType"
+          },
+          "title": "Counts By Type",
+          "type": "object"
+        },
+        "mean_missing": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Mean Missing",
+          "type": "number"
+        },
+        "n_columns": {
+          "minimum": 0,
+          "title": "N Columns",
+          "type": "integer"
+        },
+        "names": {
+          "anyOf": [
+            {
+              "items": {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 50,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Names"
+        }
+      },
+      "required": [
+        "n_columns",
+        "counts_by_type",
+        "mean_missing"
+      ],
+      "title": "RestSummary",
+      "type": "object"
+    },
+    "SemanticType": {
+      "description": "Column semantic types (FR-ING-04, §8.5).",
+      "enum": [
+        "numeric",
+        "categorical",
+        "boolean",
+        "datetime",
+        "text",
+        "identifier",
+        "constant"
+      ],
+      "title": "SemanticType",
+      "type": "string"
+    },
+    "Task": {
+      "description": "Supported prediction tasks (PRD §2.2, §10.1).",
+      "enum": [
+        "binary",
+        "multiclass",
+        "regression"
+      ],
+      "title": "Task",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "LLM-safe bounded profile (`compact_profile/1.0`, PRD §9.4, §26.2).",
+  "properties": {
+    "columns": {
+      "items": {
+        "$ref": "#/$defs/CompactColumn"
+      },
+      "title": "Columns",
+      "type": "array"
+    },
+    "mode": {
+      "default": "standard",
+      "enum": [
+        "standard",
+        "minimal"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "n_features": {
+      "minimum": 0,
+      "title": "N Features",
+      "type": "integer"
+    },
+    "n_rows_dev": {
+      "minimum": 0,
+      "title": "N Rows Dev",
+      "type": "integer"
+    },
+    "rest_summary": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RestSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "schema_version": {
+      "const": "compact_profile/1.0",
+      "default": "compact_profile/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "target": {
+      "$ref": "#/$defs/CompactTarget"
+    },
+    "task": {
+      "$ref": "#/$defs/Task"
+    },
+    "truncated": {
+      "default": false,
+      "title": "Truncated",
+      "type": "boolean"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "task",
+    "n_rows_dev",
+    "n_features",
+    "target",
+    "columns"
+  ],
+  "title": "CompactProfile",
+  "type": "object",
+  "x-schema-version": "compact_profile/1.0"
+}
