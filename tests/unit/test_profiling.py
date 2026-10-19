@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import string
 import subprocess
 import sys
@@ -12,7 +13,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, example, given, settings
 from hypothesis import strategies as st
 from tests.helpers.guarded_frame import guard
 
@@ -38,6 +39,7 @@ from tabpilot.schemas import (
 from tabpilot.splitting import build_split
 
 RID = "01JAB3K8X2V7Q9M4T6R1Z0YH5C"
+NUMBER_TOKEN = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?(?![\w.])")
 FIX = Path(__file__).resolve().parents[2] / "fixtures" / "datasets"
 HOSTED = ExecutionProfileName.HOSTED
 
@@ -298,6 +300,7 @@ LABEL = st.text(alphabet=string.ascii_uppercase + string.digits, min_size=6, max
     max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
 )
 @given(labels=st.lists(LABEL, min_size=3, max_size=8, unique=True), seed=st.integers(0, 10_000))
+@example(labels=["alpha", "beta", "gamma"], seed=1568)  # KI-012: share 0.166667 vs id 166667
 def test_T_PRIV_01_no_raw_values_in_compact_profile(
     labels: list[str], seed: int, tmp_path: Path
 ) -> None:
@@ -319,5 +322,7 @@ def test_T_PRIV_01_no_raw_values_in_compact_profile(
         for label in [*labels, "Y", "N", "good", "bad"]:
             assert label not in strings, f"category label {label!r} leaked"
             assert f'"{label}"' not in text
+        # whole numeric tokens only: a share such as 0.166667 is not the identifier 166667
+        numbers = {float(t) for t in NUMBER_TOKEN.findall(text)}
         for value in ids:
-            assert str(value) not in text, "identifier value leaked"
+            assert float(value) not in numbers, "identifier value leaked"

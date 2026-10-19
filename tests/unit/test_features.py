@@ -443,3 +443,17 @@ def test_catalog_for_planner_lists_every_op_with_bounds() -> None:
     assert entries["clip"].params == {"lower_q": [0.0, 0.2], "upper_q": [0.8, 1.0]}
     assert entries["group_mean"].inputs == ["boolean|categorical", "numeric"]
     assert entries["row_sum"].inputs == ["numeric (2-20 inputs)"]
+
+
+@pytest.mark.unit
+def test_clip_bounds_come_from_fit_not_transform() -> None:
+    """L-4 (KI-018): `clip` learns its quantiles on the training rows; transform reuses them."""
+    train = frame()
+    t = DSLFeatureTransformer(runtime_specs([spec("c", "clip", ["a"],
+                                                  {"lower_q": 0.1, "upper_q": 0.9})])).fit(train)  # fmt: skip
+    lo, hi = np.nanquantile(train["a"], [0.1, 0.9])
+    shifted = train.assign(a=train["a"] * 10 + 1000)  # new rows far outside the training range
+    out = t.transform(shifted)["llm__c"]
+    assert out.min() == pytest.approx(hi, rel=1e-6)  # everything clipped to the fitted upper bound
+    assert out.max() == pytest.approx(hi, rel=1e-6)
+    assert lo < hi

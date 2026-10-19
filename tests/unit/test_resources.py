@@ -152,3 +152,10 @@ def test_T_RES_03_memory_hog_candidate_aborted_run_continues() -> None:
     assert results[ModelName.LINEAR].status == "ok"
     assert results[ModelName.LIGHTGBM].status == "ok"
     assert mon.hard_strikes == 1
+
+
+@pytest.mark.unit
+def test_jump_straight_past_hard_limit_also_sets_soft_flag() -> None:
+    mon = ResourceMonitor(500, 700, rss_fn=FakeRss(900))
+    mon.sample()
+    assert mon.soft_exceeded

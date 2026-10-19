@@ -8,11 +8,19 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from tabpilot import cli
 from tabpilot.cli import RunArgs, execute, main, parse
-from tabpilot.schemas import ExecutionProfileName, ModelName, RunEvent, Task
+from tabpilot.schemas import (
+    ExecutionProfileName,
+    FeasibilityReport,
+    ModelName,
+    RunEvent,
+    Simplification,
+    Task,
+)
 from tabpilot.schemas.experiment import EvaluationResult, ExperimentConfig, LeaderboardEntry
 from tabpilot.splitting.guard import HoldoutSealed
 from tabpilot.tracking import RECORD_FILES
@@ -223,3 +231,90 @@ def test_winner_oof_saved_and_binary_thresholds_recorded(tmp_path: Path) -> None
     regression = run(tmp_path / "r", "regression_basic.csv", "price")
     reg = json.loads((regression.run_dir / "records" / "experiment.json").read_text())
     assert reg["thresholds"] == {}
+
+
+@pytest.mark.e2e
+def test_duplicate_grouping_ignores_identifier_columns(tmp_path: Path) -> None:
+    """§11.6 (KI-013): duplicated feature rows are grouped even when an ID column differs."""
+    rng = np.random.default_rng(0)
+    base = pd.DataFrame({"x1": rng.normal(size=270).round(3), "x2": rng.normal(size=270).round(3),
+                         "label": rng.choice(["a", "b"], 270)})  # fmt: skip
+    frame = pd.concat([base, base.iloc[:30]], ignore_index=True)  # 10% duplicate rows
+    frame.insert(0, "customer_id", np.arange(100_000, 100_000 + len(frame)))
+    path = tmp_path / "dups.csv"
+    frame.to_csv(path, index=False)
+    summary = execute(RunArgs(file=path, target="label", out=tmp_path / "run", tuning_mode="trials",
+                              trials=1, models=(ModelName.LINEAR,)))  # fmt: skip
+    config = json.loads((summary.run_dir / "records" / "experiment.json").read_text())["config"]
+    assert config["split"]["duplicate_grouping"] is True
+
+
+@pytest.mark.e2e
+def test_memory_always_over_hard_limit_two_strikes_then_e_no_valid_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """§29.6 (KI-014): two hard-limit aborts stop training; §8.9 (KI-015): no valid model →
+    E-NO-VALID-MODEL message, not a traceback.
+    """
+    real = cli.ResourceMonitor
+    monitors: list[Any] = []
+
+    def over_hard(soft: float, hard: float, **kw: Any) -> Any:
+        monitors.append(real(soft, hard, rss_fn=lambda: hard + 1, **kw))
+        return monitors[-1]
+
+    monkeypatch.setattr(cli, "ResourceMonitor", over_hard)
+    code = main(["run", str(FIX / "binary_small.csv"), "--target", "target", "--out",
+                 str(tmp_path / "run"), "--tuning-mode", "trials", "--trials", "4",
+                 "--models", "linear,lightgbm"])  # fmt: skip
+    assert code == 2
+    assert "No model trained successfully" in capsys.readouterr().err
+    assert monitors[0].hard_strikes == 2
+
+
+@pytest.mark.e2e
+def test_run_trial_cap_is_never_exceeded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """§17.3 total trials per run (KI-016): later models are skipped once the cap is used."""
+    real = cli.TimeBudget
+    monkeypatch.setattr(cli, "TimeBudget", lambda total, _cap: real(total, 3))
+    args = RunArgs(file=FIX / "binary_small.csv", target="target", out=tmp_path / "run",
+                   tuning_mode="trials", trials=3,
+                   models=(ModelName.LINEAR, ModelName.LIGHTGBM, ModelName.RANDOM_FOREST))  # fmt: skip
+    summary = execute(args)
+    trials = (summary.run_dir / "records" / "trials.jsonl").read_text().splitlines()
+    assert len(trials) == 3
+    skipped = [e for e in summary.entries if e.status == "skipped_budget"]
+    assert [e.model for e in skipped] == [ModelName.RANDOM_FOREST, ModelName.LINEAR]
+    assert "run trial cap reached" in skipped[0].warnings
+
+
+@pytest.mark.e2e
+def test_feasibility_simplifications_are_applied(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """§29.5 (KI-017): each simplification in a `simplified` report changes the run."""
+    steps = [Simplification.REDUCE_TUNING_TRIALS, Simplification.DISABLE_RANDOM_FOREST,
+             Simplification.REDUCE_FOLDS, Simplification.CAP_ONEHOT]  # fmt: skip
+    report = FeasibilityReport(status="simplified", estimated_peak_mb=100.0, limit_mb=200.0,
+                               simplifications=steps)  # fmt: skip
+    monkeypatch.setattr(cli, "estimate_feasibility", lambda *a, **k: report)
+    schemas: list[Any] = []
+    real_schema = cli._simplified_schema
+    monkeypatch.setattr(cli, "_simplified_schema",
+                        lambda run, s: schemas.append(real_schema(run, s)) or schemas[-1])  # fmt: skip
+    args = RunArgs(file=FIX / "binary_basic.csv", target="churn", out=tmp_path / "run",
+                   tuning_mode="trials", trials=4,
+                   models=(ModelName.LINEAR, ModelName.LIGHTGBM, ModelName.RANDOM_FOREST))  # fmt: skip
+    summary = execute(args)
+    experiment = json.loads((summary.run_dir / "records" / "experiment.json").read_text())
+    assert experiment["config"]["split"]["k"] == 3  # REDUCE_FOLDS
+    assert ModelName.RANDOM_FOREST not in {
+        e.model for e in summary.entries
+    }  # DISABLE_RANDOM_FOREST
+    assert schemas[0].onehot_max_categories == 8  # CAP_ONEHOT
+    trials = [
+        json.loads(t)
+        for t in (summary.run_dir / "records" / "trials.jsonl").read_text().splitlines()
+    ]
+    per_model = {m: sum(t["model"] == m for t in trials) for m in ("linear", "lightgbm")}
+    assert per_model == {"linear": 2, "lightgbm": 2}  # REDUCE_TUNING_TRIALS: 4 → 2

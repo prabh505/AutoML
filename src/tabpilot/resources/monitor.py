@@ -85,7 +85,7 @@ class ResourceMonitor:
             self._last_record = now
         if rss >= self.hard_mb:
             self._pending_abort = True
-        elif rss >= self.soft_mb and not self.soft_exceeded:
+        if rss >= self.soft_mb and not self.soft_exceeded:  # a jump past hard is also above soft
             self.soft_exceeded = True
             gc.collect()
         return rss

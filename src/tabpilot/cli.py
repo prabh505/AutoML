@@ -32,7 +32,7 @@ from tabpilot.evaluation.leaderboard import (
 )
 from tabpilot.evaluation.metrics import Problem, default_primary, selection_score
 from tabpilot.evaluation.metrics import spec as metric_spec
-from tabpilot.evaluation.selection import SelectionFreeze, select
+from tabpilot.evaluation.selection import NoValidModelError, SelectionFreeze, select
 from tabpilot.ingestion import apply_target, load_dataset, validate_target
 from tabpilot.ingestion.task import detect_task, positive_label
 from tabpilot.models import ModelRegistry
@@ -48,6 +48,8 @@ from tabpilot.resources.estimator import (
 )
 from tabpilot.schemas import (
     CandidateSpec,
+    ColumnRole,
+    ErrorCode,
     EventType,
     ExecutionProfileName,
     FeasibilityReport,
@@ -223,8 +225,10 @@ def _train(
         rest = share + sum(pending.values())
         alloc = run.budget.remaining(Stage.TRAIN_CANDIDATES) * (share / rest if rest else 0.0)
         reason = guard(cand)
-        if reason or run.monitor.stop_training:
+        out_of_trials = run.budget.trials_left() == 0  # run-level cap (§17.3), KI-016
+        if reason or run.monitor.stop_training or out_of_trials:
             status = "skipped_resource" if reason else "skipped_budget"
+            reason = reason or ("run trial cap reached" if out_of_trials else None)
             result = TrainingResult(
                 entry_id=f"0-{name.value}-00000000", status=status, error=reason
             )
@@ -244,7 +248,7 @@ def _train(
         tuned = tune(cand, dev, split, schema=schema, registry=run.registry, metric=metric,
                      allocation_s=alloc, limits=limits, seed=run.seeds.optuna,
                      profile=profile_name, extra_hook=run.train_hook(),
-                     stop=lambda: run.monitor.soft_exceeded,
+                     stop=lambda: run.monitor.soft_exceeded or run.monitor.stop_training,
                      on_trial=lambda r: run.recorder.trial(dataclasses.asdict(r)))  # fmt: skip
         run.budget.use_trials(len(tuned.trials))
         best = tuned.best
@@ -261,7 +265,7 @@ def _train(
 
 def _limits(run: _Run, alloc: float, n_dev: int, max_trials: int | None) -> TuningLimits:
     """§17.3 limits with the §29.5 simplifications chosen by the feasibility check."""
-    limits = limits_for(run.args.profile, alloc, n_dev, max(1, run.budget.trials_left()),
+    limits = limits_for(run.args.profile, alloc, n_dev, run.budget.trials_left(),
                         mode=run.args.tuning_mode, max_trials=max_trials)  # fmt: skip
     if Simplification.REDUCE_TUNING_TRIALS in run.simplifications:
         limits = replace(limits, max_trials=max(1, limits.max_trials // 2))
@@ -338,7 +342,10 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
             feasibility = _feasibility(run, loaded, target, task, positive)
         with run.stage(Stage.SPLIT):
             k = 3 if Simplification.REDUCE_FOLDS in run.simplifications else 5
-            features = loaded.frame.drop(columns=[target])
+            # duplicate grouping (§11.6) hashes feature columns only: an excluded ID column
+            # would make every row unique (KI-013)
+            feature_cols = [c.name for c in loaded.metadata.columns if c.role == ColumnRole.FEATURE]
+            features = loaded.frame[feature_cols]
             split_result = build_split(loaded.frame[target], task, args.seed, features=features,
                                        k=k)  # fmt: skip
             split = split_result.spec
@@ -371,7 +378,11 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
             entries = _train(run, plan=plan, candidates=_candidates(plan, task, run), dev=dev,
                              split=split, schema=schema, metric=metric)  # fmt: skip
         with run.stage(Stage.EVALUATE):
-            selection = select(entries, run.freeze)
+            try:
+                selection = select(entries, run.freeze)
+            except NoValidModelError as exc:
+                reasons = "; ".join(f"{e.model}: {e.status}" for e in entries)[:400]
+                raise TabPilotError(ErrorCode.NO_VALID_MODEL, reasons=reasons) from exc
             if not_comparable(entries):
                 run.recorder.event(Stage.EVALUATE, EventType.WARNING_RAISED, code="not_comparable")
             run.recorder.event(Stage.EVALUATE, EventType.LEADERBOARD_UPDATED, n=len(entries),

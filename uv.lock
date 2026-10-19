@@ -2654,6 +2654,7 @@ dependencies = [
     { name = "python-ulid" },
     { name = "pyyaml" },
     { name = "scikit-learn" },
+    { name = "scipy" },
     { name = "shap" },
     { name = "streamlit" },
 ]
@@ -2719,6 +2720,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
     { name = "scikit-learn", specifier = ">=1.5" },
+    { name = "scipy", specifier = ">=1.11" },
     { name = "shap", specifier = ">=0.46" },
     { name = "streamlit", specifier = ">=1.40" },
     { name = "types-psutil", marker = "extra == 'dev'", specifier = ">=5.9" },
