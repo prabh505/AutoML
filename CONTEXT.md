@@ -90,7 +90,7 @@ Utility prompts (run any time): U1 Independent audit · U2 Course correction · 
 
 | Gate | After | Pass condition (summary) | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| A | P09 | Rule-based AutoML runs headless via CLI on binary, multiclass, regression fixtures; leakage tests (T-LEAK-01..08) green; leaderboard equals stored results | **awaiting human check + U1 audit** | P09 report: CLI runs on the 3 task fixtures; T-LEAK-01…08 green in `make check` (709 passed) |
+| A | P09 | Rule-based AutoML runs headless via CLI on binary, multiclass, regression fixtures; leakage tests (T-LEAK-01..08) green; leaderboard equals stored results | **open**: U1 audit 2026-10-19 FAIL (§16; KI-003, KI-004); human check pending | P09 report: CLI runs on the 3 task fixtures; T-LEAK-01…08 green in `make check` (709 passed) |
 | B | P15 | Full agent run (stub LLM and no-LLM) via worker + LangGraph produces a valid bundle; cancel/timeout/cleanup work; T-E2E-01..03, 05 green | not started | |
 | C | P16 | User can complete the §3.2 journey in the Streamlit app locally; T-UI-01..04 green | not started | |
 | D | P20 | All release gates G-01..G-18 have recorded evidence or an explicit, accepted waiver | not started | |
@@ -302,6 +302,15 @@ Q-04 … Q-16 were answered by the owner on 2026-10-19 (DEC-007 … DEC-019, ADR
 | --- | --- | --- | --- | --- | --- |
 | KI-001 | 2026-10-19 | P00 follow-up | A-004 doubles the default time budget (hosted 960 s), so a default hosted run can exceed the SM-2 "≤ 10 min" target. SM-2 / T-PERF-01 / G-14 are measured with `time_budget_s=480` until the owner retunes budgets | minor | open (owner retune after MVP) |
 | KI-002 | 2026-10-19 | P09 | `make check` now takes ≈ 6.5 min locally (P08/P09 train real models on fixtures: T-TRN-01 matrix, T-LEAK-08 × 5 seeds, CLI e2e). Acceptable for CI, but slow for inner loops; candidates for a `slow` marker or smaller fixtures if CI time becomes a problem | minor | open |
+| KI-003 | 2026-10-19 | U1 (P08) | AF-01: T-LEAK-08 canary cannot detect a real target-encoding leak. It uses 60 levels (`tests/unit/test_training.py:359-373`), not the PI-08 design (500 levels, n_dev 2,000, positive control). Audit positive control on the test's own data: a plain target-mean encoder fitted on all DEV scores AUC 0.512–0.579 (4 of 5 seeds ≤ 0.55), so the test passes with the leak. With 500 levels the leak scores 0.711–0.728 and the real pipeline 0.492–0.525. Production code is not leaky (T-LEAK-07 and the cross-fit test cover it). Fix: 500 levels per PI-08 plus a positive-control test that must score > 0.55; update PI-08 status | major | open |
+| KI-004 | 2026-10-19 | U1 (P09) | AF-02: stale bytecode in this workspace. `src/tabpilot/training/__pycache__/refit.cpython-311.pyc` holds `REFIT_ITERATION_FACTOR = 1.0` with the same source mtime (1792416233) and size (2399) as the committed `refit.py` (1.1), so CPython loads it. This is a leftover from a same-second mutate/revert. Effect here: `make check` fails 2 tests (`test_refit_rounds_are_mean_best_iteration_times_1_1`, `test_refit_uses_all_dev_rows_without_early_stopping`), and the CLI refits boosting models with ×1.0 instead of ×1.1 (§11.10). A fresh cache passes 709/709. Fix: `find src tests -name __pycache__ -prune -exec rm -rf {} +` before the Gate A human check. Mutation tests must restore files with a new mtime, or run in a scratch copy / with `PYTHONDONTWRITEBYTECODE=1` | major | open |
+| KI-005 | 2026-10-19 | U1 (P08) | AF-03: the I-4 test cannot fail. `test_T_PRE_01_log1p_wraps_whole_pipeline` only asserts `pred > 0`. Mutating `inverse_func=np.expm1` → `np.log1p` (predictions on the wrong scale) passes all 38 preprocessing tests. Fix: assert predictions ≈ `expm1(inner regressor prediction)` and on the scale of `y`, and add a CV test with `log1p` on `regression_skewed.csv` | minor | open |
+| KI-006 | 2026-10-19 | U1 (P09) | AF-04: import contract R2 was not narrowed to `evaluation.holdout` (PRD §25.4 rule 2, PI-13; the `pyproject.toml` comment says P09 narrows it). Audit probe: adding `from tabpilot.splitting.guard import HoldoutGuard` to `evaluation/selection.py` keeps all 5 contracts. `tabpilot.cli` is also unconstrained (DEC-031 (8)). Fix: add `tabpilot.evaluation.{selection,leaderboard,metrics,predict}` to the R2 sources (and constrain `tabpilot.cli` once P15 owns guard construction) | minor | open |
+| KI-007 | 2026-10-19 | U1 (P09) | AF-05: the CLI builds the `HoldoutGuard` only after freeze (`cli.py:322`). During the run, the HOLD indices sit unguarded in `SplitSpec` (protected only by the AST scan on `.holdout_indices`; the complement of `dev_indices` also reveals them), and the run-level pre-freeze refusal is never exercised. L-2/I-1 say the guard holds HOLD from the split onward. Fix (P15 run context): build the guard at split time and pass it to finalize | minor | open |
+| KI-008 | 2026-10-19 | U1 (P04/P05/P08/P09) | AF-06: run-path wiring gaps. (a) The feasibility estimator is never called by the CLI run path (§8.8, FR-ING-05 AC: "a rejected job never starts training"); simplifications are not applied. (b) The RSS soft limit only sets `soft_exceeded`; nothing skips extra trials or optional stages (§29.6). (c) OOF of the selected candidates is not persisted to disk (FR-TRN-01; `OOFStore.persist` is unused). (d) Binary secondaries at the F1-optimal threshold are not computed (§10.2; `f1_optimal_threshold` is unused outside tests). Fix: wire these in now, or assign each to an owning prompt (P13/P15) in TRACEABILITY | minor | open |
+| KI-009 | 2026-10-19 | U1 (P09) | AF-07: the tuning time limit is cooperative at fold boundaries only (`tune.py:163-167`, `cv.py:256`). There is no watchdog (§17.4 "cooperative check per fold + watchdog"), so one long fold can exceed the T-TUN-01 bound (allocation × 1.1 + 15 s). Fix: add a watchdog, or document it as a limitation with a slow-fold test | minor | open |
+| KI-010 | 2026-10-19 | U1 (P07) | AF-08: `validate_spec` rejects a spec whose name equals an existing column (`features/dsl/validate.py:89-99`, code `duplicate_feature`). §14.4 says a collision gets the suffix `__2`. The deviation is not in the Decision Log. Fix: record a DEC (the name-reference ambiguity is a valid reason), or implement suffixing | minor | open |
+| KI-011 | 2026-10-19 | U1 | AF-09: CONTEXT.md inaccuracies. §3 says "`make check` green", which is not reproducible in this workspace (KI-004). PI-08 is still "proposed … P08 adopts", but the PI-08 design was not adopted (KI-003). PI-24 is still "proposed (P09)", but `entry_id_for` already hashes the full candidate (`training/cv.py:147-150`), so the status should be "applied in P08". Fix: correct these when KI-003/KI-004 are resolved | minor | open |
 
 ---
 
@@ -334,7 +343,7 @@ Things that could not be verified in a session (no Docker, no network, no provid
 
 | Date | Prompt audited | Verdict | Findings (IDs) | Fixed by |
 | --- | --- | --- | --- | --- |
-| *(none yet)* | | | | |
+| 2026-10-19 | Milestone 1 (P04–P09), U1 | **FAIL** (2 major, 7 minor). Conformance 88/92 MET: PARTIAL FR-ING-05, FR-TGT-03, FR-TRN-01, T-LEAK-08. Evidence: in this workspace `make check` gave lint/format/mypy/contracts 5/5 green and pytest 2 failed, 707 passed (607 s), caused by the stale `.pyc` (KI-004). `make test-all` with a fresh bytecode cache (`PYTHONPYCACHEPREFIX`) gave 709 passed in 345.74 s, coverage 95.92%. Invariant probes: 15 mutations run in a scratch copy; 14 caught, the I-4 log1p mutation not caught (KI-005). Scratch checks also blocked pre-freeze open, second open, select-after-freeze, code-shaped DSL specs, key leaks in logs, DataFrame logging and seed tampering, and found no `tabpilot.*` class in pickled models. Lint probe: R2 allows `evaluation.selection` to import the guard (KI-006). No TODO/FIXME/stubs, no skip/xfail, no secrets, no new dependencies in M1 | AF-01…AF-09 = KI-003…KI-011 | open: KI-003 and KI-004 must be fixed, then re-audit for Gate A |
 
 ---
 
@@ -355,6 +364,7 @@ Things that could not be verified in a session (no Docker, no network, no provid
 | 2026-10-19 | P07 | `tabpilot_runtime.{dsl_ops,transformers}` (all §14.3 ops, NaN semantics, baseline/rare/frequency transformers), `tabpilot.features.{dsl.catalog,dsl.validate,provenance}`; tests T-FE-01…07, T-LEAK-07 for every stateful op (FitSpy), T-SEC-01 AST scan, clone equivalence, canonical dedup, pickle round-trip in a subprocess without `tabpilot` (`-S` + explicit site-packages); `ingestion.loader._limit_error` no longer uses `getattr` (T-SEC-01); DEC-029 |
 | 2026-10-19 | P08 | `tabpilot.preprocessing.pipeline`, `tabpilot.models.registry`, `tabpilot.training.{cv,guards}`, runtime `columns.py` + `estimators.py`; `FrequencyEncoder(columns=None)`; `resources.estimator.rf_model_mb` (refactor, same numbers); test helpers `prepared.py`, `synthetic.py`, and `FitSpy` attribute forwarding; tests T-PRE-01…05, T-TRN-01…05 (every model × task), T-LEAK-07 (exact per-fold fit rows for every stateful step), T-LEAK-08 (5 seeds), T-FE-08, target-encoder cross-fit, probability alignment, pickle without `tabpilot`; DEC-030 |
 | 2026-10-19 | P09 | `tabpilot.tuning.{space,tune}`, `tabpilot.evaluation.{leaderboard,selection,holdout,predict}`, `tabpilot.training.refit`, `tabpilot.resources.{budget,monitor}`, `tabpilot.tracking.records`, `tabpilot.planning.fallback`, `tabpilot.cli` (+ `[project.scripts] tabpilot`); `run_cv` gains `on_fold`, `fallback`, `train_row_cap`, model size/width, memory abort; tests T-TUN-01…04, T-EVL-01…06, T-LEAK-02, T-LEAK-03 (guard + run level), T-RES-03, T-PLN-09, CLI e2e on binary_basic, multiclass_basic, regression_basic, binary_small (no holdout) in `trials` mode; DEC-031; KI-002 |
+| 2026-10-19 | U1 | Independent audit of Milestone 1 (P04–P09): verdict FAIL. Findings AF-01…AF-09 recorded as KI-003…KI-011 and in the §16 audit log. Gate A stays open. No code changed |
 
 ---
 
@@ -367,6 +377,11 @@ Things that could not be verified in a session (no Docker, no network, no provid
   2. Confirm T-LEAK-01, 02, 07, 08 are green.
   3. Run **U1 Independent audit** with scope "Milestone 1 (P04–P09)" in a fresh session.
   4. Mark Gate A in §5 only after the audit verdict is PASS.
+  - **U1 audit 2026-10-19: FAIL** (§16).
+    - Before anything else, delete the stale bytecode: `find src tests -name __pycache__ -prune -exec rm -rf {} +` (KI-004).
+    - Then fix KI-003 (T-LEAK-08 canary per PI-08, with a positive control).
+    - Then re-run U1.
+    - The minor items KI-005…KI-011 can be fixed in the same pass or given owning prompts.
 - **After Gate A, P10 (LLM router) must know:**
   - `PlannerOutput` from `rule_based_plan` is the fallback for every LLM failure path.
   - The CLI is the in-process stand-in for orchestration (P15 replaces it).
