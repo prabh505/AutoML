@@ -19,6 +19,7 @@ from tests.helpers.synthetic import synthetic
 
 from tabpilot.config import load_settings
 from tabpilot.evaluation.metrics import Problem, default_primary, score
+from tabpilot.evaluation.predict import predict_aligned as _predict
 from tabpilot.models import ModelRegistry
 from tabpilot.preprocessing import PipelineSchema, build_pipeline
 from tabpilot.schemas import (
@@ -43,7 +44,6 @@ from tabpilot.training import (
     run_cv,
     sanitize_error,
 )
-from tabpilot.training.cv import _predict
 
 REG = ModelRegistry(load_settings({}))
 FAST: dict[ModelName, dict[str, Any]] = {

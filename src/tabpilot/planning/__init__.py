@@ -5,3 +5,7 @@ features.dsl.validate, resources.
 
 Must not: training; executing anything; accessing DataFrames.
 """
+
+from tabpilot.planning.fallback import rule_based_plan
+
+__all__ = ["rule_based_plan"]

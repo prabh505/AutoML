@@ -18,6 +18,7 @@ from tabpilot.training.cv import (
     sanitize_error,
 )
 from tabpilot.training.guards import rf_resource_guard
+from tabpilot.training.refit import baseline_candidate, refit_final, refit_params
 
 __all__ = [
     "BudgetExceeded",
@@ -26,7 +27,10 @@ __all__ = [
     "Cancelled",
     "DevData",
     "OOFStore",
+    "baseline_candidate",
     "entry_id_for",
+    "refit_final",
+    "refit_params",
     "rf_resource_guard",
     "run_cv",
     "sanitize_error",

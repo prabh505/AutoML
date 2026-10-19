@@ -16,6 +16,7 @@ Failure semantics:
 from __future__ import annotations
 
 import hashlib
+import pickle
 import re
 import time
 from collections.abc import Callable
@@ -28,9 +29,11 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from tabpilot.evaluation.metrics import Problem, score
+from tabpilot.evaluation.predict import predict_aligned
 from tabpilot.logging import get_logger, scrub
 from tabpilot.models import ModelRegistry
 from tabpilot.preprocessing import PipelineSchema, build_pipeline, inner_pipeline
+from tabpilot.resources.monitor import MemoryLimitExceeded
 from tabpilot.schemas import CandidateSpec, ExecutionProfileName, MetricName, SplitSpec, Task
 from tabpilot.schemas.experiment import TrainingResult
 from tabpilot.splitting import average_repeats, iter_folds
@@ -122,6 +125,8 @@ class CVRun:
     best_iterations: list[int] = field(default_factory=list)
     dropped_features: dict[str, str] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    model_size_bytes: int = 0
+    n_features_out: int = 0
 
 
 @dataclass
@@ -135,6 +140,8 @@ class _Attempt:
     error: str | None = None
     failed_fold: int | None = None
     warnings: list[str] = field(default_factory=list)
+    model_size_bytes: int = 0
+    n_features_out: int = 0
 
 
 def entry_id_for(candidate: CandidateSpec) -> str:
@@ -153,19 +160,6 @@ def sanitize_error(exc: BaseException, fold: int) -> str:
     return text[:MAX_ERROR_CHARS]
 
 
-def _predict(model: Any, X: pd.DataFrame, problem: Problem) -> tuple[NDArray[np.float64], bool]:
-    """(n, n_outputs) predictions; probability columns aligned to `problem.classes` (§10.3).
-    The flag is True when a class was missing from the training fold.
-    """
-    if problem.task == Task.REGRESSION:
-        return np.asarray(model.predict(X), dtype=np.float64).reshape(len(X), 1), False
-    proba = np.asarray(model.predict_proba(X), dtype=np.float64)
-    classes = np.asarray(model.classes_).astype(np.int64)
-    full = np.zeros((len(X), problem.n_classes), dtype=np.float64)
-    full[:, classes] = proba
-    return full, len(classes) < problem.n_classes
-
-
 class _NonFiniteOutputError(ValueError):
     """Predictions or the fold score are NaN/inf, or the prediction shape is wrong (§16.3)."""
 
@@ -177,19 +171,41 @@ def _fold_failures(model: Any, at_fit: bool) -> dict[str, str]:
     return dict.fromkeys(dsl.slow_features_, "failed: exceeded time cap at transform")
 
 
-def _run_folds(
-    candidate: CandidateSpec,
-    *,
-    dev: DevData,
-    split: SplitSpec,
-    schema: PipelineSchema,
-    registry: ModelRegistry,
-    metric: MetricName,
-    cancel: CancelToken | None,
-    budget_hook: Callable[[], None] | None,
-    build: Builder,
-    profile: ExecutionProfileName | None,
-) -> _Attempt:
+@dataclass(frozen=True)
+class _Context:
+    dev: DevData
+    split: SplitSpec
+    schema: PipelineSchema
+    registry: ModelRegistry
+    metric: MetricName
+    cancel: CancelToken | None
+    budget_hook: Callable[[], None] | None
+    on_fold: Callable[[list[float]], None] | None
+    build: Builder
+    profile: ExecutionProfileName | None
+    train_row_cap: int | None
+    seed: int
+
+
+def _subsample(
+    train: NDArray[np.int64], cap: int | None, seed: int, index: int
+) -> NDArray[np.int64]:
+    """Uniform within-fold subsample of training rows only (§17.6); validation rows untouched."""
+    if cap is None or len(train) <= cap:
+        return train
+    rng = np.random.default_rng([seed, index])
+    return np.sort(rng.choice(train, size=cap, replace=False))
+
+
+def _size_and_width(model: Any) -> tuple[int, int]:
+    """Serialized size of a fold-fitted pipeline and its number of preprocessed columns (§18.1)."""
+    names = inner_pipeline(model).named_steps["preprocess"].get_feature_names_out()
+    return len(pickle.dumps(model)), len(names)
+
+
+def _run_folds(candidate: CandidateSpec, ctx: _Context) -> _Attempt:  # noqa: PLR0912 - one branch per §16.3 outcome
+    dev, split, build, schema, registry = ctx.dev, ctx.split, ctx.build, ctx.schema, ctx.registry
+    metric, cancel, profile = ctx.metric, ctx.cancel, ctx.profile
     problem = dev.problem
     n_out = 1 if problem.task == Task.REGRESSION else problem.n_classes
     dev_rows = np.asarray(split.dev_indices, dtype=np.int64)
@@ -202,14 +218,15 @@ def _run_folds(
             raise Cancelled
         try:
             model = build(candidate, schema, registry, profile=profile)
+            fit_rows = _subsample(train, ctx.train_row_cap, ctx.seed, index)
             start = time.perf_counter()
-            model.fit(dev.frame.iloc[train], dev.y[train])
+            model.fit(dev.frame.iloc[fit_rows], dev.y[fit_rows])
             attempt.fit_seconds.append(time.perf_counter() - start)
             attempt.failed_features = _fold_failures(model, at_fit=True)
             if attempt.failed_features:
                 return attempt
             start = time.perf_counter()
-            pred, class_missing = _predict(model, dev.frame.iloc[valid], problem)
+            pred, class_missing = predict_aligned(model, dev.frame.iloc[valid], problem)
             attempt.predict_seconds.append(time.perf_counter() - start)
             attempt.failed_features = _fold_failures(model, at_fit=False)
             if attempt.failed_features:
@@ -233,9 +250,13 @@ def _run_folds(
         best = inner_pipeline(model).named_steps["model"].best_iteration_
         if best is not None:
             attempt.best_iterations.append(int(best))
+        if index == 0:
+            attempt.model_size_bytes, attempt.n_features_out = _size_and_width(model)
         del model  # fitted fold pipelines are discarded after scoring (§29.6)
-        if budget_hook is not None:
-            budget_hook()
+        if ctx.budget_hook is not None:
+            ctx.budget_hook()
+        if ctx.on_fold is not None:
+            ctx.on_fold(list(attempt.fold_scores))
     return attempt
 
 
@@ -253,12 +274,18 @@ def run_cv(
     store: OOFStore | None = None,
     build: Builder = build_pipeline,
     profile: ExecutionProfileName | None = None,
+    on_fold: Callable[[list[float]], None] | None = None,
+    fallback: bool = True,
+    train_row_cap: int | None = None,
 ) -> CVRun:
     """Train `candidate` on every fold of `split` and return fold scores and OOF (§11.4).
 
-    `budget_hook` runs after each fold and may raise `BudgetExceeded` (→ `skipped_budget`);
-    `resource_guard` may veto the candidate before fitting (→ `skipped_resource`, §16.3);
-    `cancel` is checked before each fold (→ `Cancelled` propagates).
+    `budget_hook` runs after each fold and may raise `BudgetExceeded` (→ `skipped_budget`) or
+    `MemoryLimitExceeded` (→ `failed`, "memory", §29.6); `on_fold` receives the fold scores so far
+    (tuning prunes from it; its exceptions propagate); `resource_guard` may veto the candidate
+    before fitting (→ `skipped_resource`, §16.3); `cancel` is checked before each fold
+    (→ `Cancelled` propagates). `fallback=False` disables the default-params retry (tuning
+    trials); `train_row_cap` subsamples training folds only (§17.6).
     """
     entry_id = entry_id_for(candidate)
     reason = resource_guard(candidate) if resource_guard is not None else None
@@ -266,15 +293,19 @@ def run_cv(
         log.warning("candidate_skipped", entry_id=entry_id, status="skipped_resource")
         result = TrainingResult(entry_id=entry_id, status="skipped_resource", error=reason)
         return CVRun(result, candidate)
+    ctx = _Context(dev, split, schema, registry, metric, cancel, budget_hook, on_fold, build,
+                   profile, train_row_cap, candidate.model.seed)  # fmt: skip
     current = candidate
     dropped: dict[str, str] = {}
     warnings: list[str] = []
     fallback_used = False
     while True:
         try:
-            attempt = _run_folds(current, dev=dev, split=split, schema=schema, registry=registry,
-                                 metric=metric, cancel=cancel, budget_hook=budget_hook,
-                                 build=build, profile=profile)  # fmt: skip
+            attempt = _run_folds(current, ctx)
+        except MemoryLimitExceeded as exc:
+            error = f"memory: {exc}"
+            return _failed(CVRun(_failure(entry_id, error), current, dropped_features=dropped,
+                                 warnings=warnings))  # fmt: skip
         except BudgetExceeded:
             log.warning("candidate_skipped", entry_id=entry_id, status="skipped_budget")
             result = TrainingResult(entry_id=entry_id, status="skipped_budget")
@@ -289,7 +320,8 @@ def run_cv(
                                      warnings=warnings))  # fmt: skip
             current = current.model_copy(update={"features": kept})
             continue
-        retry = attempt.failed_fold == 0 and not fallback_used and bool(current.model.params)
+        retry = (fallback and attempt.failed_fold == 0 and not fallback_used
+                 and bool(current.model.params))  # fmt: skip
         if attempt.error and retry:
             fallback_used = True
             warnings.append("fallback_params")
@@ -304,6 +336,7 @@ def run_cv(
                     dropped_features=dropped, warnings=warnings + attempt.warnings)  # fmt: skip
         run.best_iterations = attempt.best_iterations
         run.oof = _oof(attempt, split)
+        run.model_size_bytes, run.n_features_out = attempt.model_size_bytes, attempt.n_features_out
         log.info("candidate_completed", entry_id=entry_id, folds=len(attempt.fold_scores))
         return run
 
