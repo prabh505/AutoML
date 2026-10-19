@@ -293,7 +293,7 @@ Things that could not be verified in a session (no Docker, no network, no provid
 
 | ID | Date | Prompt | Item | Why unverified | How to verify | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| UV-001 | 2026-10-19 | P01 | `.github/workflows/ci.yml` runs on GitHub Actions | Actions cannot run inside this session; the same `make setup` / `make check` / `make requirements-check` commands passed locally | Check the first Actions run on `main` is green | open |
+| UV-001 | 2026-10-19 | P01 | `.github/workflows/ci.yml` runs on GitHub Actions | Actions cannot run inside this session; the same `make setup` / `make check` / `make requirements-check` commands passed locally | Check the first Actions run on `main` is green | verified 2026-10-19: run 39243450886 green (39 s); note: `actions/checkout@v4` and `setup-uv@v6` trigger a Node 20 deprecation annotation (bump in P18) |
 
 ---
 
@@ -345,5 +345,5 @@ Things that could not be verified in a session (no Docker, no network, no provid
   - DEC-021: config values live in `config/*.yaml`; placeholders are quoted strings (PI-40).
   - Time values come from A-004 / ADR-0003.
 - **Environment:** Python 3.11 at `/usr/bin/python3.11`; always run tools through `uv run --frozen` or `make`. Never let ruff touch Markdown (excluded in `pyproject.toml`).
-- **Open:** UV-001 (first GitHub Actions run). Owner decisions are all recorded (ADR-0003).
+- **CI:** the first GitHub Actions run on `main` is green (UV-001 verified). Owner decisions are all recorded (ADR-0003).
 - **Work mode:** commit and push each prompt to `main`, then continue (stop at gates, failures, or new questions).
