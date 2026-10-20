@@ -39,5 +39,5 @@ class LLMCallRecorder:
 RECORD_FIELDS = frozenset({
     "purpose", "provider", "model_id", "attempt", "outcome", "error_class", "latency_s",
     "input_tokens", "output_tokens", "tokens_estimated", "cached", "request_sha256",
-    "response_sha256",
+    "response_sha256", "template",
 })  # fmt: skip

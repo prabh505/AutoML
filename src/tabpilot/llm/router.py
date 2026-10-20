@@ -37,7 +37,7 @@ from tabpilot.llm.errors import (
     RateLimited,
     ServerError,
 )
-from tabpilot.llm.normalize import estimate_tokens
+from tabpilot.llm.normalize import estimate_tokens, extract_json
 from tabpilot.llm.records import LLMCallRecorder
 from tabpilot.logging import get_logger
 from tabpilot.schemas import EventType, LLMRequest, LLMResponse
@@ -89,6 +89,7 @@ class LLMRouter:
         self._sleep = sleep
         self._jitter = jitter
         self.unavailable: set[str] = set()  # providers disabled for the rest of the run
+        self._template: str | None = None
 
     def _emit(self, kind: EventType, **data: Any) -> None:
         if self._events is not None:
@@ -96,6 +97,8 @@ class LLMRouter:
 
     def _record(self, **fields: Any) -> None:
         if self.recorder is not None:
+            if self._template is not None:
+                fields["template"] = self._template
             self.recorder.write(**fields)
 
     def usable(self) -> list[LLMProvider]:
@@ -103,13 +106,19 @@ class LLMRouter:
         return [p for p in self.providers if p.name not in self.unavailable
                 and self.consent.allows(p.name) and p.available()]  # fmt: skip
 
-    def complete(self, req: LLMRequest, budget: BudgetTracker) -> LLMResponse:
-        """§23.5. Raises `LLMBudgetExhausted` or `LLMUnavailable`; callers fall back (I-8)."""
+    def complete(
+        self, req: LLMRequest, budget: BudgetTracker, template: str | None = None
+    ) -> LLMResponse:
+        """§23.5. Raises `LLMBudgetExhausted` or `LLMUnavailable`; callers fall back (I-8).
+        `template` (e.g. `planner_system@1.0`) is recorded in `llm_calls.jsonl`.
+        """
         budget.start()
+        self._template = template
         try:
             return self._complete(req, budget)
         finally:
             budget.stop()
+            self._template = None
 
     def _complete(self, req: LLMRequest, budget: BudgetTracker) -> LLMResponse:
         req_hash = request_hash(req)
@@ -174,7 +183,9 @@ class LLMRouter:
                     continue
                 return None
             budget.record(response)
-            response = response.model_copy(update={"attempts": attempt})
+            parsed = response.parsed if response.parsed is not None else extract_json(
+                response.content)  # fmt: skip
+            response = response.model_copy(update={"attempts": attempt, "parsed": parsed})
             self._record(purpose=req.purpose, provider=provider.name,
                          model_id=response.model_id, attempt=attempt, outcome="success",
                          latency_s=round(response.latency_s, 3),

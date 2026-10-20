@@ -45,11 +45,11 @@
 
 | Field | Value |
 | --- | --- |
-| Last completed prompt | **P10** LLM provider router |
-| Next prompt | **P11** LLM planner and plan validator |
+| Last completed prompt | **P11** LLM planner and plan validator |
+| Next prompt | **P12** Reflection and ensembling |
 | Current milestone | Milestone 2 — Intelligence, artifacts, agent (Gate A passed) |
-| Test suite | `make check` green (2026-10-20, P10): ruff, format, mypy, import-linter 5 kept, pytest 780 passed (≈ 5.5 min; `make test` clears bytecode first), coverage 96.25% (llm 98%); live tests opt-in (KI-025) |
-| Last green commit | P10 commit (`git log --grep '^P10:'`) |
+| Test suite | `make check` green (2026-10-20, P11): ruff, format, mypy, import-linter 5 kept, pytest 838 passed (≈ 5.5 min), coverage 96.39% (planning 97%, llm 98%); live tests opt-in (KI-025) |
+| Last green commit | P11 commit (`git log --grep '^P11:'`) |
 | Blockers | None. Owner answered Q-04…Q-16 (ADR-0003) |
 
 ---
@@ -71,7 +71,7 @@ Status values: `pending` · `in_progress` · `complete` · `complete_with_issues
 | P08 | Preprocessing, model zoo, CV runner | §15, §16, §11.4, §11.8 | M1 | complete | see `git log --grep '^P08:'` | 2026-10-19 |
 | P09 | Tuning, evaluation, selection, holdout, budgets, rule-based CLI | §17, §18, §11.10, §12.8, §29.3, §29.6, §30.1 | **Gate A** | complete | see `git log --grep '^P09:'` | 2026-10-19 |
 | P10 | LLM provider router | §23, §6.4, §24.5 | M2 | complete | see `git log --grep '^P10:'` | 2026-10-20 |
-| P11 | LLM planner and plan validator | §12 | M2 | pending | | |
+| P11 | LLM planner and plan validator | §12 | M2 | complete | see `git log --grep '^P11:'` | 2026-10-20 |
 | P12 | Reflection and ensembling | §19, §20 | M2 | pending | | |
 | P13 | Explainability and reporting | §21 | M2 | pending | | |
 | P14 | Artifact export and reproducibility | §22 | M2 | pending | | |
@@ -121,7 +121,7 @@ Utility prompts (run any time): U1 Independent audit · U2 Course correction · 
 | `tabpilot.preprocessing`, `tabpilot.models`, `tabpilot.training` | P08 | complete | `build_pipeline`/`schema_from`/`inner_pipeline`; `ModelRegistry` (`available`, `make_estimator`, class weights); `run_cv` → `CVRun` (`.result` = `TrainingResult`), `DevData`, `OOFStore`, `rf_resource_guard`; runtime `ColumnNameMapper`, `TypeCaster`, `ColumnSelector`, `BooleanEncoder`, `TabularModel`, `PredictionSchemaError` |
 | `tabpilot.tuning`, `tabpilot.evaluation`, `tabpilot.tracking`, `planning.fallback` | P09 | complete | `tune`/`limits_for`/`SPACES`; `evaluation.{leaderboard,selection,holdout,predict}`; `resources.{budget,monitor}`; `tracking.RunRecorder`; `planning.rule_based_plan`; `training.refit`; CLI `tabpilot run` (`tabpilot.cli`) |
 | `tabpilot.llm` | P10 | complete | `LLMRouter.complete(req, BudgetTracker)`, adapters (`adapters/` package; Gemini isolated in `adapters/gemini.py`), error classes + `classify`, `LLMCache`, `LLMCallRecorder` (`llm_calls.jsonl`), `ConsentStore`/`privacy_notice`, `build_router`/`default_budget`; coverage 98% |
-| `tabpilot.planning` | P11 | not started | |
+| `tabpilot.planning` | P11 | complete | `build_planner_input`/`preview_planner_input`, versioned templates (`planner_system@1.0`, `planner_repair@1.0`), `validate_plan` (§12.6), `make_plan` (one repair, fallback), `rule_based_plan` (P09); coverage 97% |
 | `tabpilot.reflection`, `tabpilot.ensembling` | P12 | not started | |
 | `tabpilot.explain`, `tabpilot.reporting` | P13 | not started | |
 | `tabpilot.export` | P14 | not started | |
@@ -211,8 +211,7 @@ Format: `ID | Date | Prompt | Decision | Rationale | Status (proposed/accepted/s
 | DEC-032 | 2026-10-19 | U2 | Audit fixes. (1) T-LEAK-08 follows PI-08 except the cardinality: 90 levels instead of 500. With n_dev 2,000, 500 levels give ≈ 3 rows per level per training fold, and §14.2 rare grouping (count < 10 or share < 1%) maps every level to `__rare__`, so the target encoder would see a constant. Measured: 0 levels kept at 500 vs 60–69 at 90. With 90 levels the leaky control scores 0.596–0.633 and the pipeline 0.491–0.511. The test asserts that > 50 levels reach the encoder. (2) Tuning and training time limits are cooperative at fold boundaries; an in-process watchdog cannot interrupt a native fit. The overrun is bounded by one fold; the hard wall-clock kill (130%) belongs to the P15 worker. The default-config fallback run is deadline-bounded. (3) DSL spec names may not equal an existing raw column (`duplicate_feature`), because later specs reference earlier specs by `name`, and a shadowed raw column would be ambiguous. Output-name collisions (`llm__<name>` vs an existing column) get `__2` as §14.5 says. (4) R2 lists every evaluation module except `holdout` as a source; the CLI run context is PI-13's named construction site. (5) The CLI feasibility check builds a `RunConfig` with `llm_mode="off"` and `enable_ensemble=False` (no ensembling before P14); `DISABLE_ENSEMBLE` is recorded only. `CAP_ONEHOT` → `PipelineSchema.onehot_max_categories = 8` (or `linear_onehot=False` → frequency encoding). (6) Binary threshold metrics live in `experiment.json` `thresholds` (not `LeaderboardEntry.secondary`, whose keys are `MetricName`), for P13 to render. Only the winner's OOF is persisted until ensembling (P14) selects more | Implementation details; no PRD behavior change | accepted | `tests/unit/test_training.py`, `src/tabpilot/cli.py`, `pyproject.toml` |
 | DEC-033 | 2026-10-19 | U2 #2 | (1) **ADR-0004 (proposed, owner decision):** time limits are cooperative at fold boundaries in-process (no watchdog thread; the P15 worker's 130% kill is the hard stop), and DSL spec names may not equal a raw column (the `llm__` output-name collision still gets `__2`). These supersede DEC-032 items (2) and (3), which were wrongly marked as implementation details. (2) `scipy>=1.11` is declared because `profiling/stats.py` imports it directly. It was already resolved transitively via scikit-learn, so only the lock metadata changed. (3) §29.5 step 1 (reduce tuning trials) is a time simplification: the memory estimator lists only steps that lower memory, so it never selects it; the CLI halves trials whenever a report lists it. Corrects DEC-032 (5) | (1) changes PRD behavior → proposed; (2)–(3) accepted | proposed / accepted | ADR-0004 |
 | DEC-034 | 2026-10-20 | P10 | Router details. (1) `LLMRouter.complete(req, budget)` takes a `BudgetTracker`, which holds a run's usage against the `LLMBudget` ceilings; the contract stays static. One tracker is shared by every LLM step of a run. (2) The per-attempt timeout is min(request, `per_call_timeout_s`, wall time left). It is passed in a copy of the request; the payload hash excludes it, so T-LLM-06 holds. (3) A 429 without `retry_after` moves to the next provider (§23.5 waits only when retry_after ≤ 20 s and time is left). After 3 transient failures the router moves on with no final sleep. A backoff that does not fit the remaining wall time raises `LLMBudgetExhausted`. (4) `LLMBudgetExhausted` subclasses `LLMUnavailable`, so one `except` gives the deterministic fallback (I-8). (5) The cache key's prompt-template identity is the SHA-256 of the system prompt (§6.4 asks for the template version; templates arrive in P11). Hosted: memory only; local: `~/.cache/tabpilot/llm`, 7-day TTL by mtime. Cached responses hold response content only (metadata the LLM saw), never prompts. (6) `available()` makes no network call: model id configured and a key present (Ollama needs no key). (7) A 404 for an OpenRouter model id tries the next configured id (free models rotate). (8) The Gemini OpenAI-compatible base URL is a code default in `adapters/gemini.py` (D-11 isolation); `providers.yaml` may override it. (9) Consent defaults to deny: a provider without a granted `ProviderConsent` is never called. (10) The P01 skeleton package `tabpilot/llm/adapters/` now holds the adapters | Implementation details within §23, §6.4, §24.5 | accepted | `src/tabpilot/llm/` |
-| 2026-10-20 | U2 #3 | Fixed KI-021…KI-024 (T-PRIV-01 pin, trial-0 reservation per planned model, per-model reasons in E-NO-VALID-MODEL, Q-17 for ADR-0004); Gate A marked passed per owner instruction |
-| 2026-10-20 | P10 | `tabpilot.llm` (errors, normalize, budget, cache, records, consent, adapters/ + gemini, router, factory); tests T-LLM-01…04, 06, 07, partial T-PRIV-04, cache, consent, notices, key hygiene; opt-in live tests (KI-025); DEC-034; 780 passed |
+| DEC-035 | 2026-10-20 | P11 | Planner details. (1) The system prompt embeds a compact `PlannerOutput` schema: one generic feature object (op enum, inputs, params), no titles or descriptions. Per-op arity and parameter ranges are in the payload's `dsl_catalog`, keeping the prompt ≈ 1,870 tokens (< 3,000). The worked example is an invented loan dataset in code, not a fixture or user data. (2) Status follows §12.6 and the `PlanValidation` contract: `valid` only with zero issues. Every applied fix, including allocation normalization when the plan's own models do not sum to 1, makes the plan `repaired`. An advisory `cv_folds` that differs from the split is recorded only in `cv_folds_ignored`; an allowed but different `metric_recommendation` is ignored. A disallowed one is removed (`metric_not_allowed`). (3) Feature issues are deduplicated per (feature, code). Schema failures keep the Pydantic error type as the issue code, matching MANIFEST. (4) The router fills `parsed` with `extract_json(content)` when a provider returns none (fence stripping is the router's job, §23.6). (5) Repair calls send `{planner_input, previous_response, errors}`. Semantic `invalid` (e.g. > 50% unsafe features) falls back without a repair call, since §12.5 repairs only unparseable or schema-invalid output. (6) Cost checks go through an injectable `PlanContext.cost_check`; P15's run context supplies the §29.4 estimator. (7) `LLMRouter.complete(..., template=...)` records the template id in `llm_calls.jsonl`. `planning.versions()` gives the map for `ExperimentConfig.prompt_template_versions`, which P15 fills when the LLM planner runs; the P09 CLI still plans rule-based | Implementation details within §12, §23.6 | accepted | `src/tabpilot/planning/` |
 
 ---
 
@@ -391,19 +390,20 @@ Things that could not be verified in a session (no Docker, no network, no provid
 | 2026-10-19 | U2 #2 | Fixed re-audit findings KI-012…KI-020: T-PRIV-01 token match + pinned example; duplicate grouping on feature columns only; memory two-strike rule across tuning; E-NO-VALID-MODEL; run trial cap; simplification wiring test; clip fit-state test; ADR-0004 (proposed); scipy declared; DEC-033; 728 passed |
 | 2026-10-19 | U1 re-audit | Re-audit of Milestone 1 after U2: verdict FAIL. KI-003…KI-011 verified fixed; new findings RA-01…RA-09 recorded as KI-012…KI-020 and in the §16 audit log; §3, §5 Gate A (still open) and the handoff note updated. No code changed |
 | 2026-10-19 | U1 second re-audit | Second re-audit of Milestone 1 after U2 #2: PASS_WITH_FIXES (minor only). KI-012…KI-020 verified; new minor findings KI-021…KI-024; §3, §5 Gate A (U1 passed), §16 and handoff updated. No code changed |
+| 2026-10-20 | U2 #3 | Fixed KI-021…KI-024 (T-PRIV-01 pin, trial-0 reservation per planned model, per-model reasons in E-NO-VALID-MODEL, Q-17 for ADR-0004); Gate A marked passed per owner instruction |
+| 2026-10-20 | P10 | `tabpilot.llm` (errors, normalize, budget, cache, records, consent, adapters/ + gemini, router, factory); tests T-LLM-01…04, 06, 07, partial T-PRIV-04, cache, consent, notices, key hygiene; opt-in live tests (KI-025); DEC-034; 780 passed |
+| 2026-10-20 | P11 | `tabpilot.planning.{input,templates,validate,planner}` + prompts `planner_system@1.0`, `planner_repair@1.0`; router fills `parsed` from content and records template ids; tests T-PLN-01…08 (all 19 plan fixtures), T-TGT-11, T-LLM-05, T-SEC-02 (plan part), T-PRIV-02, prompt size; DEC-035; 838 passed |
 
 ---
 
 ## 18. Handoff note  *(replace at the end of every session)*
 
-**Latest (P10, 2026-10-20):** P10 is complete and pushed to `main`. `make check` is green (780 tests). Gate A passed (owner instruction, 2026-10-20). Q-17 (ADR-0004) and the owner's CLI check are still open but non-blocking.
+**Latest (P11, 2026-10-20):** P11 is complete and pushed to `main`. `make check` is green (838 tests). Q-17 (ADR-0004) and the owner's CLI check are still open but non-blocking.
 
-- **Next:** P11 (LLM planner and plan validator).
-- **P11 must apply:**
-  - Use `tabpilot.llm.build_router(...)` with `default_budget(time_budget_s, limits.llm_calls_per_run)` and one shared `BudgetTracker` per run.
-  - Catch `LLMUnavailable` (which includes `LLMBudgetExhausted`) → `rule_based_plan` (I-8). At most 2 planner calls (plan + one repair, §12.5).
-  - Reuse `features.dsl.validate_specs` for the features in a plan.
-  - Shrink the compact profile to fit the 6,000-token per-call cap (DEC-017); the router raises `LLMBudgetExhausted` if a request is too large.
-  - Consent: `ConsentStore` is deny-by-default. The CLI/UI must record a `ProviderConsent` per provider (§24.5).
-- **Environment:** always run tools via `uv run --frozen` or `make`. Run mutation checks with `PYTHONDONTWRITEBYTECODE=1`. Run `pytest -m live` only with keys.
+- **Next:** P12 (reflection and ensembling).
+- **P12 must apply:**
+  - Reuse the P10 router (one `BudgetTracker` per run, `template=` ids) and the P11 pattern: versioned prompts in `planning/prompts/` style, data only in `user_json`, one repair call, then a deterministic fallback.
+  - Reflection changes reuse `features.validate_specs`, at most 6 per round and 12 active features at all times (A-010).
+  - Acceptance rules are deterministic on paired fold scores (§19.5).
+- **Environment:** always run tools via `uv run --frozen` or `make`. Run mutation checks with `PYTHONDONTWRITEBYTECODE=1`.
 - **Work mode:** commit and push each prompt to `main`, then continue (stop at gates, failures, or new questions).
