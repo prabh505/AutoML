@@ -219,8 +219,9 @@ def _train(
     guard = rf_resource_guard(profile_name, len(split.dev_indices), run.monitor.soft_mb)
     entries: list[LeaderboardEntry] = []
     pending = {c.model.name: plan.tuning_allocation.get(c.model.name, 0.0) for c in candidates}
-    for cand in candidates:
+    for index, cand in enumerate(candidates):
         name = cand.model.name
+        later = len(candidates) - index - 1  # trial 0 is reserved for every planned model
         share = pending.pop(name)
         rest = share + sum(pending.values())
         alloc = run.budget.remaining(Stage.TRAIN_CANDIDATES) * (share / rest if rest else 0.0)
@@ -242,7 +243,8 @@ def _train(
             run.recorder.event(Stage.TRAIN_CANDIDATES, EventType.RESOURCE_WARNING,
                                level="soft", action="no extra tuning trials")  # fmt: skip
         extra = share > 0 and not run.monitor.soft_exceeded
-        limits = _limits(run, alloc, len(split.dev_indices), run.args.trials if extra else 1)
+        limits = _limits(run, alloc, len(split.dev_indices), run.args.trials if extra else 1,
+                         reserved=later)  # fmt: skip
         run.recorder.event(Stage.TRAIN_CANDIDATES, EventType.CANDIDATE_STARTED, model=name.value,
                            allocation_s=round(alloc, 1), max_trials=limits.max_trials)  # fmt: skip
         tuned = tune(cand, dev, split, schema=schema, registry=run.registry, metric=metric,
@@ -263,9 +265,14 @@ def _train(
     return entries
 
 
-def _limits(run: _Run, alloc: float, n_dev: int, max_trials: int | None) -> TuningLimits:
-    """§17.3 limits with the §29.5 simplifications chosen by the feasibility check."""
-    limits = limits_for(run.args.profile, alloc, n_dev, run.budget.trials_left(),
+def _limits(
+    run: _Run, alloc: float, n_dev: int, max_trials: int | None, *, reserved: int = 0
+) -> TuningLimits:
+    """§17.3 limits with the §29.5 simplifications chosen by the feasibility check. `reserved`
+    run trials stay available so every later planned model still gets its trial 0 (§12.8).
+    """
+    left = max(1, run.budget.trials_left() - reserved)
+    limits = limits_for(run.args.profile, alloc, n_dev, left,
                         mode=run.args.tuning_mode, max_trials=max_trials)  # fmt: skip
     if Simplification.REDUCE_TUNING_TRIALS in run.simplifications:
         limits = replace(limits, max_trials=max(1, limits.max_trials // 2))
@@ -381,7 +388,8 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
             try:
                 selection = select(entries, run.freeze)
             except NoValidModelError as exc:
-                reasons = "; ".join(f"{e.model}: {e.status}" for e in entries)[:400]
+                reasons = "; ".join(f"{e.model}: {e.warnings[-1] if e.warnings else e.status}"
+                                    for e in entries)[:400]  # fmt: skip
                 raise TabPilotError(ErrorCode.NO_VALID_MODEL, reasons=reasons) from exc
             if not_comparable(entries):
                 run.recorder.event(Stage.EVALUATE, EventType.WARNING_RAISED, code="not_comparable")

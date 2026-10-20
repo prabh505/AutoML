@@ -268,7 +268,9 @@ def test_memory_always_over_hard_limit_two_strikes_then_e_no_valid_model(
                  str(tmp_path / "run"), "--tuning-mode", "trials", "--trials", "4",
                  "--models", "linear,lightgbm"])  # fmt: skip
     assert code == 2
-    assert "No model trained successfully" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "No model trained successfully" in err
+    assert "memory: RSS above" in err  # per-model reasons, not just statuses (KI-023)
     assert monitors[0].hard_strikes == 2
 
 
@@ -281,11 +283,14 @@ def test_run_trial_cap_is_never_exceeded(tmp_path: Path, monkeypatch: pytest.Mon
                    tuning_mode="trials", trials=3,
                    models=(ModelName.LINEAR, ModelName.LIGHTGBM, ModelName.RANDOM_FOREST))  # fmt: skip
     summary = execute(args)
-    trials = (summary.run_dir / "records" / "trials.jsonl").read_text().splitlines()
-    assert len(trials) == 3
-    skipped = [e for e in summary.entries if e.status == "skipped_budget"]
-    assert [e.model for e in skipped] == [ModelName.RANDOM_FOREST, ModelName.LINEAR]
-    assert "run trial cap reached" in skipped[0].warnings
+    trials = [
+        json.loads(t)
+        for t in (summary.run_dir / "records" / "trials.jsonl").read_text().splitlines()
+    ]
+    assert len(trials) == 3  # never above the run cap
+    # trial 0 is reserved for each planned model, so every model trains (§12.8, KI-022)
+    assert {t["model"] for t in trials} == {"lightgbm", "random_forest", "linear"}
+    assert all(e.status == "ok" for e in summary.entries)
 
 
 @pytest.mark.e2e

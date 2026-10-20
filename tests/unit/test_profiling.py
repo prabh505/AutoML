@@ -300,7 +300,7 @@ LABEL = st.text(alphabet=string.ascii_uppercase + string.digits, min_size=6, max
     max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
 )
 @given(labels=st.lists(LABEL, min_size=3, max_size=8, unique=True), seed=st.integers(0, 10_000))
-@example(labels=["alpha", "beta", "gamma"], seed=1568)  # KI-012: share 0.166667 vs id 166667
+@example(labels=["000000", "000001", "000002", "00000A", "0000000"], seed=1568)  # KI-012/021
 def test_T_PRIV_01_no_raw_values_in_compact_profile(
     labels: list[str], seed: int, tmp_path: Path
 ) -> None:
