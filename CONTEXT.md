@@ -48,7 +48,7 @@
 | Last completed prompt | **P10** LLM provider router |
 | Next prompt | **P11** LLM planner and plan validator |
 | Current milestone | Milestone 2 — Intelligence, artifacts, agent (Gate A passed) |
-| Test suite | U1 second re-audit (2026-10-19): `make clean-pyc` then `make check` green (ruff, format, mypy 86 files, import-linter 5 kept, pytest 728 passed in 302.66 s, coverage 96.12%); `make test-all` 728 passed in 288.12 s |
+| Test suite | `make check` green (2026-10-20, P10): ruff, format, mypy, import-linter 5 kept, pytest 780 passed (≈ 5.5 min; `make test` clears bytecode first), coverage 96.25% (llm 98%); live tests opt-in (KI-025) |
 | Last green commit | P10 commit (`git log --grep '^P10:'`) |
 | Blockers | None. Owner answered Q-04…Q-16 (ADR-0003) |
 
