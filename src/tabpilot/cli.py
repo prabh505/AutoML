@@ -2,8 +2,8 @@
 
 Runs the LLM-free product in-process: ingest → split → profile → rule-based plan → tuned CV per
 model → leaderboard and selection → final refit → freeze → one-time holdout → explanations and
-error analysis → report (template narrative) → run records. P15 routes the same stages through
-orchestration.
+error analysis → report (template narrative) → verified export bundle → run records. P15
+routes the same stages through orchestration.
 """
 
 from __future__ import annotations
@@ -44,6 +44,7 @@ from tabpilot.explain import (
     error_analysis,
     explain,
 )
+from tabpilot.export import ExportSettings, export_bundle
 from tabpilot.ingestion import apply_target, load_dataset, validate_target
 from tabpilot.ingestion.task import detect_task, positive_label
 from tabpilot.models import ModelRegistry
@@ -130,6 +131,8 @@ class RunSummary:
     entries: list[LeaderboardEntry]
     winner: str
     holdout: dict[str, Any]
+    bundle: Path | None = None
+    bundle_sha256: str | None = None
 
 
 def _library_versions() -> dict[str, str]:
@@ -516,6 +519,20 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
             narrative=paths.narrative.source,
             figures=len(paths.figures),
         )
+    lineage = {"winner": selection.winner, "refit_params": refit_params(best.candidate,
+               best.best_iterations), "cv_best_iterations": best.best_iterations,
+               "baseline_model": base.model.name.value, "plan_source": "rule_based",
+               "winner_oof": oof_path}  # fmt: skip
+    with run.stage(Stage.EXPORT):
+        original = next(c.original for c in metadata.columns if c.name == target)
+        bundle = export_bundle(state, final_model, run.dir / "report", ExportSettings(
+            out_dir=run.dir, max_bundle_mb=run.limits.max_bundle_mb, profile=args.profile,
+            target_original=original, dev_positions=list(split.dev_indices),
+            n_rows_valid=metadata.n_rows_valid, scan_frame=loaded.frame,
+            lineage=lineage))  # fmt: skip
+        run.recorder.event(Stage.EXPORT, EventType.BUNDLE_EXPORTED, file=bundle.path.name,
+                           sha256=bundle.sha256, bytes=bundle.size_bytes,
+                           parity_max_abs_diff=bundle.r1.report.max_abs_diff)  # fmt: skip
     timings = {
         s.value: {"start": round(t.start, 3), "end": None if t.end is None else round(t.end, 3),
                   "duration": round(t.duration, 3)}
@@ -525,10 +542,6 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
     run.recorder.resources(
         [dataclasses.asdict(s) for s in run.monitor.samples], run.monitor.peak_mb
     )
-    lineage = {"winner": selection.winner, "refit_params": refit_params(best.candidate,
-               best.best_iterations), "cv_best_iterations": best.best_iterations,
-               "baseline_model": base.model.name.value, "plan_source": "rule_based",
-               "winner_oof": oof_path}  # fmt: skip
     run.recorder.experiment({"config": config, "plan": plan, "evaluation": evaluation,
                              "budget": run.budget.ledger(), "lineage": lineage,
                              "feasibility": feasibility, "thresholds": thresholds})  # fmt: skip
@@ -537,7 +550,8 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
         (run.dir / name).write_text(dumps(payload, indent=2) + "\n", encoding="utf-8")
     run.recorder.event(Stage.RUN, EventType.RUN_COMPLETED, winner=selection.winner)
     return RunSummary(run.dir, task, metric, entries, selection.winner,
-                      holdout.model_dump(mode="json", exclude_none=True))  # fmt: skip
+                      holdout.model_dump(mode="json", exclude_none=True), bundle=bundle.path,
+                      bundle_sha256=bundle.sha256)  # fmt: skip
 
 
 def _format(summary: RunSummary) -> list[str]:
@@ -561,6 +575,8 @@ def _format(summary: RunSummary) -> list[str]:
                      f"baseline {hold.get('baseline')}")  # fmt: skip
     else:
         lines.append(f"holdout: {hold.get('reason')}")
+    if summary.bundle is not None:
+        lines.append(f"bundle: {summary.bundle}  sha256 {summary.bundle_sha256}")
     return lines
 
 

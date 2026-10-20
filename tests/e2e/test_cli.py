@@ -44,6 +44,35 @@ def events(run_dir: Path) -> list[RunEvent]:
     return [RunEvent.model_validate_json(line) for line in lines]
 
 
+def check_report_and_bundle(summary: Any, name: str, task: Task) -> None:
+    """P13/P14 outputs of every run: the report and a verified bundle."""
+    out = summary.run_dir
+    # P13: explanations and the report are part of every run (FR-EXP-01, FR-RPT-01)
+    report = FinalReport.model_validate_json((out / "report" / "report.json").read_text())
+    assert report.sections.narrative.source == "template"
+    assert report.sections.narrative.fact_check == "passed"
+    assert report.sections.explanations.method in ("shap_tree", "shap_linear")
+    assert report.sections.explanations.top_features
+    html = (out / "report" / "report.html").read_text()
+    assert html.count("<h2>") == 17
+    assert (out / "report" / "report.md").exists()
+    assert (out / "report" / "figures" / "leaderboard.png").exists()
+    assert ("roc-curve.png" in html) == (task == Task.BINARY)
+    assert ("residual-histogram.png" in html) == (task == Task.REGRESSION)
+    stages = json.loads((out / "records" / "stage_timings.json").read_text())
+    assert {"explain", "report"} <= set(stages)
+    assert any(e.type.value == "report_rendered" for e in events(out))
+    # P14: every run offers a verified bundle (FR-ART-01)
+    assert summary.bundle is not None
+    assert summary.bundle.parent == out
+    assert summary.bundle.name.startswith(f"tabpilot_{Path(name).stem}_")
+    exported = [e for e in events(out) if e.type.value == "bundle_exported"]
+    assert len(exported) == 1
+    assert exported[0].data["sha256"] == summary.bundle_sha256
+    assert exported[0].data["parity_max_abs_diff"] <= 1e-9
+    assert "export" in stages
+
+
 @pytest.mark.e2e
 @pytest.mark.parametrize(("name", "target", "task", "holdout"), CASES)
 def test_cli_end_to_end(tmp_path: Path, name: str, target: str, task: Task, holdout: bool) -> None:
@@ -90,21 +119,7 @@ def test_cli_end_to_end(tmp_path: Path, name: str, target: str, task: Task, hold
     assert "holdout" not in (out / "leaderboard.json").read_text()
     trials = (out / "records" / "trials.jsonl").read_text().splitlines()
     assert len(trials) == 4  # 2 trials × 2 tuned models
-    # P13: explanations and the report are part of every run (FR-EXP-01, FR-RPT-01)
-    report = FinalReport.model_validate_json((out / "report" / "report.json").read_text())
-    assert report.sections.narrative.source == "template"
-    assert report.sections.narrative.fact_check == "passed"
-    assert report.sections.explanations.method in ("shap_tree", "shap_linear")
-    assert report.sections.explanations.top_features
-    html = (out / "report" / "report.html").read_text()
-    assert html.count("<h2>") == 17
-    assert (out / "report" / "report.md").exists()
-    assert (out / "report" / "figures" / "leaderboard.png").exists()
-    assert ("roc-curve.png" in html) == (task == Task.BINARY)
-    assert ("residual-histogram.png" in html) == (task == Task.REGRESSION)
-    stages = json.loads((out / "records" / "stage_timings.json").read_text())
-    assert {"explain", "report"} <= set(stages)
-    assert any(e.type.value == "report_rendered" for e in events(out))
+    check_report_and_bundle(summary, name, task)
 
 
 @pytest.mark.e2e

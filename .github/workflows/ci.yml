@@ -31,3 +31,10 @@ jobs:
         run: make fixtures-check
       - name: JSON schemas current and versioned
         run: make schemas-check SCHEMA_BASE=HEAD^
+      - name: Exported bundle verifies in a clean venv (T-ART-03)
+        run: |
+          uv run --frozen tabpilot run fixtures/datasets/binary_basic.csv --target Churn \
+            --out "$RUNNER_TEMP/run" --budget-s 240 --tuning-mode trials --trials 2 \
+            --models linear,lightgbm
+          scripts/verify_bundle_clean_venv.sh "$(ls "$RUNNER_TEMP"/run/tabpilot_*.zip)" \
+            "$(uv python find 3.11)"

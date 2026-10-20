@@ -1,0 +1,58 @@
+# Reproducibility — TabPilot run {{ run_id }}
+
+**Security warning: joblib/pickle files can execute arbitrary code when loaded. Only load model
+files from sources you trust.**
+
+## What this bundle guarantees
+
+| Level | Meaning | Status for this bundle |
+| --- | --- | --- |
+| R1 Prediction parity | Reloading `model/model.joblib` and predicting on `parity/parity_input.csv` reproduces `parity/parity_expected.json`: class labels exactly, probabilities or values within 1e-9. | **Verified at export** ({{ parity_rows }} synthetic rows, max abs diff {{ parity_diff }}). Guaranteed with the pinned `requirements.txt` on Linux x86-64 or macOS arm64 with Python 3.11. |
+| R2 Retraining parity | `python pipeline.py train` on the same development rows rebuilds a model whose parity predictions match within 1e-6 (probabilities). | Target, tested on fixture datasets with deterministic settings. Not guaranteed across CPU architectures, thread counts or library versions. |
+| R3 CV parity | Re-running TabPilot reproduces cross-validation means within ±0.5% relative. | Target in trial-count tuning mode on the same environment. Runs limited by wall-clock time can complete different numbers of trials and differ. |
+
+Results can also vary with library versions, hardware, BLAS threading and algorithms that are
+not deterministic.
+
+## Commands
+
+Run these from the bundle directory after `pip install -r requirements.txt` (Python 3.11):
+
+```
+python pipeline.py verify
+python pipeline.py predict --model model/model.joblib --input new.csv --out predictions.csv
+python pipeline.py train --data dev.csv --out retrained.joblib
+python pipeline.py train --data original_file.csv --resplit --out retrained.joblib
+```
+
+`pipeline.py` and `model.joblib` load the bundled `tabpilot_runtime/` package (it sits next to
+`pipeline.py`); the `tabpilot` application itself is not needed. `--resplit` drops rows with a
+missing target and selects the recorded development row positions, which recreates the original
+split only for the same file in the same row order. TabPilot's own file repairs (encoding
+detection, decimal commas, malformed lines) are not repeated by `pipeline.py`; supply a clean
+CSV.
+
+## Environment at export
+
+| Item | Value |
+| --- | --- |
+| TabPilot | {{ tabpilot_version }} |
+| Python | {{ python }} |
+| Platform | {{ platform }} |
+| Seed root | {{ seed_root }} |
+| Split id | {{ split_id }} |
+
+Pinned packages (`requirements.txt`):
+
+```
+{% for line in requirements %}{{ line }}
+{% endfor %}```
+
+## Contents and privacy
+
+The bundle holds no rows of your dataset. The parity fixture is synthetic: numeric values are
+drawn between the 5th and 95th percentiles, and categories are ones the fitted encoders already
+store inside `model.joblib`. Every file's SHA-256 is listed in `manifest.json`.
+{% if excluded %}
+Left out to respect the bundle size limit: {{ excluded | join(", ") }}.
+{% endif %}

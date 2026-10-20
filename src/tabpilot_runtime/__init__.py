@@ -6,6 +6,7 @@ Shipped inside export bundles; imports only numpy, pandas, scikit-learn and mode
 Must not: Importing tabpilot (import contract R5).
 """
 
+from tabpilot_runtime.bundle import ParityReport, compare, predict_outputs, read_table, verify
 from tabpilot_runtime.columns import (
     BooleanEncoder,
     ColumnNameMapper,
@@ -29,9 +30,14 @@ __all__ = [
     "ColumnSelector",
     "DSLFeatureTransformer",
     "FrequencyEncoder",
+    "ParityReport",
     "PredictionSchemaError",
     "RareCategoryGrouper",
     "TabularModel",
     "TypeCaster",
     "VotingEnsemble",
+    "compare",
+    "predict_outputs",
+    "read_table",
+    "verify",
 ]
