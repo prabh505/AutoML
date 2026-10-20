@@ -13,6 +13,8 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel
+
 from tabpilot.features.dsl.catalog import CATALOG
 from tabpilot.schemas import PlannerOutput
 from tabpilot.schemas.features import FEATURE_NAME_PATTERN
@@ -75,40 +77,77 @@ def _strip(node: Any) -> Any:
     return node
 
 
-def compact_schema() -> dict[str, Any]:
-    """`PlannerOutput` JSON Schema with one generic feature object (per-op arity and parameter
-    ranges are in the `dsl_catalog` of the data payload) and no titles or descriptions.
+GENERIC_FEATURE: dict[str, Any] = {
+    "type": "object", "required": ["id", "name", "op", "inputs"], "additionalProperties": False,
+    "properties": {"id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,15}$"},
+                   "name": {"type": "string", "pattern": FEATURE_NAME_PATTERN},
+                   "op": {"enum": sorted(CATALOG)},
+                   "inputs": {"type": "array", "items": {"type": "string"}},
+                   "params": {"type": "object"},
+                   "rationale": {"type": "string", "maxLength": 300}},
+}  # fmt: skip
+
+
+def _generic_features(node: Any) -> Any:
+    """Replace the per-op `FeatureSpec` union (a discriminator over every catalog op) with one
+    generic feature object; per-op arity and parameter ranges are in the payload's catalog.
     """
-    schema = PlannerOutput.model_json_schema()
-    feature = {"type": "object", "required": ["id", "name", "op", "inputs"],
-               "additionalProperties": False,
-               "properties": {"id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,15}$"},
-                              "name": {"type": "string", "pattern": FEATURE_NAME_PATTERN},
-                              "op": {"enum": sorted(CATALOG)},
-                              "inputs": {"type": "array", "items": {"type": "string"}},
-                              "params": {"type": "object"},
-                              "rationale": {"type": "string", "maxLength": 300}}}  # fmt: skip
-    schema["properties"]["features"]["items"] = feature
-    used = json.dumps({k: v for k, v in schema.items() if k != "$defs"})
-    schema["$defs"] = {k: v for k, v in schema["$defs"].items() if f"#/$defs/{k}" in used}
+    if isinstance(node, dict):
+        mapping = node.get("discriminator", {}).get("mapping", {})
+        if set(mapping) == set(CATALOG):
+            return GENERIC_FEATURE
+        return {k: _generic_features(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [_generic_features(v) for v in node]
+    return node
+
+
+def compact_model_schema(model: type[BaseModel]) -> dict[str, Any]:
+    """`model`'s JSON Schema with generic features, unused `$defs` pruned, and no titles or
+    descriptions (keeps prompts small).
+    """
+    schema = _generic_features(model.model_json_schema())
+    defs = schema.pop("$defs", {})
+    keep: dict[str, Any] = {}
+    frontier = json.dumps(schema)
+    while True:
+        new = {k: v for k, v in defs.items() if k not in keep and f"#/$defs/{k}" in frontier}
+        if not new:
+            break
+        keep.update(new)
+        frontier = json.dumps(new)
+    if keep:
+        schema["$defs"] = keep
     return dict(_strip(schema))
+
+
+def compact_schema() -> dict[str, Any]:
+    """The planner's compact `PlannerOutput` schema."""
+    return compact_model_schema(PlannerOutput)
 
 
 def _compact(value: Any) -> str:
     return json.dumps(value, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
 
 
-@cache
-def load(name: str, version: str = VERSION) -> Template:
-    """Load `prompts/<name>@<version>.md` and fill its placeholders."""
-    text = (PROMPTS / f"{name}@{version}.md").read_text(encoding="utf-8")
-    fills = {"{{SCHEMA}}": _compact(compact_schema()), "{{EXAMPLE_INPUT}}": _compact(EXAMPLE_INPUT),
-             "{{EXAMPLE_OUTPUT}}": _compact(EXAMPLE_OUTPUT)}  # fmt: skip
+def fill_template(directory: Path, name: str, version: str, fills: dict[str, str]) -> Template:
+    """Load `<directory>/<name>@<version>.md` and replace its `{{PLACEHOLDER}}`s with fixed,
+    code-generated text. Every placeholder must be filled.
+    """
+    text = (directory / f"{name}@{version}.md").read_text(encoding="utf-8")
     for placeholder, value in fills.items():
         text = text.replace(placeholder, value)
     if "{{" in text:
         raise ValueError(f"{name}@{version}: unfilled placeholder")
     return Template(name, version, text.strip())
+
+
+@cache
+def load(name: str, version: str = VERSION) -> Template:
+    """Load a planner template and fill its placeholders."""
+    fills = {"{{SCHEMA}}": _compact(compact_schema()), "{{EXAMPLE_INPUT}}": _compact(EXAMPLE_INPUT),
+             "{{EXAMPLE_OUTPUT}}": _compact(EXAMPLE_OUTPUT)}  # fmt: skip
+    return fill_template(PROMPTS, name, version, fills)
 
 
 def versions() -> dict[str, str]:

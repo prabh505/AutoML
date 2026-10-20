@@ -13,6 +13,7 @@ from tabpilot_runtime.columns import (
     PredictionSchemaError,
     TypeCaster,
 )
+from tabpilot_runtime.ensemble import VotingEnsemble
 from tabpilot_runtime.estimators import TabularModel
 from tabpilot_runtime.transformers import (
     BaselineFeatureTransformer,
@@ -32,4 +33,5 @@ __all__ = [
     "RareCategoryGrouper",
     "TabularModel",
     "TypeCaster",
+    "VotingEnsemble",
 ]
