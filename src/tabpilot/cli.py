@@ -1,8 +1,9 @@
 """Headless CLI: `tabpilot run <file> --target <col> --out <dir>` (PROMPTS P09; FR-PLN-03).
 
 Runs the LLM-free product in-process: ingest → split → profile → rule-based plan → tuned CV per
-model → leaderboard and selection → final refit → freeze → one-time holdout → run records. P15
-routes the same stages through orchestration.
+model → leaderboard and selection → final refit → freeze → one-time holdout → explanations and
+error analysis → report (template narrative) → run records. P15 routes the same stages through
+orchestration.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import psutil
 from ulid import ULID
 
@@ -33,12 +35,22 @@ from tabpilot.evaluation.leaderboard import (
 from tabpilot.evaluation.metrics import Problem, default_primary, selection_score
 from tabpilot.evaluation.metrics import spec as metric_spec
 from tabpilot.evaluation.selection import NoValidModelError, SelectionFreeze, select
+from tabpilot.explain import (
+    EXPLAIN_TIMEOUT_S,
+    ErrorAnalysis,
+    ExplainData,
+    ExplainSettings,
+    ExplanationResult,
+    error_analysis,
+    explain,
+)
 from tabpilot.ingestion import apply_target, load_dataset, validate_target
 from tabpilot.ingestion.task import detect_task, positive_label
 from tabpilot.models import ModelRegistry
 from tabpilot.planning import rule_based_plan
 from tabpilot.preprocessing import PipelineSchema, schema_from
 from tabpilot.profiling import apply_leakage_exclusions, profile
+from tabpilot.reporting import ReportState, build_report
 from tabpilot.resources import ResourceMonitor, TimeBudget
 from tabpilot.resources.estimator import (
     ONEHOT_CAP_SIMPLIFIED,
@@ -57,6 +69,7 @@ from tabpilot.schemas import (
     ModelName,
     PlannerOutput,
     RunConfig,
+    SemanticType,
     Simplification,
     Stage,
     TabPilotError,
@@ -74,7 +87,7 @@ from tabpilot.schemas.experiment import (
     TrainingResult,
 )
 from tabpilot.schemas.run import MIN_TIME_BUDGET_S
-from tabpilot.splitting import build_split
+from tabpilot.splitting import build_split, iter_folds
 from tabpilot.tracking import RunRecorder, dumps
 from tabpilot.training import (
     BudgetExceeded,
@@ -307,6 +320,48 @@ def _simplified_schema(run: _Run, schema: PipelineSchema) -> PipelineSchema:
     return schema
 
 
+def _explain(
+    run: _Run,
+    *,
+    final_model: Any,
+    best: CVRun,
+    dev: DevData,
+    split: Any,
+    schema: PipelineSchema,
+    metric: MetricName,
+) -> tuple[ExplanationResult, ErrorAnalysis]:
+    """§21.3–§21.5 on DEV rows only: explanations under the explain time cap, then error
+    analysis on the winner's OOF predictions.
+    """
+    rows = np.asarray(split.dev_indices)
+    frame = dev.frame.iloc[rows]
+    position = {row: i for i, row in enumerate(split.dev_indices)}
+    _, _, _, first_valid = next(iter(iter_folds(split)))
+    cap = min(EXPLAIN_TIMEOUT_S[run.args.profile], run.budget.remaining(Stage.EXPLAIN))
+    settings = ExplainSettings(
+        problem=dev.problem,
+        metric=metric,
+        sources=list(schema.columns),
+        seed=run.seeds.explain,
+        profile=run.args.profile,
+        time_cap_s=cap,
+    )
+    data = ExplainData(frame, dev.y[rows], np.asarray([position[r] for r in first_valid]))
+    explanation = explain(final_model, data, settings)
+    if explanation.method not in ("shap_tree", "shap_linear", "shap_member_plus_permutation"):
+        run.recorder.event(
+            Stage.EXPLAIN,
+            EventType.EXPLANATION_FALLBACK,
+            method=explanation.method,
+            reason=explanation.unavailable_reason,
+        )
+    categorical = [c for c, kind in schema.columns.items() if kind == SemanticType.CATEGORICAL]
+    ranked = [c for c in explanation.top_features() if c in categorical]
+    ordered = ranked + sorted(c for c in categorical if c not in ranked)
+    assert best.oof is not None  # noqa: S101 - an ok winner always has OOF
+    return explanation, error_analysis(best.oof, dev.y[rows], frame, dev.problem, ordered)
+
+
 def _entry(
     run: _Run,
     *,
@@ -417,6 +472,16 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
             assert best.oof is not None  # noqa: S101 - an ok winner always has OOF
             store.put(selection.winner, best.oof)
             oof_path = Path(store.persist(selection.winner)).relative_to(run.dir).as_posix()
+        with run.stage(Stage.EXPLAIN):
+            explanation, errors = _explain(
+                run,
+                final_model=final_model,
+                best=best,
+                dev=dev,
+                split=split,
+                schema=schema,
+                metric=metric,
+            )
     finally:
         run.monitor.stop()
     evaluation = EvaluationResult(entries=entries, selection=selection, holdout=holdout)
@@ -433,6 +498,24 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
         llm=LLMSettingsSummary(enabled=False),
         library_versions=_library_versions(),
     )  # fmt: skip
+    rows = np.asarray(split.dev_indices)
+    thresholds = {eid: report for eid, cv in run.runs.items()
+                  if (report := threshold_report(cv.oof, dev.y, split, problem))}  # fmt: skip
+    with run.stage(Stage.REPORT):
+        state = ReportState(config=config, metadata=metadata, plan=plan, entries=entries,
+                            selection=selection, holdout=holdout, problem=problem,
+                            events=run.recorder.read_events(), profile=summary,
+                            winner=best.candidate, baseline_model=base.model.name.value,
+                            thresholds=thresholds, ledger=run.budget.ledger(),
+                            explanation=explanation, errors=errors, winner_oof=best.oof,
+                            y_dev=dev.y[rows])  # fmt: skip
+        paths = build_report(state, run.dir / "report")
+        run.recorder.event(
+            Stage.REPORT,
+            EventType.REPORT_RENDERED,
+            narrative=paths.narrative.source,
+            figures=len(paths.figures),
+        )
     timings = {
         s.value: {"start": round(t.start, 3), "end": None if t.end is None else round(t.end, 3),
                   "duration": round(t.duration, 3)}
@@ -446,8 +529,6 @@ def execute(args: RunArgs) -> RunSummary:  # noqa: PLR0915 - the stage sequence,
                best.best_iterations), "cv_best_iterations": best.best_iterations,
                "baseline_model": base.model.name.value, "plan_source": "rule_based",
                "winner_oof": oof_path}  # fmt: skip
-    thresholds = {eid: report for eid, cv in run.runs.items()
-                  if (report := threshold_report(cv.oof, dev.y, split, problem))}  # fmt: skip
     run.recorder.experiment({"config": config, "plan": plan, "evaluation": evaluation,
                              "budget": run.budget.ledger(), "lineage": lineage,
                              "feasibility": feasibility, "thresholds": thresholds})  # fmt: skip

@@ -69,6 +69,11 @@ class RunRecorder:
         self._append("events.jsonl", event)
         return event
 
+    def read_events(self) -> list[RunEvent]:
+        """Every event written so far, in order (the report's event log, §21.7)."""
+        text = (self.dir / "events.jsonl").read_text(encoding="utf-8")
+        return [RunEvent.model_validate_json(line) for line in text.splitlines() if line.strip()]
+
     def trial(self, record: Mapping[str, Any]) -> None:
         self._append("trials.jsonl", record)
 

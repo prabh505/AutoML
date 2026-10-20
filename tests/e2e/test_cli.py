@@ -22,6 +22,7 @@ from tabpilot.schemas import (
     Task,
 )
 from tabpilot.schemas.experiment import EvaluationResult, ExperimentConfig, LeaderboardEntry
+from tabpilot.schemas.report import FinalReport
 from tabpilot.splitting.guard import HoldoutSealed
 from tabpilot.tracking import RECORD_FILES
 
@@ -89,6 +90,21 @@ def test_cli_end_to_end(tmp_path: Path, name: str, target: str, task: Task, hold
     assert "holdout" not in (out / "leaderboard.json").read_text()
     trials = (out / "records" / "trials.jsonl").read_text().splitlines()
     assert len(trials) == 4  # 2 trials × 2 tuned models
+    # P13: explanations and the report are part of every run (FR-EXP-01, FR-RPT-01)
+    report = FinalReport.model_validate_json((out / "report" / "report.json").read_text())
+    assert report.sections.narrative.source == "template"
+    assert report.sections.narrative.fact_check == "passed"
+    assert report.sections.explanations.method in ("shap_tree", "shap_linear")
+    assert report.sections.explanations.top_features
+    html = (out / "report" / "report.html").read_text()
+    assert html.count("<h2>") == 17
+    assert (out / "report" / "report.md").exists()
+    assert (out / "report" / "figures" / "leaderboard.png").exists()
+    assert ("roc-curve.png" in html) == (task == Task.BINARY)
+    assert ("residual-histogram.png" in html) == (task == Task.REGRESSION)
+    stages = json.loads((out / "records" / "stage_timings.json").read_text())
+    assert {"explain", "report"} <= set(stages)
+    assert any(e.type.value == "report_rendered" for e in events(out))
 
 
 @pytest.mark.e2e

@@ -1,0 +1,22 @@
+# TabPilot report
+
+Run {{ run_id }} · {{ file }} · status {{ status }}
+{% for s in sections %}
+
+## {{ s.number }}. {{ s.title }}
+{% for b in s.blocks %}
+{% if b.kind == "p" %}
+{{ b.text }}
+{% elif b.kind == "note" %}
+> {{ b.text }}
+{% elif b.kind == "list" %}
+{% for item in b["items"] %}- {{ item }}
+{% endfor %}{% elif b.kind == "table" %}
+{% if b.caption %}*{{ b.caption }}*
+
+{% endif %}|{% for h in b.headers %} {{ h }} |{% endfor %}
+|{% for h in b.headers %} --- |{% endfor %}
+{% for row in b.rows %}|{% for cell in row %} {{ cell }} |{% endfor %}
+{% endfor %}{% elif b.kind == "figure" %}
+![{{ b.alt }}]({{ b.src }})
+{% endif %}{% endfor %}{% endfor %}

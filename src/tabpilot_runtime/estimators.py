@@ -73,6 +73,12 @@ class TabularModel(BaseEstimator):  # type: ignore[misc]
                 out[col] = pd.to_numeric(out[col], errors="coerce").astype(np.float32)
         return out
 
+    def prepared(self, X: pd.DataFrame) -> pd.DataFrame:
+        """The frame the fitted library estimator sees (float32, raw CatBoost categoricals).
+        Explainers (PRD §21.3) use it to call SHAP on the estimator itself.
+        """
+        return self._prepare(X)
+
     def _fit_kwargs(self) -> dict[str, Any]:
         if self.family == "lightgbm" and self.raw_categorical_:
             return {"categorical_feature": list(self.raw_categorical_)}
