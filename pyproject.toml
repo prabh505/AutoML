@@ -176,10 +176,10 @@ layers = [
 # and the P09 CLI run context (PI-13's named construction site) are the allowed importers. Every
 # other evaluation module is listed as a source, so only evaluation.holdout may reach the guard.
 [[tool.importlinter.contracts]]
-name = "R2 holdout guard: only evaluation.holdout, orchestration and the run context may import splitting.guard"
+name = "R2 holdout guard: only evaluation.holdout, orchestration and the run context may import splitting.guard (ui and runtime sit above orchestration)"
 type = "forbidden"
 source_modules = [
-    "tabpilot.ui", "tabpilot.runtime", "tabpilot.ingestion", "tabpilot.profiling",
+    "tabpilot.ingestion", "tabpilot.profiling",
     "tabpilot.planning", "tabpilot.llm", "tabpilot.features", "tabpilot.preprocessing",
     "tabpilot.models", "tabpilot.training", "tabpilot.tuning", "tabpilot.reflection",
     "tabpilot.ensembling", "tabpilot.explain", "tabpilot.reporting", "tabpilot.export",

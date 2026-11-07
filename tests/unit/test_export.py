@@ -5,10 +5,8 @@ from __future__ import annotations
 import ast
 import json
 import shutil
-import site
 import subprocess
 import sys
-import zipfile
 from datetime import UTC, datetime
 from functools import cache
 from pathlib import Path
@@ -19,6 +17,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from sklearn.base import clone
+from tests.helpers.bundles import isolated, unzip
 from tests.helpers.report_state import report_state
 from tests.helpers.synthetic import synthetic
 
@@ -121,35 +120,6 @@ def model_for(kind: str) -> tuple[Any, Problem]:
         return fit(ModelName.LIGHTGBM, Task.REGRESSION, regression_y(),
                    target_transform=TargetTransform.LOG1P), REG  # fmt: skip
     return fit(ModelName(kind)), BIN
-
-
-def unzip(path: Path, where: Path) -> Path:
-    where.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(path) as zf:
-        zf.extractall(where)
-    return where
-
-
-def isolated(bundle: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    """Run `pipeline.py` with `-I -S`: only the stdlib, the bundle dir and third-party
-    site-packages are importable. The editable-install `.pth` that exposes `src/` (and so
-    `tabpilot`) is never processed.
-    """
-    packages = [p for p in site.getsitepackages() if Path(p).is_dir()]
-    launcher = (
-        "import sys, runpy\n"
-        "sys.path[:] = [p for p in sys.path if 'site-packages' not in p] + "
-        f"{packages!r}\n"
-        "try:\n    import tabpilot\n    print('TABPILOT IMPORTABLE', tabpilot.__file__)\n"
-        "except ImportError:\n    print('tabpilot not importable')\n"
-        "print('sys.path =', sys.path)\n"
-        f"sys.argv = ['pipeline.py', *{list(args)!r}]\n"
-        "try:\n    runpy.run_path('pipeline.py', run_name='__main__')\n"
-        "finally:\n    rt = sys.modules.get('tabpilot_runtime')\n"
-        "    print('runtime from', rt.__file__ if rt else None, flush=True)\n"
-    )  # fmt: skip
-    return subprocess.run([sys.executable, "-I", "-S", "-c", launcher], cwd=bundle,
-                          capture_output=True, text=True, timeout=300, check=False)  # fmt: skip
 
 
 # ---------------------------------------------------------------- T-ART-01 structure + manifest

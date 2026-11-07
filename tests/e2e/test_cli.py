@@ -9,10 +9,14 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import psutil
 import pytest
 
-from tabpilot import cli
 from tabpilot.cli import RunArgs, execute, main, parse
+from tabpilot.orchestration import context as run_context
+from tabpilot.orchestration import nodes as run_nodes
+from tabpilot.orchestration import prepare as run_prepare
+from tabpilot.runtime import worker as run_worker
 from tabpilot.schemas import (
     ExecutionProfileName,
     FeasibilityReport,
@@ -34,6 +38,7 @@ CASES = [("binary_basic.csv", "churn", Task.BINARY, True),
 
 
 def run(tmp_path: Path, name: str, target: str, **kw: Any) -> Any:
+    kw.setdefault("run_mode", "thread")  # in-process: tests can patch the worker's modules
     args = RunArgs(file=FIX / name, target=target, out=tmp_path / "run", tuning_mode="trials",
                    trials=2, models=(ModelName.LINEAR, ModelName.LIGHTGBM), **kw)  # fmt: skip
     return execute(args)
@@ -179,20 +184,20 @@ def test_guard_exists_from_split_and_refuses_before_freeze(
     selection is refused; the finalizer opens it exactly once after the freeze (T-LEAK-03).
     """
     guards: list[Any] = []
-    real_make_guard, real_select = cli.make_guard, cli.select
+    real_make_guard, real_select = run_prepare.make_guard, run_nodes.select
 
     def spy_make_guard(*a: Any, **kw: Any) -> Any:
         guards.append(real_make_guard(*a, **kw))
         return guards[-1]
 
-    def probing_select(entries: Any, freeze: Any) -> Any:
+    def probing_select(entries: Any, freeze: Any = None) -> Any:
         assert len(guards) == 1  # built before training, at the split stage
         with pytest.raises(HoldoutSealed):
             guards[0].open("probe.before_freeze")
         return real_select(entries, freeze)
 
-    monkeypatch.setattr(cli, "make_guard", spy_make_guard)
-    monkeypatch.setattr(cli, "select", probing_select)
+    monkeypatch.setattr(run_prepare, "make_guard", spy_make_guard)
+    monkeypatch.setattr(run_nodes, "select", probing_select)
     summary = run(tmp_path, "binary_basic.csv", "churn")
     guard = guards[0]
     assert [e.caller for e in guard.access_log] == ["evaluation.holdout"]
@@ -210,9 +215,20 @@ def test_infeasible_job_is_rejected_before_training(
     class TinyRam:
         total = 64 * 2**20  # 64 MB machine → local soft limit ≈ 45 MB
 
-    monkeypatch.setattr(cli.psutil, "virtual_memory", TinyRam)
+    monkeypatch.setattr(psutil, "virtual_memory", TinyRam)
     out = tmp_path / "run"
-    code = main(["run", str(FIX / "binary_small.csv"), "--target", "target", "--out", str(out)])
+    code = main(
+        [
+            "run",
+            str(FIX / "binary_small.csv"),
+            "--target",
+            "target",
+            "--out",
+            str(out),
+            "--run-mode",
+            "thread",
+        ]
+    )
     assert code == 2
     err = capsys.readouterr().err
     assert "exceeds the" in err
@@ -228,14 +244,15 @@ def test_soft_memory_limit_stops_extra_trials(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """§29.6: above the soft RSS limit, no further tuning trials run; the run still finishes."""
-    real = cli.ResourceMonitor
+    real = run_context.ResourceMonitor
 
     def over_soft(soft: float, hard: float, **kw: Any) -> Any:
         return real(soft, hard, rss_fn=lambda: (soft + hard) / 2, **kw)
 
-    monkeypatch.setattr(cli, "ResourceMonitor", over_soft)
+    monkeypatch.setattr(run_context, "ResourceMonitor", over_soft)
     args = RunArgs(file=FIX / "binary_small.csv", target="target", out=tmp_path / "run",
-                   tuning_mode="trials", trials=4, models=(ModelName.LINEAR, ModelName.LIGHTGBM))  # fmt: skip
+                   tuning_mode="trials", trials=4, models=(ModelName.LINEAR, ModelName.LIGHTGBM),
+                   run_mode="thread")  # fmt: skip
     summary = execute(args)
     trials = (summary.run_dir / "records" / "trials.jsonl").read_text().splitlines()
     assert len(trials) == 2  # trial 0 (defaults) per model, no extra trials
@@ -274,7 +291,7 @@ def test_duplicate_grouping_ignores_identifier_columns(tmp_path: Path) -> None:
     frame.insert(0, "customer_id", np.arange(100_000, 100_000 + len(frame)))
     path = tmp_path / "dups.csv"
     frame.to_csv(path, index=False)
-    summary = execute(RunArgs(file=path, target="label", out=tmp_path / "run", tuning_mode="trials",
+    summary = execute(RunArgs(file=path, target="label", out=tmp_path / "run", tuning_mode="trials", run_mode="thread",
                               trials=1, models=(ModelName.LINEAR,)))  # fmt: skip
     config = json.loads((summary.run_dir / "records" / "experiment.json").read_text())["config"]
     assert config["split"]["duplicate_grouping"] is True
@@ -287,17 +304,17 @@ def test_memory_always_over_hard_limit_two_strikes_then_e_no_valid_model(
     """§29.6 (KI-014): two hard-limit aborts stop training; §8.9 (KI-015): no valid model →
     E-NO-VALID-MODEL message, not a traceback.
     """
-    real = cli.ResourceMonitor
+    real = run_context.ResourceMonitor
     monitors: list[Any] = []
 
     def over_hard(soft: float, hard: float, **kw: Any) -> Any:
         monitors.append(real(soft, hard, rss_fn=lambda: hard + 1, **kw))
         return monitors[-1]
 
-    monkeypatch.setattr(cli, "ResourceMonitor", over_hard)
+    monkeypatch.setattr(run_context, "ResourceMonitor", over_hard)
     code = main(["run", str(FIX / "binary_small.csv"), "--target", "target", "--out",
                  str(tmp_path / "run"), "--tuning-mode", "trials", "--trials", "4",
-                 "--models", "linear,lightgbm"])  # fmt: skip
+                 "--models", "linear,lightgbm", "--run-mode", "thread"])  # fmt: skip
     assert code == 2
     err = capsys.readouterr().err
     assert "No model trained successfully" in err
@@ -308,10 +325,10 @@ def test_memory_always_over_hard_limit_two_strikes_then_e_no_valid_model(
 @pytest.mark.e2e
 def test_run_trial_cap_is_never_exceeded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """§17.3 total trials per run (KI-016): later models are skipped once the cap is used."""
-    real = cli.TimeBudget
-    monkeypatch.setattr(cli, "TimeBudget", lambda total, _cap: real(total, 3))
+    real = run_context.TimeBudget
+    monkeypatch.setattr(run_context, "TimeBudget", lambda total, _cap: real(total, 3))
     args = RunArgs(file=FIX / "binary_small.csv", target="target", out=tmp_path / "run",
-                   tuning_mode="trials", trials=3,
+                   tuning_mode="trials", trials=3, run_mode="thread",
                    models=(ModelName.LINEAR, ModelName.LIGHTGBM, ModelName.RANDOM_FOREST))  # fmt: skip
     summary = execute(args)
     trials = [
@@ -333,13 +350,18 @@ def test_feasibility_simplifications_are_applied(
              Simplification.REDUCE_FOLDS, Simplification.CAP_ONEHOT]  # fmt: skip
     report = FeasibilityReport(status="simplified", estimated_peak_mb=100.0, limit_mb=200.0,
                                simplifications=steps)  # fmt: skip
-    monkeypatch.setattr(cli, "estimate_feasibility", lambda *a, **k: report)
+    monkeypatch.setattr(run_prepare, "estimate_feasibility", lambda *a, **k: report)
     schemas: list[Any] = []
-    real_schema = cli._simplified_schema
-    monkeypatch.setattr(cli, "_simplified_schema",
-                        lambda run, s: schemas.append(real_schema(run, s)) or schemas[-1])  # fmt: skip
+    real_prepare = run_worker.prepare
+
+    def spy_prepare(ctx: Any) -> Any:
+        state = real_prepare(ctx)
+        schemas.append(ctx.schema)  # the schema every candidate of this run is built from
+        return state
+
+    monkeypatch.setattr(run_worker, "prepare", spy_prepare)
     args = RunArgs(file=FIX / "binary_basic.csv", target="churn", out=tmp_path / "run",
-                   tuning_mode="trials", trials=4,
+                   tuning_mode="trials", trials=4, run_mode="thread",
                    models=(ModelName.LINEAR, ModelName.LIGHTGBM, ModelName.RANDOM_FOREST))  # fmt: skip
     summary = execute(args)
     experiment = json.loads((summary.run_dir / "records" / "experiment.json").read_text())

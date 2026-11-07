@@ -51,6 +51,7 @@ class PlannerContext:
     router: LLMRouter | None
     budget: BudgetTracker | None
     events: EventSink | None = None
+    on_response: Callable[[Any], None] | None = None  # receives each raw plan (§22.2 plan.json)
 
 
 def _emit(ctx: PlannerContext, kind: EventType, **data: Any) -> None:
@@ -106,12 +107,16 @@ def make_plan(ctx: PlannerContext) -> tuple[PlannerOutput, PlanValidation, PlanS
     payload = planner_payload(ctx.planner_input)
     try:
         first = _call(router, budget, "plan", PLANNER_SYSTEM, payload)
+        if ctx.on_response is not None:
+            ctx.on_response(_raw(first))
         _emit(ctx, EventType.PLAN_RECEIVED, source="llm", provider=first.provider)
         plan, validation = _validated(ctx, _raw(first))
         if plan is None:  # unparseable or schema-invalid: one repair call (§12.5)
             repair = {"planner_input": payload, "previous_response": first.content,
                       "errors": repair_errors(validation.issues)}  # fmt: skip
             second = _call(router, budget, "plan_repair", PLANNER_REPAIR, repair)
+            if ctx.on_response is not None:
+                ctx.on_response(_raw(second))
             _emit(ctx, EventType.PLAN_RECEIVED, source="llm_repair", provider=second.provider)
             plan, validation = _validated(ctx, _raw(second))
     except LLMUnavailable as exc:
