@@ -19,7 +19,7 @@ ALLOWED = {
     "tabpilot/splitting/guard.py",
     "tabpilot/evaluation/holdout.py",  # P09: one-time holdout evaluation
 }
-ALLOWED_PREFIXES = ("tabpilot/orchestration/",)  # P15: run context constructs the guard
+ALLOWED_PREFIXES: tuple[str, ...] = ()  # U2: no package-wide exception (orchestration needs none)
 
 
 def offenders(root: Path = SRC) -> list[str]:
@@ -40,6 +40,17 @@ def offenders(root: Path = SRC) -> list[str]:
 @pytest.mark.security
 def test_only_the_finalizer_path_reads_holdout_indices() -> None:
     assert offenders() == []
+
+
+@pytest.mark.security
+def test_orchestration_and_runtime_do_not_read_holdout_indices(tmp_path: Path) -> None:
+    """P15 code builds the guard through `evaluation.holdout.make_guard`; it never touches the
+    attribute, so a new read there is caught (U2, KI-037)."""
+    pkg = tmp_path / "tabpilot" / "orchestration"
+    pkg.mkdir(parents=True)
+    (pkg / "nodes.py").write_text("def f(ctx):\n    return ctx.split.holdout_indices\n",
+                                  encoding="utf-8")  # fmt: skip
+    assert offenders(tmp_path) == ["tabpilot/orchestration/nodes.py:2"]
 
 
 @pytest.mark.security

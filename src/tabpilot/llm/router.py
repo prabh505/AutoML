@@ -153,7 +153,7 @@ class LLMRouter:
         prompt_tokens: int,
     ) -> LLMResponse | None:
         for attempt in range(1, MAX_ATTEMPTS + 1):
-            budget.check_call(req.purpose, prompt_tokens)  # raises LLMBudgetExhausted
+            budget.check_call(req.purpose, prompt_tokens, req.max_output_tokens)  # may raise
             timeout = budget.call_timeout(req.timeout_s)
             self._emit(EventType.LLM_CALL_STARTED, provider=provider.name, purpose=req.purpose,
                        attempt=attempt)  # fmt: skip

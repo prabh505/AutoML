@@ -27,6 +27,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from tabpilot.export.csvsafe import write_csv
 from tabpilot.schemas import ErrorCode, ProfileSummary, TabPilotError
 from tabpilot_runtime import ColumnNameMapper, TypeCaster
 from tabpilot_runtime.bundle import ParityReport, compare, predict_outputs, read_table
@@ -181,7 +182,8 @@ def fixture_frame(
 def write_fixture(frame: pd.DataFrame, path: Path) -> pd.DataFrame:
     """Write the fixture CSV and return it exactly as `read_table` reads it back."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_csv(path, index=False, lineterminator="\n")
+    cells = frame.astype(object).where(frame.notna(), None)  # missing cells stay empty
+    write_csv(path, list(frame.columns), cells.itertuples(index=False, name=None))  # §24.9
     return read_table(path)
 
 

@@ -370,8 +370,9 @@ def test_disabled_ensemble_and_oof_option(tmp_path: Path) -> None:
 
 @pytest.mark.integration
 def test_graph_checkpoint_retry_resumes_once_after_an_unexpected_node_error(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
+    monkeypatch.setenv("LANGGRAPH_STRICT_MSGPACK", "true")  # unregistered types would be blocked
     calls = {"n": 0}
     real = run_nodes.explain_node
 
@@ -387,6 +388,7 @@ def test_graph_checkpoint_retry_resumes_once_after_an_unexpected_node_error(
     assert calls["n"] == 2  # retried once from the last checkpoint (§13.6)
     assert outcome.types().count("selection_frozen") == 1  # finalize was not repeated
     assert outcome.types().count("holdout_evaluated") == 1  # the holdout opens once (L-7)
+    assert "unregistered type" not in caplog.text  # every checkpointed class is registered
 
 
 @pytest.mark.integration
@@ -401,3 +403,131 @@ def test_run_training_helpers_reserve_trials_for_every_model(
     assert all(e["status"] == "ok" for e in board)  # trial 0 reserved for each planned model
     assert len(records(outcome, "trials.jsonl")) == 3
     assert run_training.initial_candidates  # the module under test is the one the graph uses
+
+
+# ---------------------------------------------------------------- U2: KI-028 (A-009), KI-029
+@pytest.mark.integration
+def test_A_009_top_families_are_also_trained_without_llm_features(tmp_path: Path) -> None:
+    """A-009: with LLM features in the plan, each of the top families has a baseline twin that
+    reuses the sibling's tuned parameters; without features there are no twins.
+    """
+    outcome = go(tmp_path, llm="stub", models=(ModelName.LINEAR, ModelName.LIGHTGBM), rounds=0)
+    board = json.loads((outcome.run_dir / "leaderboard.json").read_text("utf-8"))
+    iteration0 = [e for e in board if e["iteration"] == 0]
+    by_model = {}
+    for e in iteration0:
+        by_model.setdefault(e["model"], set()).add(e["feature_set"])
+    assert by_model == {"linear": {"baseline", "baseline+llm"},
+                        "lightgbm": {"baseline", "baseline+llm"}}  # fmt: skip
+    twins = [e for e in iteration0 if e["feature_set"] == "baseline"]
+    siblings = {e["model"]: e for e in iteration0 if e["feature_set"] == "baseline+llm"}
+    for twin in twins:
+        assert twin["status"] == "ok"
+        assert twin["split_id"] == siblings[twin["model"]]["split_id"]  # same folds
+        assert twin["params"] == siblings[twin["model"]]["params"]  # same tuned parameters
+    off = go(tmp_path / "off", llm="off", models=(ModelName.LINEAR, ModelName.LIGHTGBM))
+    off_board = json.loads((off.run_dir / "leaderboard.json").read_text("utf-8"))
+    assert {e["feature_set"] for e in off_board} == {"baseline"}
+    assert len([e for e in off_board if e["iteration"] == 0]) == 2  # no twins without features
+
+
+@pytest.mark.integration
+def test_A_009_twin_count_is_limited_to_the_profile_families(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tabpilot.schemas import ExecutionProfileName  # noqa: PLC0415
+
+    monkeypatch.setitem(run_training.TWIN_FAMILIES, ExecutionProfileName.LOCAL, 1)
+    outcome = go(tmp_path, llm="stub", models=(ModelName.LINEAR, ModelName.LIGHTGBM), rounds=0)
+    board = json.loads((outcome.run_dir / "leaderboard.json").read_text("utf-8"))
+    twins = [e for e in board if e["feature_set"] == "baseline"]
+    assert len(twins) == 1
+
+
+@pytest.mark.integration
+def test_reflector_receives_importances_and_warnings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """§19.2: the reflector payload of a real run has the incumbent's top source-column
+    importances (no one-hot labels, PI-16) and the profile warnings.
+    """
+    sent: list[dict[str, Any]] = []
+    real = StubProvider.complete
+
+    def spy(self: StubProvider, req: Any) -> Any:
+        if req.purpose == "reflect":
+            sent.append(dict(req.user_json))
+        return real(self, req)
+
+    monkeypatch.setattr(StubProvider, "complete", spy)
+    outcome = go(tmp_path, "binary_imbalanced.csv", "is_fraud", llm="stub", rounds=1,
+                 models=(ModelName.LINEAR,))  # fmt: skip
+    assert outcome.result.status == "completed"
+    (payload,) = sent
+    top = payload["top_features"]
+    assert top
+    assert len(top) <= 15
+    names = {f["name"] for f in top}
+    columns = {"f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "channel", "sq_stub"}
+    assert names <= columns
+    assert abs(sum(f["importance"] for f in top) - 1.0) < 1e-6 or len(top) == 15
+    assert any("IMBALANCE" in w.upper() for w in payload["warnings"])
+    for label in ("store", "phone", "web"):  # the `channel` values never appear as names
+        assert label not in names
+
+
+@pytest.mark.integration
+def test_binary_run_without_a_positive_label_uses_the_default_and_records_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A `RunConfig` may leave `positive_label` empty; §10.1's default is then used (and
+    recorded), not a crash."""
+    from tabpilot import cli  # noqa: PLC0415
+
+    real = cli.build_config
+    monkeypatch.setattr(
+        cli,
+        "build_config",
+        lambda *a, **k: real(*a, **k).model_copy(update={"positive_label": None}),
+    )
+    outcome = go(tmp_path, "binary_basic.csv", "Churn")
+    assert outcome.result.status == "completed"
+    assert experiment(outcome)["config"]["positive_label"] == "Yes"
+
+
+# ---------------------------------------------------------------- U2 KI-043
+@pytest.mark.integration
+def test_U2_KI_043_a_kept_ensemble_is_a_leaderboard_row_and_the_final_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import numpy as np  # noqa: PLC0415
+
+    from tabpilot.ensembling import ensemble as ens  # noqa: PLC0415
+
+    monkeypatch.setattr(
+        ens, "hill_climb", lambda preds, *a, **k: np.full(len(preds), 1 / len(preds))
+    )
+    real = ens.paired_decision
+    monkeypatch.setattr(ens, "paired_decision", lambda **k: real(**k).model_copy(
+        update={"accepted": True, "reason": "forced for the test"}))  # fmt: skip
+    outcome = go(tmp_path, models=(ModelName.LINEAR, ModelName.LIGHTGBM), trials=1)
+    assert outcome.result.status == "completed"
+    board = json.loads((outcome.run_dir / "leaderboard.json").read_text("utf-8"))
+    rows = [e for e in board if e["feature_set"] == "ensemble"]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["model"] == "ensemble"
+    assert row["status"] == "ok"
+    assert len(row["fold_scores"]) == len(board[0]["fold_scores"])  # same folds as the singles
+    assert row["split_id"] == board[0]["split_id"]
+    final = outcome.result.final
+    assert final is not None
+    assert final.is_ensemble
+    assert final.selected_entry_id == row["entry_id"]  # resolvable on the leaderboard
+    selection = json.loads((outcome.run_dir / "selection.json").read_text("utf-8"))
+    assert selection["winner"] != row["entry_id"]  # the single-model rule is unchanged
+    html = (outcome.run_dir / "report" / "report.html").read_text("utf-8")
+    assert "configurations were compared in total" in html
+    facts = json.loads((outcome.run_dir / "report" / "facts.json").read_text("utf-8"))
+    compared = next(f for f in facts.values() if f["key"] == "n_models_compared")
+    assert compared["value"] == len(board) - 1  # the ensemble is not counted as a model type

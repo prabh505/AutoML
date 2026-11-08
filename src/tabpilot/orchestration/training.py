@@ -17,6 +17,7 @@ from tabpilot.resources.estimator import SUBSAMPLE_ROWS
 from tabpilot.schemas import (
     CandidateSpec,
     EventType,
+    ExecutionProfileName,
     PlannerOutput,
     Simplification,
     Stage,
@@ -25,6 +26,8 @@ from tabpilot.schemas import (
 from tabpilot.schemas.experiment import LeaderboardEntry, ModelConfig, TrainingResult
 from tabpilot.training import CVRun, rf_resource_guard, run_cv
 from tabpilot.tuning import TuningLimits, limits_for, tune
+
+TWIN_FAMILIES = {ExecutionProfileName.HOSTED: 2, ExecutionProfileName.LOCAL: 3}  # A-009
 
 
 def initial_candidates(plan: PlannerOutput, ctx: RunContext) -> list[CandidateSpec]:
@@ -150,6 +153,45 @@ def train_initial(ctx: RunContext, plan: PlannerOutput,
         ctx.budget.use_trials(len(tuned.trials))
         ctx.initial_trials += len(tuned.trials)
         entries.append(_record(ctx, tuned.best, len(tuned.trials), tuned.stopped))
+    if plan.features:
+        entries.extend(train_baseline_twins(ctx, candidates))
+    return entries
+
+
+def train_baseline_twins(
+    ctx: RunContext, candidates: list[CandidateSpec]
+) -> list[LeaderboardEntry]:
+    """A-009: the top 2 (hosted) / top 3 (local) plan-priority families are also trained
+    without the plan's LLM features, so harmful features show up as a score difference
+    (ablation A3). The twin reuses its sibling's tuned parameters and the same folds, so the
+    pair differs only in features, and costs one trial.
+    """
+    limit = TWIN_FAMILIES[ctx.config.execution_profile]
+    guard = rf_resource_guard(ctx.config.execution_profile, len(ctx.split.dev_indices),
+                              ctx.monitor.soft_mb)  # fmt: skip
+    entries: list[LeaderboardEntry] = []
+    for cand in candidates[:limit]:  # candidates are in plan-priority order
+        sibling = next((r for r in ctx.runs.values() if r.result.status == "ok"
+                        and r.candidate.candidate_id == cand.candidate_id), None)  # fmt: skip
+        if sibling is None or not cand.features:
+            continue
+        ctx.check_cancel()
+        twin = sibling.candidate.model_copy(update={
+            "candidate_id": f"0-{cand.model.name.value}-baseline", "features": [],
+            "feature_set": "baseline"})  # fmt: skip
+        out_of_time = ctx.options.tuning_mode == "time" and ctx.budget.expired(
+            Stage.TRAIN_CANDIDATES
+        )
+        if ctx.budget.trials_left() == 0 or ctx.monitor.stop_training or out_of_time:
+            entries.append(_skipped(ctx, twin, "skipped_budget", "baseline twin: no budget left"))
+            continue
+        ctx.emit(Stage.TRAIN_CANDIDATES, EventType.CANDIDATE_STARTED,
+                 model=twin.model.name.value, baseline_twin=True)  # fmt: skip
+        cv = run_cv(twin, ctx.dev, ctx.split, schema=ctx.schema, registry=ctx.registry,
+                    metric=ctx.metric, cancel=ctx.cancel, budget_hook=ctx.train_hook(),
+                    resource_guard=guard, profile=ctx.config.execution_profile)  # fmt: skip
+        ctx.budget.use_trials(1)
+        entries.append(_record(ctx, cv, 1, None))
     return entries
 
 

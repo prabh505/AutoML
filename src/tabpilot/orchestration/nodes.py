@@ -8,6 +8,8 @@ so the graph stays deterministic and every skip is recorded as an event.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
@@ -39,14 +41,17 @@ from tabpilot.orchestration.training import (
 )
 from tabpilot.planning import PlanContext, PlannerContext, make_plan, planner_payload
 from tabpilot.planning import versions as planner_versions
+from tabpilot.preprocessing import inner_pipeline
 from tabpilot.reflection import (
     ReflectionContext,
     accept,
     apply_changes,
     build_reflection_input,
     propose,
+    raw_importances,
     reflection_budget,
     retrain_parents,
+    source_importances,
 )
 from tabpilot.reflection import versions as reflector_versions
 from tabpilot.reporting import ReportState, build_report
@@ -54,6 +59,7 @@ from tabpilot.reporting import versions as narrator_versions
 from tabpilot.schemas import (
     CandidateSpec,
     ColumnRole,
+    EnsembleResult,
     ErrorCode,
     EventType,
     ExecutionProfileName,
@@ -73,9 +79,10 @@ from tabpilot.schemas.experiment import (
     LLMSettingsSummary,
     ModelConfig,
     SplitSummary,
+    fold_statistics,
 )
 from tabpilot.schemas.features import FeatureProvenance
-from tabpilot.schemas.reflection import ReflectionRecord, RemainingBudget
+from tabpilot.schemas.reflection import FeatureImportance, ReflectionRecord, RemainingBudget
 from tabpilot.schemas.run import FinalResult
 from tabpilot.splitting import iter_folds
 from tabpilot.training import CVRun, OOFStore, refit_final, run_cv
@@ -133,7 +140,7 @@ def experiment_config(state: RunState, ctx: RunContext) -> ExperimentConfig:
                 if llm_used else {})  # fmt: skip
     return ExperimentConfig(
         run_id=cfg.run_id, tabpilot_version=__version__, execution_profile=cfg.execution_profile,
-        task=cfg.task, target=cfg.target, positive_label=cfg.positive_label,
+        task=cfg.task, target=cfg.target, positive_label=ctx.positive_label,
         primary_metric=metric_spec(cfg.primary_metric),
         split=SplitSummary(split_id=split.split_id, strategy=str(split.strategy), k=split.k,
                            n_repeats=split.n_repeats, holdout_fraction=split.holdout_fraction,
@@ -345,6 +352,30 @@ def evaluate_node(state: RunState) -> dict[str, Any]:
     return {"best_candidate_id": best, "reflection_history": history, "budget": ledger(ctx)}
 
 
+def profile_warnings(ctx: RunContext) -> list[str]:
+    """Profile warnings (imbalance, leakage, small data) for the reflector, bounded (§19.2)."""
+    return [w[:200] for w in ctx.summary.warnings][:10]
+
+
+def incumbent_importances(state: RunState, ctx: RunContext) -> list[FeatureImportance]:
+    """§19.2: the incumbent's top features as normalized gain / impurity / |coef| importance,
+    folded into source columns and LLM features (never one-hot labels, PI-16). The model is
+    refitted once on DEV (fold pipelines are not kept); a failure gives an empty list.
+    """
+    run = ctx.runs.get(state.best_candidate_id or "")
+    if run is None:
+        return []
+    try:
+        tab = inner_pipeline(_refit(ctx, run)).steps[-1][1]
+        sources = [*ctx.schema.columns, *(f.name for f in run.candidate.features)]
+        raw = raw_importances(tab, [str(c) for c in tab.feature_names_in_])
+        return source_importances(raw, sources)
+    except (ValueError, RuntimeError, MemoryError, AttributeError) as exc:
+        ctx.emit(Stage.REFLECT, EventType.WARNING_RAISED, code="reflect_importances_unavailable",
+                 error_class=type(exc).__name__)  # fmt: skip
+        return []
+
+
 def reflect_node(state: RunState) -> dict[str, Any]:
     """One reflector proposal (§19.2–§19.3); route to apply_changes only for a valid one."""
     ctx = _ctx(state)
@@ -359,9 +390,11 @@ def reflect_node(state: RunState) -> dict[str, Any]:
         )
         assert state.plan is not None  # noqa: S101
         ri = build_reflection_input(task=state.config.task, metric=state.config.primary_metric,
-                                    entries=eligible(state, ctx), importances=[],
+                                    entries=eligible(state, ctx),
+                                    importances=incumbent_importances(state, ctx),
                                     provenance=feature_provenance(state, ctx), plan=state.plan,
-                                    remaining=remaining)  # fmt: skip
+                                    remaining=remaining,
+                                    warnings=profile_warnings(ctx))  # fmt: skip
         rctx = ReflectionContext(
             ri,
             plan_context(state, ctx),
@@ -432,6 +465,26 @@ def fail_node(state: RunState) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------- ensemble and finalize
+def ensemble_entry(state: RunState, ctx: RunContext, result: EnsembleResult) -> LeaderboardEntry:
+    """§18.1 / §20.4: a kept ensemble is a leaderboard row (`feature_set="ensemble"`) with its
+    cross-fitted fold scores, which are comparable with the single models' (same folds).
+    """
+    weights = {m.entry_id: m.weight for m in result.members}
+    members = [e for e in state.leaderboard if e.entry_id in weights]
+    digest = hashlib.sha256(json.dumps(weights, sort_keys=True).encode()).hexdigest()[:8]
+    mean, std, sem = fold_statistics(result.fold_scores)
+    return LeaderboardEntry(
+        entry_id=f"{min(state.iteration, 2)}-ensemble-{digest}", experiment_id=ctx.run_id,
+        iteration=min(state.iteration, 2), model="ensemble", feature_set="ensemble",
+        params={"members": json.dumps(weights, sort_keys=True)},
+        metric=metric_spec(ctx.metric), fold_scores=list(result.fold_scores), mean=mean, std=std,
+        sem=sem, fit_seconds=sum(e.fit_seconds for e in members),
+        predict_seconds=sum(e.predict_seconds for e in members),
+        model_size_bytes=sum(e.model_size_bytes for e in members), status="ok", comparable=True,
+        split_id=ctx.split.split_id,
+    )  # fmt: skip
+
+
 def ensemble_node(state: RunState) -> dict[str, Any]:
     """Cross-fitted ensemble of the eligible OOF predictions (§20), when enabled and affordable."""
     ctx = _ctx(state)
@@ -450,7 +503,12 @@ def ensemble_node(state: RunState) -> dict[str, Any]:
                                 artifact_limit_bytes=limit)  # fmt: skip
         ctx.emit(Stage.ENSEMBLE, EventType.ENSEMBLE_DECIDED, kept=result.kept,
                  reason=result.reason, members=len(result.members))  # fmt: skip
-    return {"ensemble": result, "budget": ledger(ctx)}
+    board = list(state.leaderboard)
+    if result.kept:
+        entry = ensemble_entry(state, ctx, result)
+        ctx.ensemble_entry_id = entry.entry_id
+        board.append(entry)
+    return {"ensemble": result, "leaderboard": board, "budget": ledger(ctx)}
 
 
 def _refit(ctx: RunContext, run: CVRun) -> Any:
@@ -481,7 +539,7 @@ def finalize_node(state: RunState) -> dict[str, Any]:
                 members, [m.weight for m in ensemble.members],
                 task="regression" if state.config.task == Task.REGRESSION else "classification",
             ).fit(None, None)  # fmt: skip
-            chosen = "ensemble"
+            chosen = ctx.ensemble_entry_id or "ensemble"
         else:
             for attempt, entry_id in enumerate(order[:2]):
                 try:

@@ -113,6 +113,8 @@ class RunContext:
     errors: Any = None
     report: Any = None
     bundle: Any = None
+    positive_label: str | None = None  # the binary positive class actually used
+    ensemble_entry_id: str | None = None  # the kept ensemble's leaderboard row
     failure: TabPilotError | None = None
     route: str = ""  # the next node, decided by the node that just ran
     last_round_accepted: bool = False

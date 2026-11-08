@@ -313,7 +313,16 @@ def _ensemble(state: ReportState) -> Section:
 
 def _selection(state: ReportState) -> Section:
     sel = state.selection
-    blocks = [p(f"Rule: {sel.rule}. Winner: {sel.winner}."), note(OPTIMISM)]
+    compared = len([e for e in state.entries if e.model != "ensemble"])
+    blocks = [
+        p(f"Rule: {sel.rule}. Winner: {sel.winner}."),
+        note(OPTIMISM),
+        note(
+            f"{compared} configurations were compared in total (every model and retrained "
+            "variant on the leaderboard, including failed and skipped ones). The more "
+            "configurations are compared, the more optimistic the best score tends to be."
+        ),
+    ]
     if sel.near_ties:
         blocks.append(p(f"Near ties: {', '.join(sel.near_ties)}. Tie-break: {sel.tie_break}."))
     paired = sel.runner_up_paired

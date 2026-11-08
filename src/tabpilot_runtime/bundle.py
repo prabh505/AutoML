@@ -6,6 +6,7 @@ scored identically in the worker and in the user's environment.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,9 +41,22 @@ def write_predictions(path: str | Path, outputs: dict[str, Any], classes: list[s
     frame.to_csv(path, index=False, lineterminator="\n")
 
 
+def unsafe_cell(value: Any) -> Any:
+    """Undo `safe_cell`: `'=x` → `=x` (only when the rest starts with a formula character, so
+    a genuine leading apostrophe survives)."""
+    if isinstance(value, str) and value.startswith("'") and value[1:].startswith(FORMULA_PREFIXES):
+        return value[1:]
+    return value
+
+
 def read_table(path: str | Path) -> pd.DataFrame:
-    """Read a CSV as text columns (empty cells are missing); the pipeline casts types itself."""
-    return pd.read_csv(path, dtype=str, keep_default_na=False, na_values=[""])
+    """Read a CSV as text columns (empty cells are missing); the pipeline casts types itself.
+    Cells and headers that a writer protected against spreadsheet formulas (§24.9) are restored.
+    """
+    frame = pd.read_csv(path, dtype=str, keep_default_na=False, na_values=[""])
+    frame.columns = pd.Index([unsafe_cell(c) for c in frame.columns])
+    restored: pd.DataFrame = frame.apply(lambda col: col.map(unsafe_cell))
+    return restored
 
 
 def predict_outputs(model: Any, X: pd.DataFrame, task: str, classes: list[str]) -> dict[str, Any]:
@@ -85,10 +99,34 @@ def compare(expected: dict[str, Any], actual: dict[str, Any],
     return ParityReport(diff <= tolerance and mismatches == 0, diff, mismatches, len(want))
 
 
+def check_manifest(root: Path) -> list[str]:
+    """Paths whose SHA-256 differs from `manifest.json` (or that are missing). The manifest
+    does not list itself. An absent manifest is reported as a problem, never skipped.
+    """
+    try:
+        listed = json.loads((root / "manifest.json").read_text(encoding="utf-8"))["files"]
+    except (OSError, ValueError, KeyError):
+        return ["manifest.json"]
+    bad = []
+    for entry in listed:
+        path = root / entry["path"]
+        digest = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else ""
+        if digest != entry["sha256"]:
+            bad.append(entry["path"])
+    return bad
+
+
 def verify(bundle_dir: str | Path, model: Any) -> ParityReport:
-    """Score `parity/parity_input.csv` and compare with `parity/parity_expected.json`."""
+    """Check the manifest checksums, then score `parity/parity_input.csv` and compare with
+    `parity/parity_expected.json` at the fixed 1e-9 tolerance (never one read from the file).
+    A failed checksum or an empty fixture is a failed parity, not an exception.
+    """
     root = Path(bundle_dir)
+    if check_manifest(root):
+        return ParityReport(False, float("inf"), 0, 0)
     expected = json.loads((root / "parity" / "parity_expected.json").read_text(encoding="utf-8"))
     frame = read_table(root / "parity" / "parity_input.csv")
+    if frame.empty:
+        return ParityReport(False, float("inf"), 0, 0)
     actual = predict_outputs(model, frame, expected["task"], list(expected["classes"]))
-    return compare(expected, actual, float(expected.get("tolerance", PARITY_TOLERANCE)))
+    return compare(expected, actual)

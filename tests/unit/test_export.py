@@ -191,6 +191,12 @@ def test_isolated_verify_fails_on_tampered_expectations(tmp_path: Path) -> None:
     expected = json.loads(path.read_text("utf-8"))
     expected["probabilities"][0][0] += 1e-6
     path.write_text(json.dumps(expected), encoding="utf-8")
+    # re-seal the manifest so the parity comparison itself (not the checksum) is what fails
+    manifest = json.loads((root / "manifest.json").read_text("utf-8"))
+    for entry in manifest["files"]:
+        if entry["path"] == "parity/parity_expected.json":
+            entry["sha256"] = sha256_file(path)
+    (root / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     run = isolated(root, "verify")
     assert run.returncode == 1
     assert "R1 parity FAILED" in run.stdout
@@ -530,3 +536,61 @@ def test_runtime_prediction_csv_is_formula_safe(tmp_path: Path) -> None:
     write_predictions(tmp_path / "r.csv", {"values": [-1.5]}, [])
     assert (tmp_path / "r.csv").read_text("utf-8").splitlines() == ["prediction", "-1.5"]
     assert not compare({"values": [1.0, 2.0]}, {"values": [1.0]}).ok  # shape mismatch
+
+
+# ---------------------------------------------------------------- U2 KI-038 / KI-039 / KI-040
+@pytest.mark.unit
+def test_U2_KI_038_parity_fixture_is_formula_safe_and_round_trips(tmp_path: Path) -> None:
+    from tabpilot.export.parity import write_fixture  # noqa: PLC0415
+
+    frame = pd.DataFrame({'=HYPERLINK("http://evil","x")': ["a", "=cmd", None],
+                          "plain": ["+1", "-2", "@z"]})  # fmt: skip
+    back = write_fixture(frame, tmp_path / "parity_input.csv")
+    text = (tmp_path / "parity_input.csv").read_text("utf-8").splitlines()
+    assert text[0].startswith("\"'=HYPERLINK")  # header cell neutralized (§24.9)
+    assert text[1:] == ["a,'+1", "'=cmd,'-2", ",'@z"]  # every formula-like cell prefixed
+    assert list(back.columns) == list(frame.columns)  # restored for the pipeline
+    assert back["plain"].tolist() == ["+1", "-2", "@z"]
+    assert back.iloc[:, 0].tolist()[:2] == ["a", "=cmd"]
+    assert pd.isna(back.iloc[2, 0])
+
+
+@pytest.mark.integration
+def test_U2_KI_039_verify_ignores_a_file_supplied_tolerance_and_checks_the_manifest(
+    tmp_path: Path,
+) -> None:
+    root = unzip(export(tmp_path, fit(ModelName.LINEAR)).path, tmp_path / "u")
+    model = joblib.load(root / "model" / "model.joblib")
+    assert verify(root, model).ok
+    path = root / "parity" / "parity_expected.json"
+    expected = json.loads(path.read_text("utf-8"))
+    expected["probabilities"][0][0] += 0.01
+    expected["tolerance"] = 1e9  # a tampered file must not widen its own tolerance
+    path.write_text(json.dumps(expected), encoding="utf-8")
+    run = isolated(root, "verify")
+    assert run.returncode == 1
+    assert "manifest check FAILED" in run.stdout
+    assert "parity/parity_expected.json" in run.stdout
+    # the same tampering without the manifest check (the library function on a stripped bundle)
+    (root / "manifest.json").unlink()
+    assert not verify(root, model).ok  # no manifest: never trusted
+    root2 = unzip(export(tmp_path / "b", fit(ModelName.LINEAR)).path, tmp_path / "u2")
+    (root2 / "parity" / "parity_input.csv").write_text("a\n", encoding="utf-8")
+    assert not verify(root2, joblib.load(root2 / "model" / "model.joblib")).ok  # empty fixture
+
+
+@pytest.mark.unit
+def test_U2_KI_040_cli_reports_a_busy_slot_without_a_traceback(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from tabpilot import cli  # noqa: PLC0415
+    from tabpilot.runtime import SlotBusyError  # noqa: PLC0415
+
+    def busy(args: Any) -> Any:
+        raise SlotBusyError(1)
+
+    monkeypatch.setattr(cli, "execute", busy)
+    assert cli.main(["run", "f.csv", "--target", "y", "--out", "o"]) == 2
+    err = capsys.readouterr().err
+    assert "Another analysis is running" in err
+    assert "Traceback" not in err

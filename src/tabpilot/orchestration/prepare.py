@@ -13,6 +13,7 @@ import psutil
 from tabpilot.evaluation.holdout import make_guard
 from tabpilot.evaluation.metrics import Problem
 from tabpilot.ingestion import apply_target, load_dataset, validate_target
+from tabpilot.ingestion.task import positive_label
 from tabpilot.orchestration.context import RunContext
 from tabpilot.planning import build_planner_input
 from tabpilot.preprocessing import schema_from
@@ -79,6 +80,9 @@ def prepare(ctx: RunContext) -> RunState:
         if report.simplifications:
             ctx.emit(Stage.INGEST, EventType.WARNING_RAISED, code="feasibility_simplified",
                      simplifications=[s.value for s in report.simplifications])  # fmt: skip
+    positive = cfg.positive_label  # the user's choice, else the §10.1 default for a binary task
+    if cfg.task == Task.BINARY and positive is None:
+        positive = positive_label(loaded.frame[cfg.target].dropna())
     with ctx.stage(Stage.SPLIT):
         k = REDUCED_K if Simplification.REDUCE_FOLDS in ctx.simplifications else DEFAULT_K
         features = [c.name for c in loaded.metadata.columns if c.role == ColumnRole.FEATURE]
@@ -95,16 +99,17 @@ def prepare(ctx: RunContext) -> RunState:
         summary = profile(loaded.frame, split, loaded.metadata, cfg.task,
                           execution_profile=cfg.execution_profile,
                           time_budget_s=cfg.time_budget_s, seed_root=cfg.seed_root,
-                          positive_label=cfg.positive_label)  # fmt: skip
+                          positive_label=positive)  # fmt: skip
         re_included = [o for o in cfg.column_overrides if o.role == ColumnRole.FEATURE]
         metadata = apply_leakage_exclusions(loaded.metadata, summary.leakage, re_included)
         compact = build_compact_profile(summary, metadata, cfg.profile_mode)
-    problem = _problem(loaded.frame, cfg.target, cfg.task, cfg.positive_label)
+    problem = _problem(loaded.frame, cfg.target, cfg.task, positive)
     schema = schema_from(metadata, summary)
     if Simplification.CAP_ONEHOT in ctx.simplifications:
         schema = replace(schema, onehot_max_categories=ONEHOT_CAP_SIMPLIFIED)
     ctx.loaded = replace(loaded, metadata=metadata)
     ctx.split, ctx.summary, ctx.problem, ctx.schema = split, summary, problem, schema
+    ctx.positive_label = positive
     ctx.dev = DevData.from_frame(loaded.frame, cfg.target, problem)
     ctx.planner_input = build_planner_input(compact, ctx.settings, cfg,
                                             available=ctx.available_models())  # fmt: skip

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -65,15 +66,22 @@ class LLMCache:
             return None
         if key in self._memory:
             return self._memory[key]
-        if self.directory is None:
+        return None if self.directory is None else self._read(self.directory / f"{key}.json")
+
+    def _read(self, path: Path) -> LLMResponse | None:
+        """A fresh, readable entry, else None: stale, truncated, empty or foreign-schema files
+        are misses and are deleted (I-8: a bad cache never breaks a run).
+        """
+        try:
+            if self._clock() - path.stat().st_mtime > self.ttl_s:
+                path.unlink(missing_ok=True)
+                return None
+            return LLMResponse.model_validate_json(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
             return None
-        path = self.directory / f"{key}.json"
-        if not path.exists():
-            return None
-        if self._clock() - path.stat().st_mtime > self.ttl_s:
+        except (OSError, ValueError):
             path.unlink(missing_ok=True)
             return None
-        return LLMResponse.model_validate_json(path.read_text(encoding="utf-8"))
 
     def put(self, key: str, response: LLMResponse) -> None:
         if not self.enabled:
@@ -81,5 +89,7 @@ class LLMCache:
         self._memory[key] = response
         if self.directory is not None:
             self.directory.mkdir(parents=True, exist_ok=True)
-            (self.directory / f"{key}.json").write_text(response.model_dump_json(),
-                                                        encoding="utf-8")  # fmt: skip
+            target = self.directory / f"{key}.json"
+            temp = target.with_suffix(f".{os.getpid()}.tmp")
+            temp.write_text(response.model_dump_json(), encoding="utf-8")
+            temp.replace(target)  # atomic: a reader sees the old file or the whole new one

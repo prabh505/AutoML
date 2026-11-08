@@ -49,8 +49,10 @@ class BudgetTracker:
         """The timeout for the next attempt: request, per-call cap, and remaining wall time."""
         return max(0.0, min(requested, self.budget.per_call_timeout_s, self.time_left()))
 
-    def check_call(self, purpose: str, prompt_tokens: int) -> None:
-        """Raise before an attempt that would break a ceiling; otherwise count the attempt."""
+    def check_call(self, purpose: str, prompt_tokens: int, max_output_tokens: int = 0) -> None:
+        """Raise before an attempt that would break a ceiling; otherwise count the attempt.
+        The request's own `max_output_tokens` is reserved against the output ceiling (§23.7).
+        """
         if self.calls >= self.budget.max_calls:
             raise LLMBudgetExhausted(purpose, "call budget exhausted")
         if self.time_left() <= 0:
@@ -59,7 +61,7 @@ class BudgetTracker:
             raise LLMBudgetExhausted(purpose, "request exceeds the per-call input-token cap")
         if self.input_tokens + prompt_tokens > self.budget.max_input_tokens:
             raise LLMBudgetExhausted(purpose, "input-token budget exhausted")
-        if self.output_tokens >= self.budget.max_output_tokens:
+        if self.output_tokens + max(max_output_tokens, 1) > self.budget.max_output_tokens:
             raise LLMBudgetExhausted(purpose, "output-token budget exhausted")
         self.calls += 1
 

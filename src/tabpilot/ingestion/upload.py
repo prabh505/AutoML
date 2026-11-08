@@ -108,7 +108,12 @@ def _seekable(source: BinaryIO, settings: Settings) -> tuple[BinaryIO, int]:
 
 
 def accept_upload(
-    source: BinaryIO, filename: str, settings: Settings, run_id: str | None = None
+    source: BinaryIO,
+    filename: str,
+    settings: Settings,
+    run_id: str | None = None,
+    *,
+    runs_dir: Path | None = None,
 ) -> StoredUpload:
     """Validate and store an upload as `runs/{run_id}/input/raw.{ext}` (FR-ING-01).
 
@@ -130,7 +135,7 @@ def accept_upload(
     check_content(head, tail, fmt)
 
     run_id = run_id or str(ULID())
-    run_dir = settings.data_dir / "runs" / run_id
+    run_dir = (runs_dir or settings.data_dir / "runs") / run_id
     input_dir = run_dir / "input"
     input_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     os.chmod(run_dir, 0o700)

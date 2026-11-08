@@ -39,14 +39,18 @@ def paired_decision(
     """§19.5 on raw fold scores of the same folds (same order)."""
     if len(parent_scores) != len(child_scores) or not parent_scores:
         raise ValueError("paired comparison needs the same non-empty folds")
-    deltas = [selection_score(metric, c) - selection_score(metric, p)
-              for p, c in zip(parent_scores, child_scores, strict=True)]  # fmt: skip
+    finite = all(math.isfinite(x) for x in (*parent_scores, *child_scores))
+    deltas = ([selection_score(metric, c) - selection_score(metric, p)
+               for p, c in zip(parent_scores, child_scores, strict=True)]
+              if finite else [0.0] * len(parent_scores))  # fmt: skip
     mean_gain = math.fsum(deltas) / len(deltas)
-    parent_mean = math.fsum(parent_scores) / len(parent_scores)
+    parent_mean = math.fsum(parent_scores) / len(parent_scores) if finite else 0.0
     rel_gain = mean_gain / max(abs(parent_mean), EPS)
     better = sum(d > 0 for d in deltas)
     required = math.ceil(majority * len(deltas))
-    if not child_usable:
+    if not finite:
+        accepted, reason = False, "non-finite fold scores"
+    elif not child_usable:
         accepted, reason = False, "challenger is not ok or not comparable"
     elif rel_gain < min_rel_gain:
         accepted, reason = False, f"relative gain {rel_gain:.4%} below {min_rel_gain:.1%}"

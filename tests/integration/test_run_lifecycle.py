@@ -193,3 +193,83 @@ def test_llm_call_records_hold_hashes_and_sizes_never_bodies(tmp_path: Path) -> 
     for body_marker in ("available_models", "paragraphs", "dsl_catalog", "leaderboard_top"):
         assert body_marker not in text  # no prompt or response content (§30.3)
     assert ExecutionProfileName.LOCAL.value  # profile enum is importable for hosted variants
+
+
+# ---------------------------------------------------------------- U2 KI-032: export failures
+def patch_export(monkeypatch: pytest.MonkeyPatch, **changes: Any) -> None:
+    """Make the export stage use different `ExportSettings` (loader, size limit, ...)."""
+    import dataclasses  # noqa: PLC0415
+
+    from tabpilot.orchestration import nodes  # noqa: PLC0415
+
+    real = nodes.export_bundle
+    monkeypatch.setattr(
+        nodes,
+        "export_bundle",
+        lambda state, model, report_dir, settings: real(
+            state, model, report_dir, dataclasses.replace(settings, **changes)
+        ),
+    )
+
+
+class Shifted:
+    """A reloaded model whose probabilities are off by 1e-6 (a corrupted serialization)."""
+
+    def __init__(self, inner: Any) -> None:
+        self.inner, self.classes_ = inner, inner.classes_
+
+    def predict_proba(self, X: Any) -> Any:
+        return self.inner.predict_proba(X) + 1e-6
+
+
+@pytest.mark.integration
+def test_U2_KI_032_parity_failure_is_e_export_parity_and_keeps_only_the_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import joblib  # noqa: PLC0415
+
+    patch_export(monkeypatch, loader=lambda path: Shifted(joblib.load(path)))
+    mgr, run_id = real_run(tmp_path, "thread")
+    result = mgr.wait(run_id, timeout=300)
+    assert result is not None
+    assert result.status == "failed"
+    assert result.error_code == ErrorCode.EXPORT_PARITY
+    assert result.stopped_after_stage.value == "export"  # type: ignore[union-attr]
+    directory = tmp_path / "runs" / run_id
+    assert (directory / "report" / "report.html").is_file()  # §22.8: report still viewable
+    assert not list(directory.rglob("*.zip"))  # download disabled
+    assert not (directory / "input").exists()
+    assert sorted(p.name for p in directory.iterdir()) == ["report"]  # nothing else survives
+
+
+@pytest.mark.integration
+def test_U2_KI_032_oversized_bundle_fails_with_the_size_message_not_worker_lost(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    patch_export(monkeypatch, max_bundle_mb=0.001)
+    mgr, run_id = real_run(tmp_path, "thread")
+    result = mgr.wait(run_id, timeout=300)
+    assert result is not None
+    assert result.status == "failed"
+    assert result.error_code == ErrorCode.RESOURCE_INFEASIBLE
+    assert "above the" in (result.error_message or "")
+    assert "stopped unexpectedly" not in (result.error_message or "")
+    assert (tmp_path / "runs" / run_id / "report" / "report.html").is_file()
+    exports = [e for e in mgr.events(run_id) if e.type.value == "stage_started"
+               and e.stage.value == "export"]  # fmt: skip
+    assert len(exports) == 1  # not retried by the graph
+
+
+@pytest.mark.integration
+def test_U2_KI_032_raw_row_hit_blocks_the_bundle_with_a_coded_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import tabpilot.export.bundle as bundle_module  # noqa: PLC0415
+
+    monkeypatch.setattr(bundle_module, "find_raw_rows", lambda *a: ["parity/parity_input.csv"])
+    mgr, run_id = real_run(tmp_path, "thread")
+    result = mgr.wait(run_id, timeout=300)
+    assert result is not None
+    assert result.error_code == ErrorCode.EXPORT_PARITY
+    assert "reproduced rows" in (result.error_message or "")
+    assert "parity_input" not in (result.error_message or "")  # no file names in the message

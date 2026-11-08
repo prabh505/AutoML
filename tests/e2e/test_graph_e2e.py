@@ -27,7 +27,7 @@ CASES = [
 def run_cli(tmp_path: Path, file: str, target: str, *extra: str) -> tuple[int, Path]:
     out = tmp_path / "run"
     code = main(["run", str(FIXTURES / file), "--target", target, "--out", str(out),
-                 "--budget-s", "240", "--tuning-mode", "trials", "--trials", "2",
+                 "--budget-s", "600", "--tuning-mode", "trials", "--trials", "2",
                  "--models", "linear,lightgbm", *extra])  # fmt: skip
     return code, out
 

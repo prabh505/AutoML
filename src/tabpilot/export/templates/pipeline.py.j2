@@ -96,8 +96,12 @@ def predict(args: argparse.Namespace) -> int:
 
 
 def verify_bundle(args: argparse.Namespace) -> int:
-    from tabpilot_runtime.bundle import verify
+    from tabpilot_runtime.bundle import check_manifest, verify
 
+    changed = check_manifest(HERE)
+    if changed:
+        print("manifest check FAILED, changed or missing: " + ", ".join(changed))
+        return 1
     report = verify(HERE, joblib.load(HERE / "model" / "model.joblib"))
     status = "PASSED" if report.ok else "FAILED"
     print(f"R1 parity {status}: {report.rows} rows, label mismatches {report.label_mismatches}, "

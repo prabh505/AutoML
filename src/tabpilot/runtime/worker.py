@@ -23,6 +23,7 @@ from typing import Any, Literal, Protocol
 
 import psutil
 
+from tabpilot.export import BundleTooLargeError, RawRowError
 from tabpilot.llm import BudgetTracker, LLMRouter
 from tabpilot.llm.consent import ConsentStore
 from tabpilot.llm.factory import build_router, default_budget
@@ -105,6 +106,19 @@ def _delete_inputs(run_dir: Path) -> None:
     shutil.rmtree(run_dir / "input", ignore_errors=True)
 
 
+def export_failure(exc: BundleTooLargeError | RawRowError) -> tuple[ErrorCode, str]:
+    """E-code and user message of an export-stage refusal (§22.8; DEC-040). A bundle over the
+    size limit is a resource limit; a bundle that would reproduce dataset rows is an export
+    integrity failure. Neither lists file names or values (I-11).
+    """
+    if isinstance(exc, BundleTooLargeError):
+        return ErrorCode.RESOURCE_INFEASIBLE, str(exc)
+    return ErrorCode.EXPORT_PARITY, (
+        "The export was blocked: a bundle file would have "
+        "reproduced rows of your dataset. No bundle is offered."
+    )
+
+
 def _failed(config: RunConfig, started: float, code: ErrorCode, message: str,
             stage: Stage | None) -> RunResult:  # fmt: skip
     return RunResult(run_id=config.run_id, status="failed",
@@ -150,9 +164,11 @@ def execute_run(spec: WorkerSpec, out: Outbox, cancel: Flag) -> RunResult:
         return RunResult(run_id=config.run_id, status="cancelled",
                          duration_s=round(time.monotonic() - started, 3),
                          stopped_after_stage=ctx.current_stage)  # fmt: skip
-    except TabPilotError as exc:
-        ctx.emit(Stage.RUN, EventType.RUN_FAILED, error_code=exc.code.value)
-        return _failed(config, started, exc.code, exc.user_message, ctx.current_stage)
+    except (TabPilotError, BundleTooLargeError, RawRowError) as exc:
+        code, message = (exc.code, exc.user_message) if isinstance(exc, TabPilotError) \
+            else export_failure(exc)  # fmt: skip
+        ctx.emit(Stage.RUN, EventType.RUN_FAILED, error_code=code.value)
+        return _failed(config, started, code, message, ctx.current_stage)
     except Exception as exc:
         error = StageError(stage=ctx.current_stage, error_class=type(exc).__name__[:100],
                            message=type(exc).__name__, recoverable=False)  # fmt: skip

@@ -284,3 +284,61 @@ def test_voting_ensemble_refits_clones_when_not_prefit() -> None:
     assert ens.estimators_[0] is not member
     with pytest.raises(ValueError, match="not fitted"):
         VotingEnsemble([member], [1.0], prefit=False).predict(frame)
+
+
+# ---------------------------------------------------------------- U2 KI-033: leak detection
+@pytest.mark.unit
+def test_U2_KI_033_fold_weights_exclude_the_scored_fold_on_discriminating_data() -> None:
+    """T-ENS-01 with data built so that weights learned with the fold differ from weights
+    learned without it: model B is perfect on fold 0's validation rows and noise elsewhere, so a
+    leaked (all-rows) fit favors B on fold 0, while the honest fit does not.
+    """
+    _y, split, y_dev = data()
+    parts = fold_partition(split)
+    tr0, va0 = parts[0]
+    rng = np.random.default_rng(5)
+    a = noisy_model(y_dev, 1.5, 1)  # moderate everywhere
+    b = 1 / (1 + np.exp(-rng.normal(0, 1.0, len(y_dev))))  # noise ...
+    b[va0] = np.where(y_dev[va0] == 1, 0.99, 0.01)  # ... except perfect on fold 0's rows
+    preds = [a, np.column_stack([1 - b, b]).astype(np.float32)]
+    metric = MetricName.ROC_AUC
+    honest_w = hill_climb([p[tr0] for p in preds], y_dev[tr0], BIN, metric)
+    leaked_w = hill_climb(preds, y_dev, BIN, metric)
+    assert leaked_w[1] > honest_w[1]  # the data really discriminates (guards the test itself)
+    score_of = lambda w: score(  # noqa: E731
+        metric, y_dev[va0], blend([p[va0] for p in preds], w, BIN), BIN)  # fmt: skip
+    honest, leaked = score_of(honest_w), score_of(leaked_w)
+    assert leaked > honest + 0.01
+    fold_scores, final = cross_fitted_ensemble(preds, y_dev, split, BIN, metric)
+    assert fold_scores[0] == pytest.approx(honest)
+    assert fold_scores[0] != pytest.approx(leaked, abs=1e-6)
+    assert np.array_equal(final, leaked_w)  # final export weights do use every row
+
+
+@pytest.mark.unit
+def test_U2_KI_035_inference_ratio_just_above_five_rejects_an_otherwise_good_ensemble() -> None:
+    """The limit is 5×, not something looser: a ratio between 5 and 50 must be rejected."""
+    _y, split, y_dev = data()
+    cands = [
+        cand(
+            f"0-{m}-{i:08x}",
+            noisy_model(y_dev, 2.0, i),
+            y_dev,
+            split,
+            model=m,
+            predict=0.06 if i else 0.01,
+        )
+        for i, m in enumerate(["lightgbm", "random_forest", "linear"])
+    ]
+    result = build_ensemble(
+        cands, y_dev, split, BIN, MetricName.ROC_AUC, artifact_limit_bytes=LIMIT
+    )
+    ratio = result.predicted_inference_ratio or 0.0
+    assert 5.0 < ratio < 50.0
+    assert not result.kept
+    assert "limit 5×" in result.reason
+    cheap = [cand(c.entry.entry_id, c.oof, y_dev, split, model=str(c.entry.model), predict=0.01)
+             for c in cands]  # fmt: skip
+    fine = build_ensemble(cheap, y_dev, split, BIN, MetricName.ROC_AUC, artifact_limit_bytes=LIMIT)
+    assert (fine.predicted_inference_ratio or 0.0) <= 5.0
+    assert "limit 5×" not in fine.reason

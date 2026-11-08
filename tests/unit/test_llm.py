@@ -46,6 +46,7 @@ from tabpilot.llm import (
     request_hash,
 )
 from tabpilot.llm.adapters.gemini import GEMINI_OPENAI_BASE_URL
+from tabpilot.llm.cache import cache_key
 from tabpilot.schemas import EventType, ExecutionProfileName, LLMBudget, LLMRequest, ProviderName
 from tabpilot.schemas.run import BudgetLedger
 
@@ -533,3 +534,50 @@ def test_T_LLM_03_backoff_never_exceeds_ten_seconds() -> None:
     with pytest.raises(LLMUnavailable):
         router.complete(request(), tracker(clock))
     assert clock.sleeps == [10.0, 10.0]  # min(2^a + jitter, 10)
+
+
+# ---------------------------------------------------------------- U2 KI-031 / KI-035 (cache)
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "damage", ["", '{"provider": "groq"', '{"unexpected": 1}', "\x00\x01 garbage"]
+)
+def test_U2_KI_031_corrupt_cache_entry_is_a_miss_not_an_error(tmp_path: Path, damage: str) -> None:
+    """I-8: an unreadable or stale cache file never breaks the router; it is deleted and the
+    provider is called."""
+    cache = LLMCache(directory=tmp_path)
+    groq = scripted("groq", "success")
+    router, clock, _ = make_router([groq], cache=cache)
+    budget = tracker(clock)
+    first = router.complete(request(), budget)
+    (path,) = list(tmp_path.glob("*.json"))
+    path.write_text(damage, encoding="utf-8")
+    fresh = LLMCache(directory=tmp_path)  # a new process: nothing in memory
+    router2, clock2, _ = make_router([scripted("groq", "success")], cache=fresh)
+    second = router2.complete(request(), tracker(clock2))
+    assert not second.cached
+    assert second.content == first.content
+    assert json.loads(path.read_text("utf-8"))["content"] == first.content  # rewritten whole
+    assert not list(tmp_path.glob("*.tmp"))  # atomic write leaves no temp file
+
+
+@pytest.mark.unit
+def test_U2_KI_035_cache_key_includes_the_provider_and_model() -> None:
+    req = request()
+    assert cache_key("groq", "m", req) != cache_key("gemini", "m", req)
+    assert cache_key("groq", "m1", req) != cache_key("groq", "m2", req)
+    assert cache_key("groq", "m", req) == cache_key("groq", "m", req)
+
+
+@pytest.mark.unit
+def test_U2_KI_036_output_ceiling_reserves_the_requests_own_max_output_tokens() -> None:
+    """§23.7: a call is refused before it is made when used + its max_output_tokens would
+    exceed the ceiling (previously two calls could use 15,800 of 8,000)."""
+    router, clock, _ = make_router([scripted("groq", "success")])
+    budget = tracker(clock)
+    budget.output_tokens = 7_900
+    with pytest.raises(LLMBudgetExhausted, match="output-token budget"):
+        router.complete(request(max_output_tokens=500), budget)
+    assert budget.calls == 0  # refused before the attempt was counted
+    budget.output_tokens = 7_500
+    router.complete(request(max_output_tokens=500), budget)  # exactly fits
+    assert budget.calls == 1

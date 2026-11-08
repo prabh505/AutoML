@@ -11,6 +11,7 @@ from tabpilot.runtime.manager import (
     RunStatus,
     SlotBusyError,
     UnknownRunError,
+    UploadValidation,
     pid_exists,
 )
 
@@ -20,5 +21,6 @@ __all__ = [
     "RunStatus",
     "SlotBusyError",
     "UnknownRunError",
+    "UploadValidation",
     "pid_exists",
 ]

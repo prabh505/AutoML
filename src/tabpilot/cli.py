@@ -29,7 +29,7 @@ from tabpilot.ingestion import StoredUpload, accept_upload, load_dataset
 from tabpilot.ingestion.task import detect_task, positive_label
 from tabpilot.models import ModelRegistry
 from tabpilot.orchestration.context import WorkerOptions
-from tabpilot.runtime import RunManager
+from tabpilot.runtime import RunManager, SlotBusyError
 from tabpilot.schemas import (
     ExecutionProfileName,
     MetricName,
@@ -263,6 +263,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse(argv)
     try:
         summary = execute(args)
+    except SlotBusyError as exc:
+        sys.stderr.write(f"error: {exc} Wait for it to finish, then run again.\n")
+        return 2
     except RunFailedError as exc:
         sys.stderr.write(f"error: {exc}\n")
         return 2

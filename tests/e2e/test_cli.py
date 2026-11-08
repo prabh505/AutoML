@@ -97,7 +97,9 @@ def test_cli_end_to_end(tmp_path: Path, name: str, target: str, task: Task, hold
         LeaderboardEntry.model_validate(e)
         for e in json.loads((out / "leaderboard.json").read_text())
     ]
-    assert {e.model for e in board} == {ModelName.LINEAR, ModelName.LIGHTGBM}
+    singles = [e for e in board if e.feature_set != "ensemble"]  # a kept ensemble is a row too
+    assert {e.model for e in singles} == {ModelName.LINEAR, ModelName.LIGHTGBM}
+    assert len(board) - len(singles) <= 1  # at most one ensemble row
     for e in board:
         assert e.status == "ok"
         assert e.comparable

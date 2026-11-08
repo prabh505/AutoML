@@ -463,3 +463,22 @@ def test_retrain_parents_top_two_families_plus_targeted() -> None:
         {"type": "toggle_class_weight", "model": "linear", "value": "balanced"},
         {"type": "drop_model", "model": "random_forest"}))  # fmt: skip
     assert [e.entry_id for e in targeted] == ["0-lightgbm-00000001", "0-linear-00000004"]
+
+
+@pytest.mark.unit
+def test_U2_KI_035_threshold_boundary_is_exact_and_non_finite_scores_are_rejected() -> None:
+    """Float noise cannot hide a `<` vs `<=` change: 4.0 → 5.0 is exactly 25%."""
+    parent, child = [4.0] * 5, [5.0] * 5
+    at = paired_decision(parent_id="p", child_id="c", parent_scores=parent, child_scores=child,
+                         metric=MetricName.ROC_AUC, min_rel_gain=0.25)  # fmt: skip
+    assert at.rel_gain == 0.25
+    assert at.accepted  # exactly at the threshold: accepted (inclusive)
+    above = paired_decision(parent_id="p", child_id="c", parent_scores=parent,
+                            child_scores=child, metric=MetricName.ROC_AUC,
+                            min_rel_gain=0.2500001)  # fmt: skip
+    assert not above.accepted
+    for bad in (float("nan"), float("inf")):
+        nan = paired_decision(parent_id="p", child_id="c", parent_scores=parent,
+                              child_scores=[5.0, 5.0, 5.0, 5.0, bad], metric=MetricName.ROC_AUC)  # fmt: skip
+        assert not nan.accepted
+        assert nan.reason == "non-finite fold scores"

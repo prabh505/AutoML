@@ -21,8 +21,10 @@ and cleans up.
 
 from __future__ import annotations
 
+import hashlib
 import multiprocessing as mp
 import queue
+import tempfile
 import threading
 import time
 from collections.abc import Callable
@@ -34,9 +36,11 @@ import psutil
 from ulid import ULID
 
 from tabpilot.config import Settings
-from tabpilot.ingestion import StoredUpload, accept_upload
+from tabpilot.ingestion import accept_upload, load_dataset
+from tabpilot.ingestion.task import detect_task
 from tabpilot.logging import get_logger
 from tabpilot.orchestration.context import WorkerOptions
+from tabpilot.resources.estimator import estimate_feasibility
 from tabpilot.runtime.cleanup import (
     IDLE_TTL_S,
     MAX_AGE_S,
@@ -47,11 +51,14 @@ from tabpilot.runtime.cleanup import (
 from tabpilot.runtime.slots import Slot, SlotBusyError, acquire_slot
 from tabpilot.runtime.worker import WorkerSpec, worker_main
 from tabpilot.schemas import (
+    DatasetMetadata,
     ErrorCode,
+    FeasibilityReport,
     RunConfig,
     RunEvent,
     RunResult,
     Stage,
+    TaskDetection,
 )
 from tabpilot.schemas.errors import render_message
 from tabpilot.schemas.run import MIN_TIME_BUDGET_S
@@ -63,6 +70,7 @@ CANCEL_GRACE_S = 10.0
 TERM_GRACE_S = 5.0
 HARD_KILL_FACTOR = 1.3
 POLL_S = 0.2
+PREVIEW_TIMEOUT_S = 120.0
 Mode = str  # "process" | "thread"
 
 __all__ = [
@@ -71,6 +79,7 @@ __all__ = [
     "RunStatus",
     "SlotBusyError",
     "UnknownRunError",
+    "UploadValidation",
     "pid_exists",
 ]
 
@@ -81,6 +90,16 @@ class InvalidConfigError(ValueError):
 
 class UnknownRunError(KeyError):
     """No run with this id is known to the manager (§28.2)."""
+
+
+@dataclass(frozen=True)
+class UploadValidation:
+    """§28.2 `UploadValidation{run_id, metadata, warnings}` (plus the sanitized display name)."""
+
+    run_id: str
+    metadata: DatasetMetadata
+    warnings: list[str]
+    display_name: str
 
 
 @dataclass(frozen=True)
@@ -154,14 +173,90 @@ class RunManager:
         self._lock = threading.Lock()
         self._ctx = mp.get_context("spawn")
         self._sweeper: threading.Timer | None = None
+        self._previews: dict[tuple[str, str], str] = {}
         root.mkdir(parents=True, exist_ok=True, mode=0o700)
 
     # ------------------------------------------------------------ validation helpers
-    def validate_upload(self, file: BinaryIO, filename: str) -> StoredUpload:
-        """§28.2: validate and store an upload under a new run id (E-FILE-*)."""
-        settings = self.settings.model_copy(update={"data_dir": self.root.parent})
-        stored = accept_upload(file, filename, settings, run_id=str(ULID()))
-        return stored
+    def validate_upload(self, file: BinaryIO, filename: str) -> UploadValidation:
+        """§28.2: validate, store and parse an upload under a new run id.
+
+        Raises E-FILE-*, E-PARSE-*, E-ENCODING; a rejected upload leaves nothing on disk.
+        """
+        stored = accept_upload(file, filename, self.settings, run_id=str(ULID()),
+                               runs_dir=self.root)  # fmt: skip
+        try:
+            loaded = load_dataset(stored.path, stored.display_name, self.settings, stored.run_id)
+        except BaseException:
+            delete_run_dir(self.run_dir(stored.run_id))
+            raise
+        return UploadValidation(stored.run_id, loaded.metadata, list(loaded.metadata.warnings),
+                                stored.display_name)  # fmt: skip
+
+    def _loaded(self, run_id: str) -> Any:
+        return load_dataset(self._stored_input(self.run_dir(run_id)), "upload", self.settings,
+                            run_id)  # fmt: skip
+
+    def detect_task(self, run_id: str, target: str) -> TaskDetection:
+        """§28.2: detect the task for `target` (original or normalized name); pure."""
+        loaded = self._loaded(run_id)
+        column = next((c.name for c in loaded.metadata.columns if target in (c.original, c.name)),
+                      None)  # fmt: skip
+        if column is None:
+            raise ValueError(f"target column {target!r} is not in the file")
+        return detect_task(loaded.frame[column].dropna())
+
+    def estimate(self, run_id: str, cfg: RunConfig) -> FeasibilityReport:
+        """§28.2: the §8.8 feasibility estimate for `cfg`; pure."""
+        loaded = self._loaded(run_id)
+        return estimate_feasibility(loaded.metadata, cfg, self.settings,
+                                    psutil.virtual_memory().total / 2**20)  # fmt: skip
+
+    def preview_planner_input(self, run_id: str, cfg: RunConfig) -> str:
+        """§28.2: the exact planner input JSON the run would send, built by a worker-like
+        subprocess (split + profile) in a scratch directory; cached by (run id, config).
+        """
+        key = (run_id, hashlib.sha256(cfg.model_dump_json().encode()).hexdigest())
+        if key not in self._previews:
+            self._previews[key] = self._run_preview(run_id, cfg)
+        return self._previews[key]
+
+    def _run_preview(self, run_id: str, cfg: RunConfig) -> str:
+        scratch = Path(tempfile.mkdtemp(prefix=f".preview-{run_id[-8:]}-", dir=self.root))
+        spec = WorkerSpec(
+            config_json=cfg.model_dump_json(),
+            run_dir=str(scratch),
+            input_path=str(self._stored_input(self.run_dir(run_id))),
+            display_name="upload",
+            options=WorkerOptions(),
+            mode="preview",
+        )
+        out: Any = self._ctx.Queue() if self.mode == "process" else queue.Queue()
+        cancel: Any = self._ctx.Event() if self.mode == "process" else threading.Event()
+        runner: Any = (self._ctx.Process if self.mode == "process" else threading.Thread)(
+            target=self._worker, args=(spec, out, cancel), daemon=True)  # fmt: skip
+        runner.start()
+        text: str | None = None
+        try:
+            end = self._clock() + PREVIEW_TIMEOUT_S
+            while self._clock() < end:
+                try:
+                    kind, payload = out.get(timeout=POLL_S)
+                except queue.Empty:
+                    if not runner.is_alive():
+                        break
+                    continue
+                if kind == "preview":
+                    text = str(payload)
+                if kind == "result":
+                    break
+        finally:
+            if self.mode == "process" and runner.is_alive():
+                runner.kill()
+            runner.join(timeout=5)
+            delete_run_dir(scratch)
+        if text is None:
+            raise TimeoutError("the planner-input preview did not complete")
+        return text
 
     def check_config(self, cfg: RunConfig) -> None:
         """Validate `cfg` against the active profile's limits (raises `InvalidConfigError`)."""
@@ -348,7 +443,22 @@ class RunManager:
         if result.status in ("failed", "cancelled"):
             self._errors[run.config.run_id] = result
             if self.delete_failed:
-                delete_run_dir(run.run_dir)
+                self._clean_failed(run, result)
+
+    @staticmethod
+    def _clean_failed(run: _Run, result: RunResult) -> None:
+        """§24.7: a failed or cancelled run's directory is deleted. §22.8 exception: when the
+        export stage failed, "download disabled, report still viewable", so only the report
+        survives (the idle TTL and sweeper remove it later).
+        """
+        report = run.run_dir / "report"
+        if result.status == "failed" and result.stopped_after_stage == Stage.EXPORT \
+                and report.is_dir():  # fmt: skip
+            for child in run.run_dir.iterdir():
+                if child != report:
+                    delete_run_dir(child) if child.is_dir() else child.unlink(missing_ok=True)
+            return
+        delete_run_dir(run.run_dir)
 
     # ------------------------------------------------------------ public API (§28.2)
     def events(self, run_id: str, since_seq: int = 0) -> list[RunEvent]:

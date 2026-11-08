@@ -433,4 +433,97 @@ def test_validate_upload_stores_the_file_under_a_new_run_id(tmp_path: Path) -> N
     assert first.run_id != second.run_id
     assert first.display_name == "my data.csv"
     assert second.display_name == "evil.csv"
-    assert first.path.read_bytes() == b"a,t\n1,0\n2,1\n"
+    (stored,) = mgr.run_dir(first.run_id).glob("input/raw.*")
+    assert stored.read_bytes() == b"a,t\n1,0\n2,1\n"
+    assert first.metadata.n_rows_raw == 2
+
+
+# ---------------------------------------------------------------- U2 KI-034: §28.2 contract
+FIXTURE_DIR = Path(__file__).resolve().parents[2] / "fixtures"
+
+
+def upload(mgr: RunManager, relative: str) -> Any:
+    path = FIXTURE_DIR / relative
+    with path.open("rb") as handle:
+        return mgr.validate_upload(handle, path.name)
+
+
+@pytest.mark.integration
+def test_U2_KI_034_validate_upload_parses_and_returns_metadata_and_warnings(tmp_path: Path) -> None:
+    mgr = manager(tmp_path / "custom_root_name", fw.quick_ok)  # not named "runs"
+    result = upload(mgr, "datasets/binary_basic.csv")
+    assert result.metadata.n_rows_raw == 2500
+    assert result.metadata.run_id == result.run_id
+    assert result.display_name == "binary_basic.csv"
+    assert isinstance(result.warnings, list)
+    stored = list(mgr.run_dir(result.run_id).glob("input/raw.*"))
+    assert len(stored) == 1  # stored under the manager's own root, not <root.parent>/runs
+    cfg = config(run_id=result.run_id, target="churn")
+    assert mgr.start(cfg, display_name=result.display_name) == result.run_id  # found its input
+    mgr.wait(result.run_id, timeout=30)
+    assert upload(mgr, "datasets/binary_basic.csv").run_id != result.run_id  # new id per call
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("relative", "code"),
+    [("malicious/zip_renamed.csv", ErrorCode.ARCHIVE_UNSUPPORTED),
+     ("malicious/corrupt.parquet", ErrorCode.FILE_CORRUPT)],
+)  # fmt: skip
+def test_U2_KI_034_rejected_upload_leaves_nothing_on_disk(
+    tmp_path: Path, relative: str, code: ErrorCode
+) -> None:
+    from tabpilot.schemas import TabPilotError  # noqa: PLC0415
+
+    mgr = manager(tmp_path, fw.quick_ok)
+    with pytest.raises(TabPilotError) as err:
+        upload(mgr, relative)
+    assert err.value.code in (code, ErrorCode.FILE_CORRUPT, ErrorCode.PARSE_MALFORMED)
+    assert [p for p in (tmp_path / "runs").iterdir() if p.name != ".locks"] == []
+
+
+@pytest.mark.integration
+def test_U2_KI_034_detect_task_and_estimate_are_pure_calls(tmp_path: Path) -> None:
+    mgr = manager(tmp_path, fw.quick_ok)
+    up = upload(mgr, "datasets/binary_basic.csv")
+    detected = mgr.detect_task(up.run_id, "Churn")  # the original column name works
+    assert detected.task == Task.BINARY
+    assert mgr.detect_task(up.run_id, "churn").task == Task.BINARY
+    with pytest.raises(ValueError, match="not in the file"):
+        mgr.detect_task(up.run_id, "nope")
+    report = mgr.estimate(up.run_id, config(run_id=up.run_id, target="churn"))
+    assert report.status in ("ok", "simplified")
+    assert report.estimated_peak_mb > 0
+    assert mgr.estimate(up.run_id, config(run_id=up.run_id, target="churn")) == report
+
+
+@pytest.mark.integration
+def test_U2_KI_034_preview_planner_input_is_cached_and_byte_identical_to_the_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """T-PRIV-02 through the manager: the previewed JSON is what the planner sends."""
+    from tabpilot.llm.stub import StubProvider  # noqa: PLC0415
+    from tabpilot.orchestration.context import WorkerOptions  # noqa: PLC0415
+    from tabpilot.runtime import worker as run_worker  # noqa: PLC0415
+    from tabpilot.tracking import dumps  # noqa: PLC0415
+
+    sent: list[Any] = []
+    real = StubProvider.complete
+
+    def spy(self: StubProvider, req: Any) -> Any:
+        if req.purpose == "plan":
+            sent.append(req.user_json)
+        return real(self, req)
+
+    monkeypatch.setattr(StubProvider, "complete", spy)
+    mgr = manager(tmp_path, run_worker.worker_main, mode="thread")
+    up = upload(mgr, "datasets/binary_basic.csv")
+    cfg = config(run_id=up.run_id, target="churn", llm_mode="stub")
+    preview = mgr.preview_planner_input(up.run_id, cfg)
+    assert mgr.preview_planner_input(up.run_id, cfg) is preview  # cached by (run, config)
+    assert not [p for p in mgr.root.iterdir() if p.name.startswith(".preview")]  # scratch removed
+    mgr.start(cfg, display_name=up.display_name,
+              options=WorkerOptions(tuning_mode="trials", trials_per_model=1))  # fmt: skip
+    mgr.wait(up.run_id, timeout=300)
+    assert dumps(sent[0], indent=None) == dumps(__import__("json").loads(preview), indent=None)
+    assert "Churn" not in preview  # the target's raw label never leaves (names are normalized)

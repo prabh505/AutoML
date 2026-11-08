@@ -539,3 +539,42 @@ def test_rich_run_renders_every_optional_part(tmp_path: Path) -> None:
     assert facts.by_key("reflection_rounds") is not None
     assert facts.by_key("ensemble_members") is not None
     assert "north" not in json.dumps(facts.payload())  # PI-16
+
+
+# ---------------------------------------------------------------- U2 KI-030: number forms
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("insert", "needle"),
+    [
+        (" Accuracy reached .95 on the test rows.", "number .95 is not in the facts table"),
+        (" An improvement of 40x was seen.", "40x has letters attached"),
+        (" That is the 99pct figure.", "99pct has letters attached"),
+        (" It sits at the 99th percentile.", "99th has letters attached"),
+        (" The gain was ninety-five percent.", "spelled number 'ninety'"),
+        (" It doubled the score.", "spelled number"),
+        (" The score is 1,234,567.5 here.", "1,234,567.5 is not in the facts table"),
+        (" A twofold improvement.", "spelled number"),
+    ],
+)
+def test_U2_KI_030_invented_number_forms_are_caught(insert: str, needle: str) -> None:
+    text, facts, events = template_text()
+    paragraphs_ = text.split("\n\n")
+    paragraphs_[1] += insert
+    result = fact_check("\n\n".join(paragraphs_), facts, events)
+    if "doubled" in insert:
+        needle = "spelled number"
+    if "twofold" in insert:
+        needle = "spelled number"
+    assert any(needle.split(" is not")[0] in v or needle in v for v in result.violations), (
+        result.violations
+    )
+
+
+@pytest.mark.unit
+def test_U2_KI_030_factual_numbers_in_every_allowed_form_still_pass() -> None:
+    text, facts, events = template_text()
+    assert fact_check(text, facts, events).passed
+    cv = facts.by_key("cv_mean")
+    assert cv is not None
+    bare = text.replace(f"0.8474 [{cv.id}]", f".8474 [{cv.id}]")  # same value, no leading zero
+    assert fact_check(bare, facts, events).passed

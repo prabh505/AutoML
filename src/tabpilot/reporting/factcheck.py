@@ -32,7 +32,22 @@ MAX_WORDS = 300
 PARAGRAPHS = 4
 MIN_TRIALS_FOR_TUNING = 2
 CITATION = re.compile(r"\[F(\d+)\]")
-NUMBER = re.compile(r"(?<![\w.])-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?%?(?![\w])")
+# A number: integers, thousands separators, decimals with or without a leading zero (`.95`), an
+# optional `%`, and any letters glued to it (`40x`, `99pct`, `99th`), which are rejected below.
+NUMBER = re.compile(
+    r"(?<![\w.])(?P<value>-?(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d+|\.\d+|\d+))"
+    r"(?P<suffix>%|[A-Za-z]+)?"
+)
+# Spelled numbers and multipliers carry numbers the table cannot cite. ("one" stays allowed: it
+# is also a pronoun, and "one hundred" is caught by "hundred".)
+NUMBER_WORDS = re.compile(
+    r"\b(?:zero|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen"
+    r"|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy"
+    r"|eighty|ninety|hundred|thousand|million|billion|dozen|half|third|quarter|doubl\w*|tripl\w*"
+    r"|twice|thrice|percent|percentage|per ?cent"
+    r"|(?:two|three|four|five|six|seven|eight|nine|ten|hundred)fold)\b",
+    re.I,
+)
 BACKTICK = re.compile(r"`([^`]*)`")
 SNAKE = re.compile(r"\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b")
 MASK = " • "
@@ -100,18 +115,21 @@ def _mask_names(text: str, names: Sequence[str]) -> str:
     return text
 
 
-def _number(token: str) -> tuple[Decimal | None, bool]:
-    percent = token.endswith("%")
+def _number(value: str, suffix: str | None) -> tuple[Decimal | None, bool]:
     try:
-        return Decimal(token.rstrip("%").replace(",", "")), percent
+        return Decimal(value.replace(",", "")), suffix == "%"
     except InvalidOperation:
-        return None, percent
+        return None, suffix == "%"
 
 
 def _check_numbers(paragraph: str, cited: set[str], facts: FactsTable, n: int) -> list[str]:
     out = []
-    for token in NUMBER.findall(paragraph):
-        value, percent = _number(token)
+    for found in NUMBER.finditer(paragraph):
+        token = found.group(0)
+        if found.group("suffix") not in (None, "%"):
+            out.append(f"paragraph {n}: number {token} has letters attached")
+            continue
+        value, percent = _number(found.group("value"), found.group("suffix"))
         matches = {
             f.id
             for f in facts.facts.values()
@@ -157,6 +175,8 @@ def fact_check(text: str, facts: FactsTable, event_log: Sequence[RunEvent]) -> F
         result.violations.extend(f"paragraph {n}: unknown name {token}"
                                  for token in SNAKE.findall(plain))  # fmt: skip
         result.violations.extend(_check_numbers(plain, cited, facts, n))
+        result.violations.extend(f"paragraph {n}: spelled number {w.group(0)!r}"
+                                 for w in NUMBER_WORDS.finditer(plain))  # fmt: skip
         for label, pattern in BANNED.items():
             if (hit := pattern.search(plain)) is not None:
                 result.violations.append(f"paragraph {n}: {label} ({hit.group(0)!r})")

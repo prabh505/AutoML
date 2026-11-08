@@ -164,7 +164,8 @@ def build_facts(state: ReportState) -> FactsTable:  # noqa: PLR0912, PLR0915 - o
     t.add("n_folds", cfg.split.k * cfg.split.n_repeats, unit="folds")
     if cfg.split.n_repeats > 1:
         t.add("n_repeats", cfg.split.n_repeats, unit="repeats")
-    t.add("n_models_compared", len(_ok(state.entries)), unit="models")
+    singles = [e for e in _ok(state.entries) if e.model != "ensemble"]
+    t.add("n_models_compared", len(singles), unit="models")
     failed = sum(1 for e in state.entries if e.status != "ok")
     if failed:
         t.add("n_models_failed", failed, unit="models")
