@@ -85,7 +85,7 @@ from tabpilot.schemas.features import FeatureProvenance
 from tabpilot.schemas.reflection import FeatureImportance, ReflectionRecord, RemainingBudget
 from tabpilot.schemas.run import FinalResult
 from tabpilot.splitting import iter_folds
-from tabpilot.training import CVRun, OOFStore, refit_final, run_cv
+from tabpilot.training import Cancelled, CVRun, OOFStore, refit_final, run_cv
 from tabpilot.training.refit import baseline_candidate, refit_params
 from tabpilot_runtime import VotingEnsemble
 
@@ -370,7 +370,9 @@ def incumbent_importances(state: RunState, ctx: RunContext) -> list[FeatureImpor
         sources = [*ctx.schema.columns, *(f.name for f in run.candidate.features)]
         raw = raw_importances(tab, [str(c) for c in tab.feature_names_in_])
         return source_importances(raw, sources)
-    except (ValueError, RuntimeError, MemoryError, AttributeError) as exc:
+    except (Cancelled, TabPilotError):
+        raise
+    except Exception as exc:
         ctx.emit(Stage.REFLECT, EventType.WARNING_RAISED, code="reflect_importances_unavailable",
                  error_class=type(exc).__name__)  # fmt: skip
         return []

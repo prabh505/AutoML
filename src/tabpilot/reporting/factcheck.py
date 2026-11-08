@@ -43,8 +43,8 @@ NUMBER = re.compile(
 NUMBER_WORDS = re.compile(
     r"\b(?:zero|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen"
     r"|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy"
-    r"|eighty|ninety|hundred|thousand|million|billion|dozen|half|third|quarter|doubl\w*|tripl\w*"
-    r"|twice|thrice|percent|percentage|per ?cent"
+    r"|eighty|ninety|hundred|thousand|million|billion|dozen|half|third|quarter|doubl(?:ed|es|ing)|tripl(?:ed|es|ing)"
+    r"|twice|thrice|percent|per ?cent"
     r"|(?:two|three|four|five|six|seven|eight|nine|ten|hundred)fold)\b",
     re.I,
 )

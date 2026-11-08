@@ -578,3 +578,12 @@ def test_U2_KI_030_factual_numbers_in_every_allowed_form_still_pass() -> None:
     assert cv is not None
     bare = text.replace(f"0.8474 [{cv.id}]", f".8474 [{cv.id}]")  # same value, no leading zero
     assert fact_check(bare, facts, events).passed
+
+
+@pytest.mark.unit
+def test_U2b_KI_049_ordinary_words_are_not_spelled_numbers() -> None:
+    text, facts, events = template_text()
+    benign = text + " Nothing was double-counted, and the percentage of rows is in the table."
+    assert fact_check(benign, facts, events).passed
+    for bad in (" It doubled.", " It was tripled.", " A third of the rows."):
+        assert not fact_check(text + bad, facts, events).passed

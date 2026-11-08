@@ -581,3 +581,18 @@ def test_U2_KI_036_output_ceiling_reserves_the_requests_own_max_output_tokens() 
     budget.output_tokens = 7_500
     router.complete(request(max_output_tokens=500), budget)  # exactly fits
     assert budget.calls == 1
+
+
+@pytest.mark.unit
+def test_U2b_KI_045_unwritable_cache_never_loses_a_good_answer(tmp_path: Path) -> None:
+    """I-8: a failing cache write (here: the cache path is under a regular file) keeps the
+    response in memory and never raises out of the router."""
+    blocker = tmp_path / "file"
+    blocker.write_text("x", encoding="utf-8")
+    cache = LLMCache(directory=blocker / "cache")
+    router, clock, _ = make_router([scripted("groq", "success")], cache=cache)
+    budget = tracker(clock)
+    first = router.complete(request(), budget)
+    second = router.complete(request(), budget)  # served from the in-memory copy
+    assert second.cached
+    assert second.content == first.content

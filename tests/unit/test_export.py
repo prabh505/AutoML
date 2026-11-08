@@ -594,3 +594,22 @@ def test_U2_KI_040_cli_reports_a_busy_slot_without_a_traceback(
     err = capsys.readouterr().err
     assert "Another analysis is running" in err
     assert "Traceback" not in err
+
+
+@pytest.mark.integration
+def test_U2b_KI_047_verify_uses_the_fixed_tolerance_even_with_a_resealed_manifest(
+    tmp_path: Path,
+) -> None:
+    root = unzip(export(tmp_path, fit(ModelName.LINEAR)).path, tmp_path / "u")
+    model = joblib.load(root / "model" / "model.joblib")
+    path = root / "parity" / "parity_expected.json"
+    expected = json.loads(path.read_text("utf-8"))
+    expected["probabilities"][0][0] += 0.01
+    expected["tolerance"] = 1e9
+    path.write_text(json.dumps(expected), encoding="utf-8")
+    manifest = json.loads((root / "manifest.json").read_text("utf-8"))
+    for entry in manifest["files"]:
+        if entry["path"] == "parity/parity_expected.json":
+            entry["sha256"] = sha256_file(path)  # the manifest check passes ...
+    (root / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    assert not verify(root, model).ok  # ... but the file's own tolerance is ignored

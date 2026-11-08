@@ -531,3 +531,32 @@ def test_U2_KI_043_a_kept_ensemble_is_a_leaderboard_row_and_the_final_model(
     facts = json.loads((outcome.run_dir / "report" / "facts.json").read_text("utf-8"))
     compared = next(f for f in facts.values() if f["key"] == "n_models_compared")
     assert compared["value"] == len(board) - 1  # the ensemble is not counted as a model type
+
+
+@pytest.mark.integration
+def test_U2b_KI_046_a_library_error_in_the_importance_refit_gives_an_empty_list(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The reflector evidence is best effort: any library error (LightGBM, CatBoost, ...)
+    leaves the importances empty instead of failing the run."""
+
+    class LibraryError(Exception):  # not a ValueError/RuntimeError, like LightGBMError
+        pass
+
+    def boom(*a: Any, **k: Any) -> Any:
+        raise LibraryError("simulated refit failure")
+
+    monkeypatch.setattr(run_nodes, "raw_importances", boom)
+    sent: list[dict[str, Any]] = []
+    real = StubProvider.complete
+
+    def spy(self: StubProvider, req: Any) -> Any:
+        if req.purpose == "reflect":
+            sent.append(dict(req.user_json))
+        return real(self, req)
+
+    monkeypatch.setattr(StubProvider, "complete", spy)
+    outcome = go(tmp_path, llm="stub", rounds=1, models=(ModelName.LINEAR,))
+    assert outcome.result.status == "completed"
+    assert sent[0]["top_features"] == []
+    assert any(e.data.get("code") == "reflect_importances_unavailable" for e in outcome.events)

@@ -74,22 +74,35 @@ class LLMCache:
         """
         try:
             if self._clock() - path.stat().st_mtime > self.ttl_s:
-                path.unlink(missing_ok=True)
+                self._drop(path)
                 return None
             return LLMResponse.model_validate_json(path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
+        except (FileNotFoundError, NotADirectoryError):
             return None
         except (OSError, ValueError):
-            path.unlink(missing_ok=True)
+            self._drop(path)
             return None
+
+    @staticmethod
+    def _drop(path: Path) -> None:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:  # an undeletable bad entry is still just a miss
+            return
 
     def put(self, key: str, response: LLMResponse) -> None:
         if not self.enabled:
             return
         self._memory[key] = response
-        if self.directory is not None:
+        if self.directory is None:
+            return
+        try:
             self.directory.mkdir(parents=True, exist_ok=True)
             target = self.directory / f"{key}.json"
             temp = target.with_suffix(f".{os.getpid()}.tmp")
             temp.write_text(response.model_dump_json(), encoding="utf-8")
             temp.replace(target)  # atomic: a reader sees the old file or the whole new one
+        except (
+            OSError
+        ):  # an unwritable cache never loses a good answer (I-8); memory still holds it
+            return
