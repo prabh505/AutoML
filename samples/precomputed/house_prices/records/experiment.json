@@ -1,0 +1,351 @@
+{
+  "budget": {
+    "elapsed_s": 61.896,
+    "llm_calls_used": 0,
+    "llm_input_tokens_used": 0,
+    "llm_output_tokens_used": 0,
+    "llm_seconds_used": 0.0,
+    "schema_version": "budget_ledger/1.0",
+    "stage_seconds": {
+      "build_features": 0.001,
+      "ensemble": 0.006,
+      "evaluate": 0.001,
+      "explain": 1.182,
+      "export": 0.774,
+      "finalize": 0.873,
+      "ingest": 0.087,
+      "plan": 0.001,
+      "profile": 0.147,
+      "report": 0.742,
+      "split": 0.01,
+      "train_candidates": 58.032,
+      "validate_plan": 0.0
+    },
+    "time_budget_s": 240,
+    "trials_max": 60,
+    "trials_used": 60
+  },
+  "config": {
+    "budgets": {
+      "llm_calls": 0,
+      "max_trials": 60,
+      "reflection_rounds": 1,
+      "time_s": 240
+    },
+    "execution_profile": "hosted",
+    "library_versions": {
+      "catboost": "1.2.10",
+      "lightgbm": "4.7.0",
+      "numpy": "2.4.6",
+      "optuna": "5.0.0",
+      "pandas": "3.0.6",
+      "scikit-learn": "1.9.1",
+      "xgboost": "2.1.4"
+    },
+    "llm": {
+      "enabled": false,
+      "order": []
+    },
+    "primary_metric": {
+      "direction": "minimize",
+      "name": "rmse",
+      "schema_version": "metric_spec/1.0"
+    },
+    "prompt_template_versions": {},
+    "run_id": "01M7X1SWPW6ZAN2X27PPRTB98N",
+    "schema_version": "experiment_config/1.0",
+    "seeds": {
+      "explain": 46,
+      "model": 43,
+      "optuna": 44,
+      "profile": 45,
+      "root": 42,
+      "split": 42
+    },
+    "split": {
+      "duplicate_grouping": false,
+      "holdout_fraction": 0.2,
+      "holdout_present": true,
+      "k": 5,
+      "n_repeats": 1,
+      "split_id": "1b593326034ed31ac92058ebb0509d2f4d3e28fbea50b551b4ce03096a9776a5",
+      "strategy": "kfold"
+    },
+    "tabpilot_version": "0.1.0",
+    "target": "saleprice",
+    "task": "regression"
+  },
+  "ensemble": {
+    "fold_scores": [
+      12714.098253386237,
+      11878.528564083774,
+      12196.796391163547,
+      10882.812784041353,
+      11671.384088554982
+    ],
+    "kept": false,
+    "members": [
+      {
+        "entry_id": "0-lightgbm-6a78bd8f",
+        "weight": 1.0
+      }
+    ],
+    "reason": "hill climbing selected a single model",
+    "schema_version": "ensemble/1.0"
+  },
+  "evaluation": {
+    "entries": [
+      {
+        "comparable": true,
+        "entry_id": "0-lightgbm-6a78bd8f",
+        "experiment_id": "01M7X1SWPW6ZAN2X27PPRTB98N",
+        "feature_set": "baseline",
+        "fit_seconds": 0.4698817654000038,
+        "fold_scores": [
+          12714.098335331595,
+          11878.528884895577,
+          12196.796399073677,
+          10882.812831165364,
+          11671.383933365723
+        ],
+        "iteration": 0,
+        "mean": 11868.724076766386,
+        "metric": {
+          "direction": "minimize",
+          "name": "rmse",
+          "schema_version": "metric_spec/1.0"
+        },
+        "model": "lightgbm",
+        "model_size_bytes": 1379668,
+        "n_features_out": 15,
+        "params": {
+          "bagging_fraction": 0.5000573342613845,
+          "bagging_freq": 1,
+          "feature_fraction": 0.7358657255571391,
+          "lambda_l1": 0.2068936727015662,
+          "lambda_l2": 5.805498098286235,
+          "learning_rate": 0.01280047171238114,
+          "min_child_samples": 5,
+          "n_estimators": 2000,
+          "num_leaves": 15
+        },
+        "predict_seconds": 0.03173320900000931,
+        "schema_version": "leaderboard_entry/1.0",
+        "secondary": {
+          "mae": 8560.570095825195,
+          "r2": 0.870864836857401,
+          "rmsle": 0.13825294886529804
+        },
+        "sem": 302.7663568142256,
+        "split_id": "1b593326034ed31ac92058ebb0509d2f4d3e28fbea50b551b4ce03096a9776a5",
+        "status": "ok",
+        "std": 677.0061551365652,
+        "warnings": []
+      },
+      {
+        "comparable": true,
+        "entry_id": "0-random_forest-7aec312d",
+        "experiment_id": "01M7X1SWPW6ZAN2X27PPRTB98N",
+        "feature_set": "baseline",
+        "fit_seconds": 0.4610213190000024,
+        "fold_scores": [
+          20826.114775417922,
+          20730.033684447677,
+          18298.4736482715,
+          17453.87817488176,
+          19555.576615495567
+        ],
+        "iteration": 0,
+        "mean": 19372.815379702886,
+        "metric": {
+          "direction": "minimize",
+          "name": "rmse",
+          "schema_version": "metric_spec/1.0"
+        },
+        "model": "random_forest",
+        "model_size_bytes": 7782993,
+        "n_features_out": 15,
+        "params": {
+          "max_depth": 16,
+          "max_features": 0.8,
+          "min_samples_leaf": 3
+        },
+        "predict_seconds": 0.04042744519999815,
+        "schema_version": "leaderboard_entry/1.0",
+        "secondary": {
+          "mae": 13939.370724487304,
+          "r2": 0.6584397230119539,
+          "rmsle": 0.23067989693119584
+        },
+        "sem": 664.2308514955542,
+        "split_id": "1b593326034ed31ac92058ebb0509d2f4d3e28fbea50b551b4ce03096a9776a5",
+        "status": "ok",
+        "std": 1485.2653366966272,
+        "warnings": []
+      },
+      {
+        "comparable": true,
+        "entry_id": "0-linear-cf8cf9d3",
+        "experiment_id": "01M7X1SWPW6ZAN2X27PPRTB98N",
+        "feature_set": "baseline",
+        "fit_seconds": 0.051030156000001624,
+        "fold_scores": [
+          14273.612110611408,
+          19870.34329863338,
+          13699.992358012149,
+          12856.929446788108,
+          13695.739958920773
+        ],
+        "iteration": 0,
+        "mean": 14879.323434593161,
+        "metric": {
+          "direction": "minimize",
+          "name": "rmse",
+          "schema_version": "metric_spec/1.0"
+        },
+        "model": "linear",
+        "model_size_bytes": 10763,
+        "n_features_out": 30,
+        "params": {},
+        "predict_seconds": 0.026098548999999593,
+        "schema_version": "leaderboard_entry/1.0",
+        "secondary": {
+          "mae": 10749.936771647135,
+          "r2": 0.7965307605444467,
+          "rmsle": 0.237348304578257
+        },
+        "sem": 1268.0483935013729,
+        "split_id": "1b593326034ed31ac92058ebb0509d2f4d3e28fbea50b551b4ce03096a9776a5",
+        "status": "ok",
+        "std": 2835.4424066284723,
+        "warnings": []
+      }
+    ],
+    "holdout": {
+      "accessed_at": "2026-11-20T18:00:24.851726Z",
+      "baseline": {
+        "rmse": 11882.075132259417
+      },
+      "final": {
+        "rmse": 11581.812587581702
+      },
+      "present": true
+    },
+    "schema_version": "evaluation/1.0",
+    "selection": {
+      "near_ties": [],
+      "rule": "max mean CV score; near-ties (0.25 SEM): simpler, fewer features, faster, id",
+      "runner_up_paired": {
+        "folds_won": 5,
+        "max_diff": 7991.814413737802,
+        "mean_diff": 3010.599357826776,
+        "min_diff": 1503.1959589384714,
+        "n_folds": 5,
+        "runner_up": "0-linear-cf8cf9d3"
+      },
+      "schema_version": "selection/1.0",
+      "winner": "0-lightgbm-6a78bd8f"
+    }
+  },
+  "feasibility": {
+    "estimated_peak_mb": 526.3,
+    "limit_mb": 600.0,
+    "schema_version": "feasibility/1.0",
+    "simplifications": [],
+    "status": "ok"
+  },
+  "lineage": {
+    "baseline_model": "lightgbm",
+    "candidates": [
+      {
+        "candidate_id": "0-lightgbm",
+        "change_set_id": null,
+        "iteration": 0,
+        "parent_entry_id": null
+      },
+      {
+        "candidate_id": "0-random_forest",
+        "change_set_id": null,
+        "iteration": 0,
+        "parent_entry_id": null
+      },
+      {
+        "candidate_id": "0-linear",
+        "change_set_id": null,
+        "iteration": 0,
+        "parent_entry_id": null
+      }
+    ],
+    "cv_best_iterations": [
+      900,
+      1121,
+      1583,
+      983,
+      1023
+    ],
+    "final": "0-lightgbm-6a78bd8f",
+    "plan_source": "rule_based",
+    "refit_params": {
+      "bagging_fraction": 0.5000573342613845,
+      "bagging_freq": 1,
+      "feature_fraction": 0.7358657255571391,
+      "lambda_l1": 0.2068936727015662,
+      "lambda_l2": 5.805498098286235,
+      "learning_rate": 0.01280047171238114,
+      "min_child_samples": 5,
+      "n_estimators": 1234,
+      "num_leaves": 15
+    },
+    "winner": "0-lightgbm-6a78bd8f",
+    "winner_oof": "oof/oof_0-lightgbm-6a78bd8f.npy"
+  },
+  "plan": {
+    "column_decisions": [],
+    "cv_folds": 5,
+    "encoding": {
+      "high_cardinality": "frequency",
+      "low_cardinality": "onehot"
+    },
+    "features": [],
+    "imputation": {
+      "add_missing_indicators": true,
+      "categorical": "most_frequent",
+      "numeric": "median"
+    },
+    "models": [
+      {
+        "class_weight": "none",
+        "name": "lightgbm",
+        "priority": 1
+      },
+      {
+        "class_weight": "none",
+        "name": "random_forest",
+        "priority": 2
+      },
+      {
+        "class_weight": "none",
+        "name": "linear",
+        "priority": 3
+      }
+    ],
+    "rationale": "Rule-based plan (§12.8): all available models, baseline features only, median / most-frequent imputation, one-hot ≤ 15 categories, frequency encoding > 50.",
+    "schema_version": "plan/1.0",
+    "target_transform": "none",
+    "tuning_allocation": {
+      "lightgbm": 0.6,
+      "linear": 0.15,
+      "random_forest": 0.25
+    }
+  },
+  "plan_source": "rule_based",
+  "plan_validation": {
+    "cv_folds_ignored": false,
+    "issues": [],
+    "schema_version": "plan_validation/1.0",
+    "simplifications": [],
+    "status": "valid"
+  },
+  "reflection_history": [],
+  "thresholds": {}
+}

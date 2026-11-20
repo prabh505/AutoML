@@ -1,0 +1,14 @@
+{
+  "near_ties": [],
+  "rule": "max mean CV score; near-ties (0.25 SEM): simpler, fewer features, faster, id",
+  "runner_up_paired": {
+    "folds_won": 2,
+    "max_diff": 0.0477558314414179,
+    "mean_diff": 0.00467103530800791,
+    "min_diff": -0.016595848252829476,
+    "n_folds": 5,
+    "runner_up": "0-lightgbm-6283f9f8"
+  },
+  "schema_version": "selection/1.0",
+  "winner": "0-linear-3d8f3e9d"
+}

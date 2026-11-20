@@ -1,0 +1,73 @@
+{
+  "facts_ref": "report/facts.json",
+  "run_id": "01M7X1VW0WMQZFAJB17K8N4P6W",
+  "schema_version": "report/1.0",
+  "sections": {
+    "data_decisions": [
+      {
+        "count": 0,
+        "kind": "row_removal",
+        "reason": "target_missing"
+      }
+    ],
+    "explanations": {
+      "method": "shap_linear",
+      "top_features": [
+        "education_num",
+        "age",
+        "marital_status",
+        "hours_per_week",
+        "occupation",
+        "capital_gain",
+        "education",
+        "native_region",
+        "sex"
+      ]
+    },
+    "holdout": {
+      "baseline": 0.7547351648634063,
+      "final": 0.7791498547968441,
+      "present": true
+    },
+    "leaderboard_ref": "leaderboard.json",
+    "limitations": [
+      "Importance and SHAP values describe how this model uses features, not causal effects in the world.",
+      "Correlated features share or swap importance; a low importance does not mean a feature is irrelevant.",
+      "SHAP values are computed on a sample and on preprocessed features; one-hot columns are aggregated.",
+      "Permutation importance can be misleading with correlated features.",
+      "Cross-validation scores of the selected model are optimistically biased, because the same folds were used for tuning and selection."
+    ],
+    "narrative": {
+      "fact_check": "passed",
+      "source": "template",
+      "text": "This run predicts `income` [F2] as a binary [F1] task. TabPilot compared 3 [F8] model types with cross-validation over 5 [F7] folds on the development rows and selected linear [F4] by its roc_auc [F3] score.\n\nThe selected model's mean cross-validated score is 0.7730 [F5], with a fold-to-fold standard deviation of 0.0124 [F6]. The runner-up, lightgbm [F9], averaged 0.7667 [F10]; the selected model scored higher on 3 [F12] of 5 [F7] folds. With this few folds the comparison is descriptive, not a significance test. Cross-validated scores of the selected model are optimistic, because the same folds were used to choose it.\n\nOn the independent test rows, used once after selection, the selected model scored 0.7791 [F13]. The reference baseline, lightgbm [F14], scored 0.7547 [F15]. The 95% [F16] bootstrap interval for the selected model runs from 0.7477 [F17] to 0.8104 [F18].\n\nThe inputs this model relied on most were `education_num` [F22], `age` [F23], `marital_status` [F24], `hours_per_week` [F25] and `occupation` [F26]. Importance describes how this model uses its inputs, not what would happen in the world if a value changed; correlated inputs can share or swap importance."
+    },
+    "plan": {
+      "models": [
+        "lightgbm",
+        "random_forest",
+        "linear"
+      ],
+      "source": "rule_based"
+    },
+    "selection": {
+      "rule": "max mean CV score; near-ties (0.25 SEM): simpler, fewer features, faster, id",
+      "winner": "0-linear-00160141"
+    },
+    "summary": {
+      "cv_mean": 0.7730071675675324,
+      "cv_std": 0.012437767435838533,
+      "final_model": "linear",
+      "holdout": 0.7791498547968441,
+      "primary_metric": "roc_auc",
+      "target": "income",
+      "task": "binary",
+      "winner": "0-linear-00160141"
+    },
+    "warnings": [
+      "W-CONFLICTING-DUPLICATES:6",
+      "W-DUPLICATES:4"
+    ]
+  },
+  "status": "completed"
+}

@@ -24,3 +24,6 @@ mlruns/
 *.joblib
 fixtures/datasets/hosted_limit.csv
 benchmark/results/**/tmp/
+
+# Streamlit secrets (I-10)
+.streamlit/secrets.toml

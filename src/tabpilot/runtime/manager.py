@@ -36,8 +36,10 @@ import psutil
 from ulid import ULID
 
 from tabpilot.config import Settings
-from tabpilot.ingestion import accept_upload, load_dataset
-from tabpilot.ingestion.task import detect_task
+from tabpilot.ingestion import accept_upload, load_dataset, validate_target
+from tabpilot.ingestion.overrides import check_override
+from tabpilot.ingestion.samples import sample, sample_path
+from tabpilot.ingestion.task import detect_task, positive_label
 from tabpilot.logging import get_logger
 from tabpilot.orchestration.context import WorkerOptions
 from tabpilot.resources.estimator import estimate_feasibility
@@ -48,7 +50,8 @@ from tabpilot.runtime.cleanup import (
     delete_run_dir,
     sweep,
 )
-from tabpilot.runtime.slots import Slot, SlotBusyError, acquire_slot
+from tabpilot.runtime.results import RunArtifacts, read_artifacts
+from tabpilot.runtime.slots import Slot, SlotBusyError, acquire_slot, slots_in_use
 from tabpilot.runtime.worker import WorkerSpec, worker_main
 from tabpilot.schemas import (
     DatasetMetadata,
@@ -57,9 +60,12 @@ from tabpilot.schemas import (
     RunConfig,
     RunEvent,
     RunResult,
+    SemanticType,
     Stage,
+    Task,
     TaskDetection,
 )
+from tabpilot.schemas.dataset import TargetReport
 from tabpilot.schemas.errors import render_message
 from tabpilot.schemas.run import MIN_TIME_BUDGET_S
 
@@ -71,6 +77,7 @@ TERM_GRACE_S = 5.0
 HARD_KILL_FACTOR = 1.3
 POLL_S = 0.2
 PREVIEW_TIMEOUT_S = 120.0
+PREVIEW_ROWS = 20  # §27.1 Configure page preview
 Mode = str  # "process" | "thread"
 
 __all__ = [
@@ -78,6 +85,8 @@ __all__ = [
     "RunManager",
     "RunStatus",
     "SlotBusyError",
+    "SlotNotice",
+    "TargetChoice",
     "UnknownRunError",
     "UploadValidation",
     "pid_exists",
@@ -100,6 +109,25 @@ class UploadValidation:
     metadata: DatasetMetadata
     warnings: list[str]
     display_name: str
+
+
+@dataclass(frozen=True)
+class TargetChoice:
+    """A validated target (FR-TGT-01/02): detection, report and the binary positive label."""
+
+    column: str
+    detection: TaskDetection
+    task: Task
+    report: TargetReport
+    positive_label: str | None
+    positive_share: float | None
+
+
+@dataclass(frozen=True)
+class SlotNotice:
+    """Every run slot is busy (FR-RUN-03); `est_wait_s` is None when another process holds it."""
+
+    est_wait_s: float | None
 
 
 @dataclass(frozen=True)
@@ -174,6 +202,9 @@ class RunManager:
         self._ctx = mp.get_context("spawn")
         self._sweeper: threading.Timer | None = None
         self._previews: dict[tuple[str, str], str] = {}
+        self._uploads: dict[str, UploadValidation] = {}
+        self._rows: dict[str, list[dict[str, str]]] = {}
+        self._estimates: dict[tuple[str, str], FeasibilityReport] = {}
         root.mkdir(parents=True, exist_ok=True, mode=0o700)
 
     # ------------------------------------------------------------ validation helpers
@@ -189,8 +220,34 @@ class RunManager:
         except BaseException:
             delete_run_dir(self.run_dir(stored.run_id))
             raise
-        return UploadValidation(stored.run_id, loaded.metadata, list(loaded.metadata.warnings),
-                                stored.display_name)  # fmt: skip
+        upload = UploadValidation(stored.run_id, loaded.metadata, list(loaded.metadata.warnings),
+                                  stored.display_name)  # fmt: skip
+        head = loaded.frame.head(PREVIEW_ROWS).astype("string").fillna("")
+        originals = {c.name: c.original for c in loaded.metadata.columns}
+        self._rows[stored.run_id] = [{originals.get(str(k), str(k)): str(v) for k, v in row.items()}
+                                     for row in head.to_dict("records")]  # fmt: skip
+        self._uploads[stored.run_id] = upload
+        return upload
+
+    def validate_sample(self, sample_id: str) -> UploadValidation:
+        """FR-ING-06: a bundled sample goes through the same upload path as a user file."""
+        path = sample_path(sample_id, self.settings.data_dir)
+        with path.open("rb") as handle:
+            return self.validate_upload(handle, sample(sample_id).filename)
+
+    def upload_info(self, run_id: str) -> UploadValidation:
+        """The validated upload of `run_id` (kept in memory; metadata only, no rows)."""
+        try:
+            return self._uploads[run_id]
+        except KeyError:
+            raise UnknownRunError(run_id) from None
+
+    def preview_rows(self, run_id: str) -> list[dict[str, str]]:
+        """The first 20 rows as display strings (§27.1); the only rows the UI ever holds."""
+        try:
+            return self._rows[run_id]
+        except KeyError:
+            raise UnknownRunError(run_id) from None
 
     def _loaded(self, run_id: str) -> Any:
         return load_dataset(self._stored_input(self.run_dir(run_id)), "upload", self.settings,
@@ -205,29 +262,86 @@ class RunManager:
             raise ValueError(f"target column {target!r} is not in the file")
         return detect_task(loaded.frame[column].dropna())
 
-    def estimate(self, run_id: str, cfg: RunConfig) -> FeasibilityReport:
-        """§28.2: the §8.8 feasibility estimate for `cfg`; pure."""
-        loaded = self._loaded(run_id)
-        return estimate_feasibility(loaded.metadata, cfg, self.settings,
-                                    psutil.virtual_memory().total / 2**20)  # fmt: skip
+    def check_target(self, run_id: str, target: str, task: Task | None = None) -> TargetChoice:
+        """§8.7 + §10.1: validate `target` under `task` (default: the detected task).
 
-    def preview_planner_input(self, run_id: str, cfg: RunConfig) -> str:
+        Raises the E-TARGET-* `TabPilotError` for an invalid target.
+        """
+        loaded = self._loaded(run_id)
+        column = next((c.name for c in loaded.metadata.columns if target in (c.original, c.name)),
+                      None)  # fmt: skip
+        if column is None:
+            raise ValueError(f"target column {target!r} is not in the file")
+        values = loaded.frame[column].dropna()
+        detection = detect_task(values)
+        chosen = task or detection.task
+        check = validate_target(loaded, column, chosen)
+        positive: str | None = None
+        share: float | None = None
+        if chosen == Task.BINARY:
+            positive = detection.positive_label or positive_label(values)
+            share = float((values.astype("string") == str(positive)).mean()) if len(values) \
+                else None  # fmt: skip
+        return TargetChoice(column, detection, chosen, check.report, positive, share)
+
+    def check_override(self, run_id: str, column: str, semantic_type: SemanticType) -> str | None:
+        """FR-ING-04 Val: why `column` cannot be read as `semantic_type` (None when it can)."""
+        loaded = self._loaded(run_id)
+        info = next((c for c in loaded.metadata.columns if column in (c.original, c.name)), None)
+        if info is None:
+            raise ValueError(f"column {column!r} is not in the file")
+        return check_override(info.original, loaded.frame[info.name], semantic_type)
+
+    def slot_notice(self) -> SlotNotice | None:
+        """None when a slot is free; else the §27.3 wait notice (estimate from runs we own)."""
+        limit = self.settings.limits.max_concurrent_runs
+        if slots_in_use(self.root, limit) < limit:
+            return None
+        remaining = [
+            max(0.0, self.hard_kill_factor * r.config.time_budget_s - (self._clock() - r.started))
+            for r in self._runs.values() if r.monitor is not None and r.monitor.is_alive()
+        ]  # fmt: skip
+        return SlotNotice(min(remaining) if remaining else None)
+
+    def artifacts(self, run_id: str) -> RunArtifacts | None:
+        """The finished run's outputs for the Results page; None if absent or deleted."""
+        run = self._get(run_id)
+        result = self.result(run_id)
+        if run.deleted or result is None or result.final is None:
+            return None
+        return read_artifacts(run.run_dir, bundle_path=result.final.bundle_path,
+                              bundle_sha256=result.final.bundle_sha256)  # fmt: skip
+
+    def estimate(self, run_id: str, cfg: RunConfig) -> FeasibilityReport:
+        """§28.2: the §8.8 feasibility estimate for `cfg`; pure, cached by (run id, config)."""
+        key = (run_id, hashlib.sha256(cfg.model_dump_json().encode()).hexdigest())
+        if key not in self._estimates:
+            loaded = self._loaded(run_id)
+            total_mb = psutil.virtual_memory().total / 2**20
+            self._estimates[key] = estimate_feasibility(loaded.metadata, cfg, self.settings,
+                                                        total_mb)  # fmt: skip
+        return self._estimates[key]
+
+    def preview_planner_input(self, run_id: str, cfg: RunConfig,
+                              options: WorkerOptions | None = None) -> str:  # fmt: skip
         """§28.2: the exact planner input JSON the run would send, built by a worker-like
         subprocess (split + profile) in a scratch directory; cached by (run id, config).
         """
-        key = (run_id, hashlib.sha256(cfg.model_dump_json().encode()).hexdigest())
+        options = options or WorkerOptions()
+        ident = cfg.model_dump_json() + repr(options)
+        key = (run_id, hashlib.sha256(ident.encode()).hexdigest())
         if key not in self._previews:
-            self._previews[key] = self._run_preview(run_id, cfg)
+            self._previews[key] = self._run_preview(run_id, cfg, options)
         return self._previews[key]
 
-    def _run_preview(self, run_id: str, cfg: RunConfig) -> str:
+    def _run_preview(self, run_id: str, cfg: RunConfig, options: WorkerOptions) -> str:
         scratch = Path(tempfile.mkdtemp(prefix=f".preview-{run_id[-8:]}-", dir=self.root))
         spec = WorkerSpec(
             config_json=cfg.model_dump_json(),
             run_dir=str(scratch),
             input_path=str(self._stored_input(self.run_dir(run_id))),
             display_name="upload",
-            options=WorkerOptions(),
+            options=options,
             mode="preview",
         )
         out: Any = self._ctx.Queue() if self.mode == "process" else queue.Queue()
@@ -465,6 +579,10 @@ class RunManager:
         """Events with `seq >= since_seq` (events survive the deletion of a failed run)."""
         return [e for e in list(self._get(run_id).events) if e.seq >= since_seq]
 
+    def run_config(self, run_id: str) -> RunConfig:
+        """The config a started run was given."""
+        return self._get(run_id).config
+
     def worker_exit_code(self, run_id: str) -> int | None:
         """How the worker ended: 0 clean, positive = exit status, negative = killed by signal."""
         return self._get(run_id).exit_code
@@ -514,6 +632,25 @@ class RunManager:
             self.cancel(run_id)
         delete_run_dir(run.run_dir)
         run.deleted = True
+        self._forget(run_id)
+
+    def discard_upload(self, run_id: str) -> None:
+        """Delete an uploaded file that never became a run ("Delete my data now" before start,
+        or a replaced upload); a known run is deleted through `delete`.
+        """
+        if run_id in self._runs:
+            self.delete(run_id)
+            return
+        if run_id in self._uploads:
+            delete_run_dir(self.run_dir(run_id))
+        self._forget(run_id)
+
+    def _forget(self, run_id: str) -> None:
+        self._uploads.pop(run_id, None)
+        self._rows.pop(run_id, None)
+        for cache in (self._previews, self._estimates):
+            for key in [k for k in cache if k[0] == run_id]:
+                del cache[key]
 
     def _get(self, run_id: str) -> _Run:
         try:
@@ -540,7 +677,10 @@ class RunManager:
         """Delete stale run directories (hosted 2 h / local 7 days); skips active runs."""
         active = {r.run_dir.name for r in self._runs.values()
                   if r.monitor is not None and r.monitor.is_alive()}  # fmt: skip
-        return sweep(self.root, MAX_AGE_S[self.settings.profile], now=self._wall, skip=active)
+        gone = sweep(self.root, MAX_AGE_S[self.settings.profile], now=self._wall, skip=active)
+        for run_id in [r for r in self._uploads if not self.run_dir(r).exists()]:
+            self._forget(run_id)
+        return gone
 
     def start_sweeper(self) -> None:
         """Sweep now and every 10 minutes (on app start, §24.7)."""

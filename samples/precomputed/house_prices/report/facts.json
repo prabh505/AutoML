@@ -1,0 +1,184 @@
+{
+  "F1": {
+    "display": "regression",
+    "key": "task",
+    "rounding": null,
+    "unit": "",
+    "value": "regression"
+  },
+  "F10": {
+    "display": "14879.3234",
+    "key": "runner_up_cv_mean",
+    "rounding": 4,
+    "unit": "",
+    "value": 14879.323434593161
+  },
+  "F11": {
+    "display": "3010.5994",
+    "key": "paired_mean_difference",
+    "rounding": 4,
+    "unit": "",
+    "value": 3010.599357826776
+  },
+  "F12": {
+    "display": "5",
+    "key": "folds_won",
+    "rounding": 0,
+    "unit": "folds",
+    "value": 5
+  },
+  "F13": {
+    "display": "11581.8126",
+    "key": "holdout_score",
+    "rounding": 4,
+    "unit": "",
+    "value": 11581.812587581702
+  },
+  "F14": {
+    "display": "lightgbm",
+    "key": "baseline_model",
+    "rounding": null,
+    "unit": "",
+    "value": "lightgbm"
+  },
+  "F15": {
+    "display": "11882.0751",
+    "key": "holdout_baseline_score",
+    "rounding": 4,
+    "unit": "",
+    "value": 11882.075132259417
+  },
+  "F16": {
+    "display": "2400",
+    "key": "n_rows_valid",
+    "rounding": 0,
+    "unit": "rows",
+    "value": 2400
+  },
+  "F17": {
+    "display": "1920",
+    "key": "n_rows_dev",
+    "rounding": 0,
+    "unit": "rows",
+    "value": 1920
+  },
+  "F18": {
+    "display": "10",
+    "key": "n_features",
+    "rounding": 0,
+    "unit": "columns",
+    "value": 10
+  },
+  "F19": {
+    "display": "1",
+    "key": "n_columns_excluded",
+    "rounding": 0,
+    "unit": "columns",
+    "value": 1
+  },
+  "F2": {
+    "display": "saleprice",
+    "key": "target",
+    "rounding": null,
+    "unit": "",
+    "value": "saleprice"
+  },
+  "F20": {
+    "display": "overallqual",
+    "key": "top_feature_1",
+    "rounding": null,
+    "unit": "",
+    "value": "overallqual"
+  },
+  "F21": {
+    "display": "neighborhood",
+    "key": "top_feature_2",
+    "rounding": null,
+    "unit": "",
+    "value": "neighborhood"
+  },
+  "F22": {
+    "display": "grlivarea",
+    "key": "top_feature_3",
+    "rounding": null,
+    "unit": "",
+    "value": "grlivarea"
+  },
+  "F23": {
+    "display": "yearbuilt",
+    "key": "top_feature_4",
+    "rounding": null,
+    "unit": "",
+    "value": "yearbuilt"
+  },
+  "F24": {
+    "display": "lotarea",
+    "key": "top_feature_5",
+    "rounding": null,
+    "unit": "",
+    "value": "lotarea"
+  },
+  "F25": {
+    "display": "240",
+    "key": "time_budget_s",
+    "rounding": 0,
+    "unit": "s",
+    "value": 240
+  },
+  "F26": {
+    "display": "60",
+    "key": "trials_used",
+    "rounding": 0,
+    "unit": "trials",
+    "value": 60
+  },
+  "F3": {
+    "display": "rmse",
+    "key": "primary_metric",
+    "rounding": null,
+    "unit": "",
+    "value": "rmse"
+  },
+  "F4": {
+    "display": "lightgbm",
+    "key": "final_model",
+    "rounding": null,
+    "unit": "",
+    "value": "lightgbm"
+  },
+  "F5": {
+    "display": "11868.7241",
+    "key": "cv_mean",
+    "rounding": 4,
+    "unit": "",
+    "value": 11868.724076766386
+  },
+  "F6": {
+    "display": "677.0062",
+    "key": "cv_std",
+    "rounding": 4,
+    "unit": "",
+    "value": 677.0061551365652
+  },
+  "F7": {
+    "display": "5",
+    "key": "n_folds",
+    "rounding": 0,
+    "unit": "folds",
+    "value": 5
+  },
+  "F8": {
+    "display": "3",
+    "key": "n_models_compared",
+    "rounding": 0,
+    "unit": "models",
+    "value": 3
+  },
+  "F9": {
+    "display": "linear",
+    "key": "runner_up_model",
+    "rounding": null,
+    "unit": "",
+    "value": "linear"
+  }
+}

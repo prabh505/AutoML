@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-20",
+  "duration_s": 66.8,
+  "llm_mode": "off",
+  "profile": "hosted",
+  "sample_id": "telco_churn",
+  "status": "completed",
+  "tabpilot_version": "0.1.0",
+  "time_budget_s": 240
+}

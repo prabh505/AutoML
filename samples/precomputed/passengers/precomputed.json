@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-20",
+  "duration_s": 116.5,
+  "llm_mode": "off",
+  "profile": "hosted",
+  "sample_id": "passengers",
+  "status": "completed",
+  "tabpilot_version": "0.1.0",
+  "time_budget_s": 240
+}

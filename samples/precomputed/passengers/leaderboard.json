@@ -1,0 +1,166 @@
+[
+  {
+    "comparable": true,
+    "entry_id": "0-lightgbm-64a38e9e",
+    "experiment_id": "01M7X1P8BYZM75STVD4JGC114E",
+    "feature_set": "baseline",
+    "fit_seconds": 0.09766993606666574,
+    "fold_scores": [
+      0.7663478935125355,
+      0.8782756813417191,
+      0.85440313111546,
+      0.806914546640574,
+      0.7482061317677755,
+      0.813776169552856,
+      0.7924528301886793,
+      0.8332681017612524,
+      0.8194390084801043,
+      0.8049575994781475,
+      0.8117084517963298,
+      0.7942872117400419,
+      0.8003261578604044,
+      0.8193085453359427,
+      0.8472276581865622
+    ],
+    "iteration": 0,
+    "mean": 0.8127266079172256,
+    "metric": {
+      "direction": "maximize",
+      "name": "roc_auc",
+      "schema_version": "metric_spec/1.0"
+    },
+    "model": "lightgbm",
+    "model_size_bytes": 244719,
+    "n_features_out": 10,
+    "params": {
+      "bagging_fraction": 0.679655418904036,
+      "bagging_freq": 1,
+      "feature_fraction": 0.6802504181281428,
+      "lambda_l1": 0.0030419034509264697,
+      "lambda_l2": 3.499580273241349e-05,
+      "learning_rate": 0.013688090729945365,
+      "min_child_samples": 45,
+      "n_estimators": 2000,
+      "num_leaves": 159
+    },
+    "predict_seconds": 0.022370836333333463,
+    "schema_version": "leaderboard_entry/1.0",
+    "secondary": {
+      "accuracy": 0.7553700332684702,
+      "average_precision": 0.7324035639834513,
+      "brier": 0.1709302780669156,
+      "f1": 0.7043245676771681,
+      "log_loss": 0.5196355980120366
+    },
+    "sem": 0.008465399771709086,
+    "split_id": "fa8e261dfcad2e67651f1d4e60c861704ce8c0a4ebef9b50eafff97b5c2294a9",
+    "status": "ok",
+    "std": 0.03278635233481736,
+    "warnings": []
+  },
+  {
+    "comparable": true,
+    "entry_id": "0-random_forest-b0a4624d",
+    "experiment_id": "01M7X1P8BYZM75STVD4JGC114E",
+    "feature_set": "baseline",
+    "fit_seconds": 0.3453788360666664,
+    "fold_scores": [
+      0.7812096148875678,
+      0.8760482180293501,
+      0.8648401826484019,
+      0.8177429876060014,
+      0.772211350293542,
+      0.8176531403463427,
+      0.815251572327044,
+      0.8237442922374429,
+      0.8267449445531637,
+      0.8224396607958252,
+      0.8185577668648228,
+      0.8238993710691824,
+      0.795433789954338,
+      0.8418786692759295,
+      0.8487932159165035
+    ],
+    "iteration": 0,
+    "mean": 0.8230965851203639,
+    "metric": {
+      "direction": "maximize",
+      "name": "roc_auc",
+      "schema_version": "metric_spec/1.0"
+    },
+    "model": "random_forest",
+    "model_size_bytes": 1180001,
+    "n_features_out": 10,
+    "params": {
+      "max_depth": 6,
+      "max_features": "sqrt",
+      "min_samples_leaf": 2
+    },
+    "predict_seconds": 0.03276361926666548,
+    "schema_version": "leaderboard_entry/1.0",
+    "secondary": {
+      "accuracy": 0.7620990521624507,
+      "average_precision": 0.7456919983019492,
+      "brier": 0.1662915010523073,
+      "f1": 0.7138114312194431,
+      "log_loss": 0.5086788687413342
+    },
+    "sem": 0.007179264379685414,
+    "split_id": "fa8e261dfcad2e67651f1d4e60c861704ce8c0a4ebef9b50eafff97b5c2294a9",
+    "status": "ok",
+    "std": 0.02780517138054173,
+    "warnings": []
+  },
+  {
+    "comparable": true,
+    "entry_id": "0-linear-83a8a00c",
+    "experiment_id": "01M7X1P8BYZM75STVD4JGC114E",
+    "feature_set": "baseline",
+    "fit_seconds": 0.040717459600000436,
+    "fold_scores": [
+      0.7741018350995089,
+      0.8845649895178197,
+      0.852576647097195,
+      0.8056099151989563,
+      0.7720808871493802,
+      0.8354872059963815,
+      0.7935010482180294,
+      0.8416177429876059,
+      0.8371819960861057,
+      0.8049575994781475,
+      0.8014990953734815,
+      0.8144654088050315,
+      0.8007827788649706,
+      0.8400521852576648,
+      0.8558382257012394
+    ],
+    "iteration": 0,
+    "mean": 0.8209545040554345,
+    "metric": {
+      "direction": "maximize",
+      "name": "roc_auc",
+      "schema_version": "metric_spec/1.0"
+    },
+    "model": "linear",
+    "model_size_bytes": 7919,
+    "n_features_out": 18,
+    "params": {
+      "C": 0.06346060107838852,
+      "class_weight": "balanced"
+    },
+    "predict_seconds": 0.02002199486666806,
+    "schema_version": "leaderboard_entry/1.0",
+    "secondary": {
+      "accuracy": 0.7722114117130123,
+      "average_precision": 0.7572027717954684,
+      "brier": 0.17139828975821228,
+      "f1": 0.7373057022271272,
+      "log_loss": 0.5228409808165271
+    },
+    "sem": 0.008218945019974066,
+    "split_id": "fa8e261dfcad2e67651f1d4e60c861704ce8c0a4ebef9b50eafff97b5c2294a9",
+    "status": "ok",
+    "std": 0.03183183718575394,
+    "warnings": []
+  }
+]

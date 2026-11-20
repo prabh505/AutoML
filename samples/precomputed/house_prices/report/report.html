@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TabPilot report 01M7X1SWPW6ZAN2X27PPRTB98N</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; line-height: 1.5; }
+h1 { margin-bottom: 0.2rem; }
+.meta { color: #555; margin-top: 0; }
+table { border-collapse: collapse; margin: 0.8rem 0; width: 100%; font-size: 0.9rem; }
+caption { text-align: left; font-weight: 600; padding-bottom: 0.3rem; }
+th, td { border: 1px solid #ccc; padding: 0.25rem 0.5rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+th { background: #f2f2f2; }
+.note { background: #f6f8fa; border-left: 3px solid #999; padding: 0.4rem 0.7rem; }
+figure { margin: 1rem 0; }
+figure img { max-width: 100%; }
+figcaption { color: #555; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<h1>TabPilot report</h1>
+<p class="meta">Run 01M7X1SWPW6ZAN2X27PPRTB98N · house_prices.csv · status completed</p>
+<nav>
+<ol>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#dataset">Dataset summary</a></li>
+<li><a href="#data-decisions">Data decisions</a></li>
+<li><a href="#warnings">Data-quality and leakage warnings</a></li>
+<li><a href="#plan">Modeling plan</a></li>
+<li><a href="#preprocessing">Preprocessing decisions</a></li>
+<li><a href="#features">Features</a></li>
+<li><a href="#leaderboard">Leaderboard (cross-validation)</a></li>
+<li><a href="#reflection">Reflection history</a></li>
+<li><a href="#ensemble">Ensemble decision</a></li>
+<li><a href="#selection">Why this model was selected</a></li>
+<li><a href="#independent-test">Independent test (used once, after selection)</a></li>
+<li><a href="#importance">Feature importance and SHAP</a></li>
+<li><a href="#errors">Error analysis</a></li>
+<li><a href="#limitations">Limitations</a></li>
+<li><a href="#reproducibility">Reproducibility information</a></li>
+<li><a href="#narrative">Narrative</a></li>
+</ol>
+</nav>
+
+<section id="summary">
+<h2>1. Summary</h2>
+
+<table>
+
+<thead><tr><th>Item</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Task</td><td>regression</td></tr>
+<tr><td>Target</td><td>saleprice</td></tr>
+<tr><td>Final model</td><td>lightgbm (0-lightgbm-6a78bd8f)</td></tr>
+<tr><td>Primary metric</td><td>rmse (minimize)</td></tr>
+<tr><td>CV score (DEV, mean ± std)</td><td>11868.7241 ± 677.0062</td></tr>
+<tr><td>Independent test score</td><td>11581.8126</td></tr>
+<tr><td>Run status</td><td>completed</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="dataset">
+<h2>2. Dataset summary</h2>
+
+<table>
+
+<thead><tr><th>Item</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>File</td><td>house_prices.csv</td></tr>
+<tr><td>Format</td><td>csv</td></tr>
+<tr><td>Rows (raw / valid)</td><td>2400 / 2400</td></tr>
+<tr><td>Columns</td><td>12</td></tr>
+<tr><td>Development rows</td><td>1920</td></tr>
+<tr><td>Feature columns</td><td>10</td></tr>
+<tr><td>Duplicate rows</td><td>0</td></tr>
+<tr><td>Validation</td><td>kfold, k = 5, repeats = 1, holdout fraction = 0.2</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="data-decisions">
+<h2>3. Data decisions</h2>
+
+<table>
+
+<thead><tr><th>Excluded column</th><th>Normalized name</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td>Id</td><td>id</td><td>identifier_integer_unique</td></tr>
+</tbody>
+</table>
+
+
+<table>
+
+<thead><tr><th>Original column name</th><th>Normalized name</th></tr></thead>
+<tbody>
+<tr><td>Id</td><td>id</td></tr>
+<tr><td>Neighborhood</td><td>neighborhood</td></tr>
+<tr><td>OverallQual</td><td>overallqual</td></tr>
+<tr><td>GrLivArea</td><td>grlivarea</td></tr>
+<tr><td>LotArea</td><td>lotarea</td></tr>
+<tr><td>YearBuilt</td><td>yearbuilt</td></tr>
+<tr><td>Bedrooms</td><td>bedrooms</td></tr>
+<tr><td>FullBath</td><td>fullbath</td></tr>
+<tr><td>GarageCars</td><td>garagecars</td></tr>
+<tr><td>PoolArea</td><td>poolarea</td></tr>
+<tr><td>SaleDate</td><td>saledate</td></tr>
+<tr><td>SalePrice</td><td>saleprice</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="warnings">
+<h2>4. Data-quality and leakage warnings</h2>
+
+<p>No data-quality or leakage warnings were raised.</p>
+
+
+</section>
+
+<section id="plan">
+<h2>5. Modeling plan</h2>
+
+<p>Plan source: rule-based planner.</p>
+
+
+<table>
+
+<thead><tr><th>Model</th><th>Priority</th><th>Class weight</th><th>Tuning share</th></tr></thead>
+<tbody>
+<tr><td>lightgbm</td><td>1</td><td>none</td><td>0.60</td></tr>
+<tr><td>random_forest</td><td>2</td><td>none</td><td>0.25</td></tr>
+<tr><td>linear</td><td>3</td><td>none</td><td>0.15</td></tr>
+</tbody>
+</table>
+
+
+<p>Validation status: valid.</p>
+
+
+</section>
+
+<section id="preprocessing">
+<h2>6. Preprocessing decisions</h2>
+
+<table>
+
+<thead><tr><th>Decision</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Numeric imputation</td><td>median</td></tr>
+<tr><td>Categorical imputation</td><td>most_frequent</td></tr>
+<tr><td>Missing indicators</td><td>yes</td></tr>
+<tr><td>Low-cardinality encoding</td><td>onehot</td></tr>
+<tr><td>High-cardinality encoding</td><td>frequency</td></tr>
+<tr><td>Target transform</td><td>none</td></tr>
+</tbody>
+</table>
+
+
+<p class="note">Every learned transformation is fitted inside the pipeline on training-fold rows only.</p>
+
+
+</section>
+
+<section id="features">
+<h2>7. Features</h2>
+
+<p>Baseline features: datetime parts, missing-value indicators and rare-category grouping, built inside the pipeline.</p>
+
+
+<p>No LLM-proposed features were used.</p>
+
+
+</section>
+
+<section id="leaderboard">
+<h2>8. Leaderboard (cross-validation)</h2>
+
+<table>
+<caption>Cross-validation on development data (DEV) only</caption>
+<thead><tr><th>Entry</th><th>Model</th><th>Features</th><th>CV mean</th><th>CV std</th><th>Fold scores</th><th>Fit s</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>0-lightgbm-6a78bd8f</td><td>lightgbm</td><td>baseline</td><td>11868.7241</td><td>677.0062</td><td>12714.0983, 11878.5289, 12196.7964, 10882.8128, 11671.3839</td><td>0.47</td><td>ok</td></tr>
+<tr><td>0-linear-cf8cf9d3</td><td>linear</td><td>baseline</td><td>14879.3234</td><td>2835.4424</td><td>14273.6121, 19870.3433, 13699.9924, 12856.9294, 13695.7400</td><td>0.05</td><td>ok</td></tr>
+<tr><td>0-random_forest-7aec312d</td><td>random_forest</td><td>baseline</td><td>19372.8154</td><td>1485.2653</td><td>20826.1148, 20730.0337, 18298.4736, 17453.8782, 19555.5766</td><td>0.46</td><td>ok</td></tr>
+</tbody>
+</table>
+
+
+<figure><img src="figures/leaderboard.png" alt="CV mean score with ±std error bars"><figcaption>CV mean score with ±std error bars</figcaption></figure>
+
+
+<figure><img src="figures/fold-scores.png" alt="CV score of every fold"><figcaption>CV score of every fold</figcaption></figure>
+
+
+</section>
+
+<section id="reflection">
+<h2>9. Reflection history</h2>
+
+<p>No reflection rounds were run.</p>
+
+
+</section>
+
+<section id="ensemble">
+<h2>10. Ensemble decision</h2>
+
+<p>Ensemble kept: no. Reason: hill climbing selected a single model</p>
+
+
+<table>
+
+<thead><tr><th>Member</th><th>Weight</th></tr></thead>
+<tbody>
+<tr><td>0-lightgbm-6a78bd8f</td><td>1.000</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="selection">
+<h2>11. Why this model was selected</h2>
+
+<p>Rule: max mean CV score; near-ties (0.25 SEM): simpler, fewer features, faster, id. Winner: 0-lightgbm-6a78bd8f.</p>
+
+
+<p class="note">Cross-validation scores of the selected model are optimistically biased, because the same folds were used for tuning and selection.</p>
+
+
+<p class="note">3 configurations were compared in total (every model and retrained variant on the leaderboard, including failed and skipped ones). The more configurations are compared, the more optimistic the best score tends to be.</p>
+
+
+<table>
+
+<thead><tr><th>Runner-up</th><th>Mean difference</th><th>Min</th><th>Max</th><th>Folds won</th></tr></thead>
+<tbody>
+<tr><td>0-linear-cf8cf9d3</td><td>3010.5994</td><td>1503.1960</td><td>7991.8144</td><td>5/5</td></tr>
+</tbody>
+</table>
+
+
+<p class="note">Paired fold differences are descriptive: with this few folds they are not a significance test.</p>
+
+
+</section>
+
+<section id="independent-test">
+<h2>12. Independent test (used once, after selection)</h2>
+
+<table>
+
+<thead><tr><th>Model</th><th>rmse</th><th>Bootstrap 95% interval</th></tr></thead>
+<tbody>
+<tr><td>Final model</td><td>11581.8126</td><td>—</td></tr>
+<tr><td>Reference baseline (lightgbm)</td><td>11882.0751</td><td>—</td></tr>
+</tbody>
+</table>
+
+
+<p class="note">These rows were used once, after the selection was frozen, and never for training, tuning or selection.</p>
+
+
+</section>
+
+<section id="importance">
+<h2>13. Feature importance and SHAP</h2>
+
+<p>Method: shap_tree. Rows explained: 1000.</p>
+
+
+<figure><img src="figures/shap-importance.png" alt="Mean |SHAP| per source column"><figcaption>Mean |SHAP| per source column</figcaption></figure>
+
+
+<figure><img src="figures/gain-importance.png" alt="Native model importance"><figcaption>Native model importance</figcaption></figure>
+
+
+<figure><img src="figures/shap-beeswarm-1.png" alt="SHAP values"><figcaption>SHAP values</figcaption></figure>
+
+
+<table>
+
+<thead><tr><th>Rank</th><th>Source column</th><th>Importance</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>overallqual</td><td>16356.0380</td></tr>
+<tr><td>2</td><td>neighborhood</td><td>11630.9537</td></tr>
+<tr><td>3</td><td>grlivarea</td><td>10201.8995</td></tr>
+<tr><td>4</td><td>yearbuilt</td><td>6298.1833</td></tr>
+<tr><td>5</td><td>lotarea</td><td>2126.7541</td></tr>
+<tr><td>6</td><td>garagecars</td><td>1873.1453</td></tr>
+<tr><td>7</td><td>saledate</td><td>1089.5379</td></tr>
+<tr><td>8</td><td>bedrooms</td><td>560.9676</td></tr>
+<tr><td>9</td><td>fullbath</td><td>113.5557</td></tr>
+<tr><td>10</td><td>poolarea</td><td>7.1873</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="errors">
+<h2>14. Error analysis</h2>
+
+<p>Overall OOF mean absolute error on DEV: 8560.5701.</p>
+
+
+<table>
+
+<thead><tr><th>Predicted from</th><th>to</th><th>Mean absolute error</th><th>Rows</th></tr></thead>
+<tbody>
+<tr><td>21801.9355</td><td>43964.1289</td><td>4246.7599</td><td>192</td></tr>
+<tr><td>44044.7930</td><td>50941.1484</td><td>5081.6310</td><td>192</td></tr>
+<tr><td>50953.9922</td><td>57388.5586</td><td>6172.1516</td><td>192</td></tr>
+<tr><td>57392.8086</td><td>63868.3320</td><td>6366.7978</td><td>192</td></tr>
+<tr><td>63921.0938</td><td>70794.6250</td><td>7223.0671</td><td>192</td></tr>
+<tr><td>70872.2188</td><td>79606.3750</td><td>8224.1153</td><td>192</td></tr>
+<tr><td>79632.6094</td><td>89289.7031</td><td>8362.6459</td><td>192</td></tr>
+<tr><td>89308.8828</td><td>101142.0312</td><td>11124.5722</td><td>192</td></tr>
+<tr><td>101164.2188</td><td>118772.2109</td><td>11861.1128</td><td>192</td></tr>
+<tr><td>118828.9219</td><td>193369.5312</td><td>16942.8475</td><td>192</td></tr>
+</tbody>
+</table>
+
+
+<table>
+<caption>Worst segments (categories with at least 30 DEV rows)</caption>
+<thead><tr><th>Column</th><th>Rank</th><th>Category</th><th>Rows</th><th>Mean absolute error</th></tr></thead>
+<tbody>
+<tr><td>neighborhood</td><td>1</td><td>district_10</td><td>100</td><td>15740.6354</td></tr>
+<tr><td>neighborhood</td><td>2</td><td>district_15</td><td>106</td><td>12583.9642</td></tr>
+<tr><td>neighborhood</td><td>3</td><td>district_11</td><td>106</td><td>10261.5128</td></tr>
+<tr><td>neighborhood</td><td>4</td><td>district_18</td><td>118</td><td>9887.8872</td></tr>
+<tr><td>neighborhood</td><td>5</td><td>district_07</td><td>93</td><td>8933.7125</td></tr>
+</tbody>
+</table>
+
+
+<figure><img src="figures/residuals-vs-predicted.png" alt="Residuals vs predicted (OOF)"><figcaption>Residuals vs predicted (OOF)</figcaption></figure>
+
+
+<figure><img src="figures/residual-histogram.png" alt="Residual histogram (OOF)"><figcaption>Residual histogram (OOF)</figcaption></figure>
+
+
+<figure><img src="figures/actual-vs-predicted.png" alt="Actual vs predicted (OOF)"><figcaption>Actual vs predicted (OOF)</figcaption></figure>
+
+
+</section>
+
+<section id="limitations">
+<h2>15. Limitations</h2>
+
+<ul>
+<li>Importance and SHAP values describe how this model uses features, not causal effects in the world.</li>
+<li>Correlated features share or swap importance; a low importance does not mean a feature is irrelevant.</li>
+<li>SHAP values are computed on a sample and on preprocessed features; one-hot columns are aggregated.</li>
+<li>Permutation importance can be misleading with correlated features.</li>
+<li>Cross-validation scores of the selected model are optimistically biased, because the same folds were used for tuning and selection.</li>
+</ul>
+
+
+</section>
+
+<section id="reproducibility">
+<h2>16. Reproducibility information</h2>
+
+<table>
+
+<thead><tr><th>Item</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Run id</td><td>01M7X1SWPW6ZAN2X27PPRTB98N</td></tr>
+<tr><td>TabPilot version</td><td>0.1.0</td></tr>
+<tr><td>Execution profile</td><td>hosted</td></tr>
+<tr><td>Split id</td><td>1b593326034ed31ac92058ebb0509d2f4d3e28fbea50b551b4ce03096a9776a5</td></tr>
+<tr><td>Seeds</td><td>root=42, split=42, model=43, optuna=44, profile=45, explain=46</td></tr>
+<tr><td>Libraries</td><td>catboost 1.2.10, lightgbm 4.7.0, numpy 2.4.6, optuna 5.0.0, pandas 3.0.6, scikit-learn 1.9.1, xgboost 2.1.4</td></tr>
+<tr><td>Time budget (s)</td><td>240</td></tr>
+<tr><td>Elapsed at report (s)</td><td>60.4</td></tr>
+<tr><td>Trials used</td><td>60 of 60</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="narrative">
+<h2>17. Narrative</h2>
+
+<p class="note">Template narrative, built deterministically from the facts table. Reason: no LLM provider available.</p>
+
+
+<p>This run predicts `saleprice` [F2] as a regression [F1] task. TabPilot compared 3 [F8] model types with cross-validation over 5 [F7] folds on the development rows and selected lightgbm [F4] by its rmse [F3] score.</p>
+
+
+<p>The selected model&#39;s mean cross-validated score is 11868.7241 [F5], with a fold-to-fold standard deviation of 677.0062 [F6]. The runner-up, linear [F9], averaged 14879.3234 [F10]; the selected model scored higher on 5 [F12] of 5 [F7] folds. With this few folds the comparison is descriptive, not a significance test. Cross-validated scores of the selected model are optimistic, because the same folds were used to choose it.</p>
+
+
+<p>On the independent test rows, used once after selection, the selected model scored 11581.8126 [F13]. The reference baseline, lightgbm [F14], scored 11882.0751 [F15].</p>
+
+
+<p>The inputs this model relied on most were `overallqual` [F20], `neighborhood` [F21], `grlivarea` [F22], `yearbuilt` [F23] and `lotarea` [F24]. Importance describes how this model uses its inputs, not what would happen in the world if a value changed; correlated inputs can share or swap importance.</p>
+
+
+</section>
+
+</body>
+</html>

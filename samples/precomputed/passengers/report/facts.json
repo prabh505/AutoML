@@ -1,0 +1,170 @@
+{
+  "F1": {
+    "display": "binary",
+    "key": "task",
+    "rounding": null,
+    "unit": "",
+    "value": "binary"
+  },
+  "F10": {
+    "display": "linear",
+    "key": "runner_up_model",
+    "rounding": null,
+    "unit": "",
+    "value": "linear"
+  },
+  "F11": {
+    "display": "0.8210",
+    "key": "runner_up_cv_mean",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.8209545040554345
+  },
+  "F12": {
+    "display": "0.0021",
+    "key": "paired_mean_difference",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.0021420810649293463
+  },
+  "F13": {
+    "display": "9",
+    "key": "folds_won",
+    "rounding": 0,
+    "unit": "folds",
+    "value": 9
+  },
+  "F14": {
+    "display": "891",
+    "key": "n_rows_valid",
+    "rounding": 0,
+    "unit": "rows",
+    "value": 891
+  },
+  "F15": {
+    "display": "891",
+    "key": "n_rows_dev",
+    "rounding": 0,
+    "unit": "rows",
+    "value": 891
+  },
+  "F16": {
+    "display": "8",
+    "key": "n_features",
+    "rounding": 0,
+    "unit": "columns",
+    "value": 8
+  },
+  "F17": {
+    "display": "1",
+    "key": "n_columns_excluded",
+    "rounding": 0,
+    "unit": "columns",
+    "value": 1
+  },
+  "F18": {
+    "display": "sex",
+    "key": "top_feature_1",
+    "rounding": null,
+    "unit": "",
+    "value": "sex"
+  },
+  "F19": {
+    "display": "pclass",
+    "key": "top_feature_2",
+    "rounding": null,
+    "unit": "",
+    "value": "pclass"
+  },
+  "F2": {
+    "display": "survived",
+    "key": "target",
+    "rounding": null,
+    "unit": "",
+    "value": "survived"
+  },
+  "F20": {
+    "display": "fare",
+    "key": "top_feature_3",
+    "rounding": null,
+    "unit": "",
+    "value": "fare"
+  },
+  "F21": {
+    "display": "age",
+    "key": "top_feature_4",
+    "rounding": null,
+    "unit": "",
+    "value": "age"
+  },
+  "F22": {
+    "display": "sibsp",
+    "key": "top_feature_5",
+    "rounding": null,
+    "unit": "",
+    "value": "sibsp"
+  },
+  "F23": {
+    "display": "240",
+    "key": "time_budget_s",
+    "rounding": 0,
+    "unit": "s",
+    "value": 240
+  },
+  "F24": {
+    "display": "60",
+    "key": "trials_used",
+    "rounding": 0,
+    "unit": "trials",
+    "value": 60
+  },
+  "F3": {
+    "display": "roc_auc",
+    "key": "primary_metric",
+    "rounding": null,
+    "unit": "",
+    "value": "roc_auc"
+  },
+  "F4": {
+    "display": "random_forest",
+    "key": "final_model",
+    "rounding": null,
+    "unit": "",
+    "value": "random_forest"
+  },
+  "F5": {
+    "display": "0.8231",
+    "key": "cv_mean",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.8230965851203639
+  },
+  "F6": {
+    "display": "0.0278",
+    "key": "cv_std",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.02780517138054173
+  },
+  "F7": {
+    "display": "15",
+    "key": "n_folds",
+    "rounding": 0,
+    "unit": "folds",
+    "value": 15
+  },
+  "F8": {
+    "display": "3",
+    "key": "n_repeats",
+    "rounding": 0,
+    "unit": "repeats",
+    "value": 3
+  },
+  "F9": {
+    "display": "3",
+    "key": "n_models_compared",
+    "rounding": 0,
+    "unit": "models",
+    "value": 3
+  }
+}

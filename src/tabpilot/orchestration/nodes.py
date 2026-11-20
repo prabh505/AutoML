@@ -111,6 +111,17 @@ def _emit(ctx: RunContext, stage: Stage, kind: EventType, data: dict[str, Any]) 
     ctx.emit(stage, kind, **data)
 
 
+RATIONALE_MAX_CHARS = 800
+
+
+def emit_rationale(ctx: RunContext, stage: Stage, source: str, text: str) -> None:
+    """§27.4 / US-07: an LLM rationale as an `llm_rationale` event, recorded after the
+    validated plan or proposal it explains. The text is untrusted LLM output: the UI shows it
+    as quoted, labeled text only, never as a completed action.
+    """
+    ctx.emit(stage, EventType.LLM_RATIONALE, source=source, text=text[:RATIONALE_MAX_CHARS])
+
+
 def _llm_on(ctx: RunContext) -> bool:
     return ctx.router is not None and ctx.llm_budget is not None and bool(ctx.router.usable())
 
@@ -214,6 +225,8 @@ def validate_plan_node(state: RunState) -> dict[str, Any]:
     ctx = _ctx(state)
     with ctx.stage(Stage.VALIDATE_PLAN):
         plan, validation, source = ctx.pending_plan
+        if source == "llm" and plan.rationale:
+            emit_rationale(ctx, Stage.VALIDATE_PLAN, "plan", plan.rationale)
     return {"plan": plan, "plan_validation": validation, "plan_source": source,
             "budget": ledger(ctx)}  # fmt: skip
 
@@ -410,6 +423,8 @@ def reflect_node(state: RunState) -> dict[str, Any]:
     history = list(state.reflection_history)
     if status == "ok" and proposal is not None:
         ctx.pending_proposal = proposal
+        if proposal.rationale:
+            emit_rationale(ctx, Stage.REFLECT, "reflection", proposal.rationale)
         ctx.route = "apply_changes"
     else:
         reason = {"empty": "proposal empty", "invalid": "proposal invalid after one repair",

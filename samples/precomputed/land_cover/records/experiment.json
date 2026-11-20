@@ -1,0 +1,400 @@
+{
+  "budget": {
+    "elapsed_s": 82.226,
+    "llm_calls_used": 0,
+    "llm_input_tokens_used": 0,
+    "llm_output_tokens_used": 0,
+    "llm_seconds_used": 0.0,
+    "schema_version": "budget_ledger/1.0",
+    "stage_seconds": {
+      "build_features": 0.001,
+      "ensemble": 0.013,
+      "evaluate": 0.001,
+      "explain": 1.557,
+      "export": 0.657,
+      "finalize": 0.856,
+      "ingest": 0.087,
+      "plan": 0.001,
+      "profile": 0.323,
+      "report": 0.854,
+      "split": 0.013,
+      "train_candidates": 77.82,
+      "validate_plan": 0.001
+    },
+    "time_budget_s": 240,
+    "trials_max": 60,
+    "trials_used": 60
+  },
+  "config": {
+    "budgets": {
+      "llm_calls": 0,
+      "max_trials": 60,
+      "reflection_rounds": 1,
+      "time_s": 240
+    },
+    "execution_profile": "hosted",
+    "library_versions": {
+      "catboost": "1.2.10",
+      "lightgbm": "4.7.0",
+      "numpy": "2.4.6",
+      "optuna": "5.0.0",
+      "pandas": "3.0.6",
+      "scikit-learn": "1.9.1",
+      "xgboost": "2.1.4"
+    },
+    "llm": {
+      "enabled": false,
+      "order": []
+    },
+    "primary_metric": {
+      "direction": "minimize",
+      "name": "log_loss",
+      "schema_version": "metric_spec/1.0"
+    },
+    "prompt_template_versions": {},
+    "run_id": "01M7X22Q266XRRPM58QTQ985JG",
+    "schema_version": "experiment_config/1.0",
+    "seeds": {
+      "explain": 46,
+      "model": 43,
+      "optuna": 44,
+      "profile": 45,
+      "root": 42,
+      "split": 42
+    },
+    "split": {
+      "duplicate_grouping": false,
+      "holdout_fraction": 0.2,
+      "holdout_present": true,
+      "k": 5,
+      "n_repeats": 1,
+      "split_id": "1e8481ca520060aaee4b302e0f5467a40d323a60d8feacd803f3af6f10e4c962",
+      "strategy": "stratified_kfold"
+    },
+    "tabpilot_version": "0.1.0",
+    "target": "land_cover",
+    "task": "multiclass"
+  },
+  "ensemble": {
+    "decision": {
+      "accepted": true,
+      "child_entry_id": "ensemble",
+      "fold_deltas": [
+        0.009626139467289574,
+        0.006437664033782736,
+        0.008488015473279459,
+        -0.014208644849173502,
+        0.015254914854954227
+      ],
+      "folds_better": 4,
+      "folds_required": 3,
+      "mean_gain": 0.005119617796026499,
+      "parent_entry_id": "0-linear-3d8f3e9d",
+      "reason": "improved by 2.55% and better in 4 of 5 folds",
+      "rel_gain": 0.025544099183757624,
+      "schema_version": "acceptance/1.0"
+    },
+    "fold_scores": [
+      0.1683528014359152,
+      0.19410629178642805,
+      0.1912400115368708,
+      0.23169574508163696,
+      0.1911206528929572
+    ],
+    "kept": true,
+    "members": [
+      {
+        "entry_id": "0-linear-3d8f3e9d",
+        "weight": 0.5
+      },
+      {
+        "entry_id": "0-lightgbm-6283f9f8",
+        "weight": 0.5
+      }
+    ],
+    "predicted_inference_ratio": 2.238600440603812,
+    "reason": "improved by 2.55% and better in 4 of 5 folds",
+    "schema_version": "ensemble/1.0"
+  },
+  "evaluation": {
+    "entries": [
+      {
+        "comparable": true,
+        "entry_id": "0-lightgbm-6283f9f8",
+        "experiment_id": "01M7X22Q266XRRPM58QTQ985JG",
+        "feature_set": "baseline",
+        "fit_seconds": 0.26466160439998704,
+        "fold_scores": [
+          0.17315290834517846,
+          0.20098929550266664,
+          0.19630391323717183,
+          0.26524293167388135,
+          0.18977971949508196
+        ],
+        "iteration": 0,
+        "mean": 0.20509375365079605,
+        "metric": {
+          "direction": "minimize",
+          "name": "log_loss",
+          "schema_version": "metric_spec/1.0"
+        },
+        "model": "lightgbm",
+        "model_size_bytes": 1205403,
+        "n_features_out": 8,
+        "params": {
+          "bagging_fraction": 0.7688044362142916,
+          "bagging_freq": 1,
+          "feature_fraction": 0.6684507631539928,
+          "lambda_l1": 0.031169333279559255,
+          "lambda_l2": 2.723045088685353e-05,
+          "learning_rate": 0.030611333060438648,
+          "min_child_samples": 45,
+          "n_estimators": 2000,
+          "num_leaves": 16
+        },
+        "predict_seconds": 0.015867601000002195,
+        "schema_version": "leaderboard_entry/1.0",
+        "secondary": {
+          "accuracy": 0.9190000000000002,
+          "balanced_accuracy": 0.9300469196289454,
+          "macro_f1": 0.92984844242741,
+          "ovr_macro_roc_auc": 0.9898230053471412
+        },
+        "sem": 0.015758757452602832,
+        "split_id": "1e8481ca520060aaee4b302e0f5467a40d323a60d8feacd803f3af6f10e4c962",
+        "status": "ok",
+        "std": 0.03523765290495135,
+        "warnings": []
+      },
+      {
+        "comparable": true,
+        "entry_id": "0-random_forest-1ceab2e8",
+        "experiment_id": "01M7X22Q266XRRPM58QTQ985JG",
+        "feature_set": "baseline",
+        "fit_seconds": 0.395019990600008,
+        "fold_scores": [
+          0.20343407787848022,
+          0.21695975810410092,
+          0.21151524868103627,
+          0.25219386671742217,
+          0.2151936413152763
+        ],
+        "iteration": 0,
+        "mean": 0.21985931853926316,
+        "metric": {
+          "direction": "minimize",
+          "name": "log_loss",
+          "schema_version": "metric_spec/1.0"
+        },
+        "model": "random_forest",
+        "model_size_bytes": 5283779,
+        "n_features_out": 8,
+        "params": {},
+        "predict_seconds": 0.026777503200014506,
+        "schema_version": "leaderboard_entry/1.0",
+        "secondary": {
+          "accuracy": 0.9175000000000001,
+          "balanced_accuracy": 0.9291949153903432,
+          "macro_f1": 0.9287500248931542,
+          "ovr_macro_roc_auc": 0.9894008434940723
+        },
+        "sem": 0.008411631925865757,
+        "split_id": "1e8481ca520060aaee4b302e0f5467a40d323a60d8feacd803f3af6f10e4c962",
+        "status": "ok",
+        "std": 0.018808980787943304,
+        "warnings": []
+      },
+      {
+        "comparable": true,
+        "entry_id": "0-linear-3d8f3e9d",
+        "experiment_id": "01M7X22Q266XRRPM58QTQ985JG",
+        "feature_set": "baseline",
+        "fit_seconds": 0.03362148759997581,
+        "fold_scores": [
+          0.17797894090320476,
+          0.20054395582021078,
+          0.19972802701015027,
+          0.21748710023246345,
+          0.20637556774791144
+        ],
+        "iteration": 0,
+        "mean": 0.20042271834278816,
+        "metric": {
+          "direction": "minimize",
+          "name": "log_loss",
+          "schema_version": "metric_spec/1.0"
+        },
+        "model": "linear",
+        "model_size_bytes": 6596,
+        "n_features_out": 11,
+        "params": {},
+        "predict_seconds": 0.01281091179998839,
+        "schema_version": "leaderboard_entry/1.0",
+        "secondary": {
+          "accuracy": 0.9215,
+          "balanced_accuracy": 0.9326169266012105,
+          "macro_f1": 0.9325162893362313,
+          "ovr_macro_roc_auc": 0.9906355555364754
+        },
+        "sem": 0.0064453471033291965,
+        "split_id": "1e8481ca520060aaee4b302e0f5467a40d323a60d8feacd803f3af6f10e4c962",
+        "status": "ok",
+        "std": 0.014412234261625445,
+        "warnings": []
+      },
+      {
+        "comparable": true,
+        "entry_id": "0-ensemble-37301ae2",
+        "experiment_id": "01M7X22Q266XRRPM58QTQ985JG",
+        "feature_set": "ensemble",
+        "fit_seconds": 0.29828309199996283,
+        "fold_scores": [
+          0.1683528014359152,
+          0.19410629178642805,
+          0.1912400115368708,
+          0.23169574508163696,
+          0.1911206528929572
+        ],
+        "iteration": 0,
+        "mean": 0.19530310054676164,
+        "metric": {
+          "direction": "minimize",
+          "name": "log_loss",
+          "schema_version": "metric_spec/1.0"
+        },
+        "model": "ensemble",
+        "model_size_bytes": 1211999,
+        "n_features_out": 0,
+        "params": {
+          "members": "{\"0-lightgbm-6283f9f8\": 0.5, \"0-linear-3d8f3e9d\": 0.5}"
+        },
+        "predict_seconds": 0.028678512799990584,
+        "schema_version": "leaderboard_entry/1.0",
+        "secondary": {},
+        "sem": 0.010213170688610372,
+        "split_id": "1e8481ca520060aaee4b302e0f5467a40d323a60d8feacd803f3af6f10e4c962",
+        "status": "ok",
+        "std": 0.022837343925541133,
+        "warnings": []
+      }
+    ],
+    "holdout": {
+      "accessed_at": "2026-11-20T18:05:34.112317Z",
+      "baseline": {
+        "ci95": [
+          0.28025241406444484,
+          0.5225431658328081
+        ],
+        "log_loss": 0.398242623214895
+      },
+      "final": {
+        "ci95": [
+          0.17377336241420158,
+          0.2640246938060539
+        ],
+        "log_loss": 0.21752114158949884
+      },
+      "present": true
+    },
+    "schema_version": "evaluation/1.0",
+    "selection": {
+      "near_ties": [],
+      "rule": "max mean CV score; near-ties (0.25 SEM): simpler, fewer features, faster, id",
+      "runner_up_paired": {
+        "folds_won": 2,
+        "max_diff": 0.0477558314414179,
+        "mean_diff": 0.00467103530800791,
+        "min_diff": -0.016595848252829476,
+        "n_folds": 5,
+        "runner_up": "0-lightgbm-6283f9f8"
+      },
+      "schema_version": "selection/1.0",
+      "winner": "0-linear-3d8f3e9d"
+    }
+  },
+  "feasibility": {
+    "estimated_peak_mb": 527.4,
+    "limit_mb": 600.0,
+    "schema_version": "feasibility/1.0",
+    "simplifications": [],
+    "status": "ok"
+  },
+  "lineage": {
+    "baseline_model": "lightgbm",
+    "candidates": [
+      {
+        "candidate_id": "0-lightgbm",
+        "change_set_id": null,
+        "iteration": 0,
+        "parent_entry_id": null
+      },
+      {
+        "candidate_id": "0-random_forest",
+        "change_set_id": null,
+        "iteration": 0,
+        "parent_entry_id": null
+      },
+      {
+        "candidate_id": "0-linear",
+        "change_set_id": null,
+        "iteration": 0,
+        "parent_entry_id": null
+      }
+    ],
+    "cv_best_iterations": [],
+    "final": "0-ensemble-37301ae2",
+    "plan_source": "rule_based",
+    "refit_params": {},
+    "winner": "0-linear-3d8f3e9d",
+    "winner_oof": "oof/oof_0-linear-3d8f3e9d.npy"
+  },
+  "plan": {
+    "column_decisions": [],
+    "cv_folds": 5,
+    "encoding": {
+      "high_cardinality": "frequency",
+      "low_cardinality": "onehot"
+    },
+    "features": [],
+    "imputation": {
+      "add_missing_indicators": true,
+      "categorical": "most_frequent",
+      "numeric": "median"
+    },
+    "models": [
+      {
+        "class_weight": "balanced",
+        "name": "lightgbm",
+        "priority": 1
+      },
+      {
+        "class_weight": "balanced",
+        "name": "random_forest",
+        "priority": 2
+      },
+      {
+        "class_weight": "balanced",
+        "name": "linear",
+        "priority": 3
+      }
+    ],
+    "rationale": "Rule-based plan (§12.8): all available models, baseline features only, median / most-frequent imputation, one-hot ≤ 15 categories, frequency encoding > 50.",
+    "schema_version": "plan/1.0",
+    "target_transform": "none",
+    "tuning_allocation": {
+      "lightgbm": 0.6,
+      "linear": 0.15,
+      "random_forest": 0.25
+    }
+  },
+  "plan_source": "rule_based",
+  "plan_validation": {
+    "cv_folds_ignored": false,
+    "issues": [],
+    "schema_version": "plan_validation/1.0",
+    "simplifications": [],
+    "status": "valid"
+  },
+  "reflection_history": [],
+  "thresholds": {}
+}

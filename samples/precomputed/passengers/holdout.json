@@ -1,0 +1,4 @@
+{
+  "present": false,
+  "reason": "no holdout: fewer than 2,000 valid rows; CV only (§11.5)"
+}

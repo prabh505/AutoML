@@ -10,17 +10,26 @@ from tabpilot.runtime.manager import (
     RunManager,
     RunStatus,
     SlotBusyError,
+    SlotNotice,
+    TargetChoice,
     UnknownRunError,
     UploadValidation,
     pid_exists,
 )
+from tabpilot.runtime.results import Bundle, Figure, RunArtifacts, read_artifacts
 
 __all__ = [
+    "Bundle",
+    "Figure",
     "InvalidConfigError",
+    "RunArtifacts",
     "RunManager",
     "RunStatus",
     "SlotBusyError",
+    "SlotNotice",
+    "TargetChoice",
     "UnknownRunError",
     "UploadValidation",
     "pid_exists",
+    "read_artifacts",
 ]

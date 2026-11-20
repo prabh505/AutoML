@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-20",
+  "duration_s": 70.3,
+  "llm_mode": "off",
+  "profile": "hosted",
+  "sample_id": "adult_income",
+  "status": "completed",
+  "tabpilot_version": "0.1.0",
+  "time_budget_s": 240
+}

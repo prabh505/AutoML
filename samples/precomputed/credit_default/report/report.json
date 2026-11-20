@@ -1,0 +1,80 @@
+{
+  "facts_ref": "report/facts.json",
+  "run_id": "01M7X207B9N4PZA9ASZ7HX4RF8",
+  "schema_version": "report/1.0",
+  "sections": {
+    "data_decisions": [
+      {
+        "count": 0,
+        "kind": "row_removal",
+        "reason": "target_missing"
+      },
+      {
+        "column": "id",
+        "kind": "column_excluded",
+        "reason": "identifier_integer_unique"
+      }
+    ],
+    "explanations": {
+      "method": "shap_linear",
+      "top_features": [
+        "pay_2",
+        "pay_1",
+        "limit_bal",
+        "pay_3",
+        "bill_amt3",
+        "pay_amt3",
+        "bill_amt2",
+        "pay_amt1",
+        "pay_amt2",
+        "age",
+        "bill_amt1",
+        "education",
+        "marriage",
+        "sex"
+      ]
+    },
+    "holdout": {
+      "baseline": 0.6672365714285715,
+      "final": 0.7452708571428571,
+      "present": true
+    },
+    "leaderboard_ref": "leaderboard.json",
+    "limitations": [
+      "Importance and SHAP values describe how this model uses features, not causal effects in the world.",
+      "Correlated features share or swap importance; a low importance does not mean a feature is irrelevant.",
+      "SHAP values are computed on a sample and on preprocessed features; one-hot columns are aggregated.",
+      "Permutation importance can be misleading with correlated features.",
+      "Cross-validation scores of the selected model are optimistically biased, because the same folds were used for tuning and selection."
+    ],
+    "narrative": {
+      "fact_check": "passed",
+      "source": "template",
+      "text": "This run predicts `default_payment_next_month` [F2] as a binary [F1] task. TabPilot compared 3 [F8] model types with cross-validation over 5 [F7] folds on the development rows and selected linear [F4] by its roc_auc [F3] score.\n\nThe selected model's mean cross-validated score is 0.7353 [F5], with a fold-to-fold standard deviation of 0.0118 [F6]. The runner-up, random_forest [F9], averaged 0.7236 [F10]; the selected model scored higher on 5 [F12] of 5 [F7] folds. With this few folds the comparison is descriptive, not a significance test. Cross-validated scores of the selected model are optimistic, because the same folds were used to choose it.\n\nOn the independent test rows, used once after selection, the selected model scored 0.7453 [F13]. The reference baseline, lightgbm [F14], scored 0.6672 [F15]. The 95% [F16] bootstrap interval for the selected model runs from 0.7028 [F17] to 0.7884 [F18].\n\nThe inputs this model relied on most were `pay_2` [F23], `pay_1` [F24], `limit_bal` [F25], `pay_3` [F26] and `bill_amt3` [F27]. Importance describes how this model uses its inputs, not what would happen in the world if a value changed; correlated inputs can share or swap importance."
+    },
+    "plan": {
+      "models": [
+        "lightgbm",
+        "random_forest",
+        "linear"
+      ],
+      "source": "rule_based"
+    },
+    "selection": {
+      "rule": "max mean CV score; near-ties (0.25 SEM): simpler, fewer features, faster, id",
+      "winner": "0-linear-00160141"
+    },
+    "summary": {
+      "cv_mean": 0.735330967791713,
+      "cv_std": 0.011810454721691142,
+      "final_model": "linear",
+      "holdout": 0.7452708571428571,
+      "primary_metric": "roc_auc",
+      "target": "default_payment_next_month",
+      "task": "binary",
+      "winner": "0-linear-00160141"
+    },
+    "warnings": []
+  },
+  "status": "completed"
+}

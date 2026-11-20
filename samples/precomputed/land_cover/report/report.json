@@ -1,0 +1,74 @@
+{
+  "facts_ref": "report/facts.json",
+  "run_id": "01M7X22Q266XRRPM58QTQ985JG",
+  "schema_version": "report/1.0",
+  "sections": {
+    "data_decisions": [
+      {
+        "count": 0,
+        "kind": "row_removal",
+        "reason": "target_missing"
+      },
+      {
+        "column": "tile_id",
+        "kind": "column_excluded",
+        "reason": "identifier_integer_unique"
+      }
+    ],
+    "explanations": {
+      "method": "shap_member_plus_permutation",
+      "top_features": [
+        "red",
+        "nir",
+        "blue",
+        "green",
+        "ndvi",
+        "region",
+        "elevation_m",
+        "slope_deg"
+      ]
+    },
+    "holdout": {
+      "baseline": 0.398242623214895,
+      "final": 0.21752114158949884,
+      "present": true
+    },
+    "leaderboard_ref": "leaderboard.json",
+    "limitations": [
+      "Importance and SHAP values describe how this model uses features, not causal effects in the world.",
+      "Correlated features share or swap importance; a low importance does not mean a feature is irrelevant.",
+      "SHAP values are computed on a sample and on preprocessed features; one-hot columns are aggregated.",
+      "Permutation importance can be misleading with correlated features.",
+      "Cross-validation scores of the selected model are optimistically biased, because the same folds were used for tuning and selection."
+    ],
+    "narrative": {
+      "fact_check": "passed",
+      "source": "template",
+      "text": "This run predicts `land_cover` [F2] as a multiclass [F1] task. TabPilot compared 3 [F8] model types with cross-validation over 5 [F7] folds on the development rows and selected linear [F4] by its log_loss [F3] score.\n\nThe selected model's mean cross-validated score is 0.2004 [F5], with a fold-to-fold standard deviation of 0.0144 [F6]. The runner-up, lightgbm [F9], averaged 0.2051 [F10]; the selected model scored higher on 2 [F12] of 5 [F7] folds. With this few folds the comparison is descriptive, not a significance test. Cross-validated scores of the selected model are optimistic, because the same folds were used to choose it.\n\nOn the independent test rows, used once after selection, the selected model scored 0.2175 [F13]. The reference baseline, lightgbm [F14], scored 0.3982 [F15]. The 95% [F16] bootstrap interval for the selected model runs from 0.1738 [F17] to 0.2640 [F18].\n\nThe inputs this model relied on most were `red` [F23], `nir` [F24], `blue` [F25], `green` [F26] and `ndvi` [F27]. Importance describes how this model uses its inputs, not what would happen in the world if a value changed; correlated inputs can share or swap importance. The final model blends 2 [F28] models, kept because the blend scored higher on most folds."
+    },
+    "plan": {
+      "models": [
+        "lightgbm",
+        "random_forest",
+        "linear"
+      ],
+      "source": "rule_based"
+    },
+    "selection": {
+      "rule": "max mean CV score; near-ties (0.25 SEM): simpler, fewer features, faster, id",
+      "winner": "0-linear-3d8f3e9d"
+    },
+    "summary": {
+      "cv_mean": 0.20042271834278816,
+      "cv_std": 0.014412234261625445,
+      "final_model": "linear",
+      "holdout": 0.21752114158949884,
+      "primary_metric": "log_loss",
+      "target": "land_cover",
+      "task": "multiclass",
+      "winner": "0-linear-3d8f3e9d"
+    },
+    "warnings": []
+  },
+  "status": "completed"
+}

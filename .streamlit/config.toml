@@ -1,0 +1,18 @@
+# Streamlit server settings (PRD §27, §29.1, P16).
+[server]
+# Upload limit in MB: the largest profile file limit (local 50 MB). The hosted 20 MB limit is
+# enforced by TabPilot itself before parsing (FR-ING-01, E-FILE-TOO-LARGE).
+maxUploadSize = 50
+headless = true
+enableXsrfProtection = true
+
+[client]
+# Never show Python tracebacks or exception details in the browser (§8.9, NFR-UX-01).
+showErrorDetails = "none"
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
+
+[runner]
+magicEnabled = false

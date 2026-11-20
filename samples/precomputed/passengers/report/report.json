@@ -1,0 +1,77 @@
+{
+  "facts_ref": "report/facts.json",
+  "run_id": "01M7X1P8BYZM75STVD4JGC114E",
+  "schema_version": "report/1.0",
+  "sections": {
+    "data_decisions": [
+      {
+        "count": 0,
+        "kind": "row_removal",
+        "reason": "target_missing"
+      },
+      {
+        "column": "passengerid",
+        "kind": "column_excluded",
+        "reason": "identifier_integer_unique"
+      }
+    ],
+    "explanations": {
+      "method": "shap_tree",
+      "top_features": [
+        "sex",
+        "pclass",
+        "fare",
+        "age",
+        "sibsp",
+        "cabin_deck",
+        "embarked",
+        "parch"
+      ]
+    },
+    "holdout": {
+      "baseline": null,
+      "final": null,
+      "present": false
+    },
+    "leaderboard_ref": "leaderboard.json",
+    "limitations": [
+      "Importance and SHAP values describe how this model uses features, not causal effects in the world.",
+      "Correlated features share or swap importance; a low importance does not mean a feature is irrelevant.",
+      "SHAP values are computed on a sample and on preprocessed features; one-hot columns are aggregated.",
+      "Permutation importance can be misleading with correlated features.",
+      "Cross-validation scores of the selected model are optimistically biased, because the same folds were used for tuning and selection.",
+      "No independent test set: no holdout: fewer than 2,000 valid rows; CV only (§11.5)."
+    ],
+    "narrative": {
+      "fact_check": "passed",
+      "source": "template",
+      "text": "This run predicts `survived` [F2] as a binary [F1] task. TabPilot compared 3 [F9] model types with cross-validation over 15 [F7] folds on the development rows and selected random_forest [F4] by its roc_auc [F3] score.\n\nThe selected model's mean cross-validated score is 0.8231 [F5], with a fold-to-fold standard deviation of 0.0278 [F6]. The runner-up, linear [F10], averaged 0.8210 [F11]; the selected model scored higher on 9 [F13] of 15 [F7] folds. With this few folds the comparison is descriptive, not a significance test. Cross-validated scores of the selected model are optimistic, because the same folds were used to choose it.\n\nNo rows were set aside for a final check, so only cross-validated scores are available for this run.\n\nThe inputs this model relied on most were `sex` [F18], `pclass` [F19], `fare` [F20], `age` [F21] and `sibsp` [F22]. Importance describes how this model uses its inputs, not what would happen in the world if a value changed; correlated inputs can share or swap importance."
+    },
+    "plan": {
+      "models": [
+        "lightgbm",
+        "random_forest",
+        "linear"
+      ],
+      "source": "rule_based"
+    },
+    "selection": {
+      "rule": "max mean CV score; near-ties (0.25 SEM): simpler, fewer features, faster, id",
+      "winner": "0-random_forest-b0a4624d"
+    },
+    "summary": {
+      "cv_mean": 0.8230965851203639,
+      "cv_std": 0.02780517138054173,
+      "final_model": "random_forest",
+      "holdout": null,
+      "primary_metric": "roc_auc",
+      "target": "survived",
+      "task": "binary",
+      "winner": "0-random_forest-b0a4624d"
+    },
+    "warnings": [
+      "W-HIGH-MISSING:cabin_deck"
+    ]
+  },
+  "status": "completed"
+}

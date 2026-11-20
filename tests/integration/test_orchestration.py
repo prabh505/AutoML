@@ -77,7 +77,12 @@ def test_stub_run_uses_the_llm_for_plan_reflection_and_narrative(tmp_path: Path)
     report = json.loads((outcome.run_dir / "report" / "report.json").read_text("utf-8"))
     assert report["sections"]["narrative"]["source"] == "llm"
     assert report["sections"]["narrative"]["fact_check"] == "passed"
-    assert all(e.origin == "system" for e in outcome.events)  # the LLM never creates events
+    # §27.4: the LLM never creates action events. Its rationale is relayed by system code as
+    # `llm_rationale` events only (US-07, P16); the stub's reflection proposal has no rationale.
+    actions = [e for e in outcome.events if e.type.value != "llm_rationale"]
+    assert all(e.origin == "system" for e in actions)
+    rationale = [e for e in outcome.events if e.origin != "system"]
+    assert [(e.type.value, e.data["source"]) for e in rationale] == [("llm_rationale", "plan")]
     exported = outcome.of("bundle_exported")
     assert len(exported) == 1
     assert exported[0].data["sha256"] == outcome.result.final.bundle_sha256  # type: ignore[union-attr]

@@ -1,0 +1,212 @@
+{
+  "F1": {
+    "display": "multiclass",
+    "key": "task",
+    "rounding": null,
+    "unit": "",
+    "value": "multiclass"
+  },
+  "F10": {
+    "display": "0.2051",
+    "key": "runner_up_cv_mean",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.20509375365079605
+  },
+  "F11": {
+    "display": "0.0047",
+    "key": "paired_mean_difference",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.00467103530800791
+  },
+  "F12": {
+    "display": "2",
+    "key": "folds_won",
+    "rounding": 0,
+    "unit": "folds",
+    "value": 2
+  },
+  "F13": {
+    "display": "0.2175",
+    "key": "holdout_score",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.21752114158949884
+  },
+  "F14": {
+    "display": "lightgbm",
+    "key": "baseline_model",
+    "rounding": null,
+    "unit": "",
+    "value": "lightgbm"
+  },
+  "F15": {
+    "display": "0.3982",
+    "key": "holdout_baseline_score",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.398242623214895
+  },
+  "F16": {
+    "display": "95",
+    "key": "ci_level",
+    "rounding": 0,
+    "unit": "%",
+    "value": 95
+  },
+  "F17": {
+    "display": "0.1738",
+    "key": "holdout_ci_low",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.17377336241420158
+  },
+  "F18": {
+    "display": "0.2640",
+    "key": "holdout_ci_high",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.2640246938060539
+  },
+  "F19": {
+    "display": "2500",
+    "key": "n_rows_valid",
+    "rounding": 0,
+    "unit": "rows",
+    "value": 2500
+  },
+  "F2": {
+    "display": "land_cover",
+    "key": "target",
+    "rounding": null,
+    "unit": "",
+    "value": "land_cover"
+  },
+  "F20": {
+    "display": "2000",
+    "key": "n_rows_dev",
+    "rounding": 0,
+    "unit": "rows",
+    "value": 2000
+  },
+  "F21": {
+    "display": "8",
+    "key": "n_features",
+    "rounding": 0,
+    "unit": "columns",
+    "value": 8
+  },
+  "F22": {
+    "display": "1",
+    "key": "n_columns_excluded",
+    "rounding": 0,
+    "unit": "columns",
+    "value": 1
+  },
+  "F23": {
+    "display": "red",
+    "key": "top_feature_1",
+    "rounding": null,
+    "unit": "",
+    "value": "red"
+  },
+  "F24": {
+    "display": "nir",
+    "key": "top_feature_2",
+    "rounding": null,
+    "unit": "",
+    "value": "nir"
+  },
+  "F25": {
+    "display": "blue",
+    "key": "top_feature_3",
+    "rounding": null,
+    "unit": "",
+    "value": "blue"
+  },
+  "F26": {
+    "display": "green",
+    "key": "top_feature_4",
+    "rounding": null,
+    "unit": "",
+    "value": "green"
+  },
+  "F27": {
+    "display": "ndvi",
+    "key": "top_feature_5",
+    "rounding": null,
+    "unit": "",
+    "value": "ndvi"
+  },
+  "F28": {
+    "display": "2",
+    "key": "ensemble_members",
+    "rounding": 0,
+    "unit": "models",
+    "value": 2
+  },
+  "F29": {
+    "display": "240",
+    "key": "time_budget_s",
+    "rounding": 0,
+    "unit": "s",
+    "value": 240
+  },
+  "F3": {
+    "display": "log_loss",
+    "key": "primary_metric",
+    "rounding": null,
+    "unit": "",
+    "value": "log_loss"
+  },
+  "F30": {
+    "display": "60",
+    "key": "trials_used",
+    "rounding": 0,
+    "unit": "trials",
+    "value": 60
+  },
+  "F4": {
+    "display": "linear",
+    "key": "final_model",
+    "rounding": null,
+    "unit": "",
+    "value": "linear"
+  },
+  "F5": {
+    "display": "0.2004",
+    "key": "cv_mean",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.20042271834278816
+  },
+  "F6": {
+    "display": "0.0144",
+    "key": "cv_std",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.014412234261625445
+  },
+  "F7": {
+    "display": "5",
+    "key": "n_folds",
+    "rounding": 0,
+    "unit": "folds",
+    "value": 5
+  },
+  "F8": {
+    "display": "3",
+    "key": "n_models_compared",
+    "rounding": 0,
+    "unit": "models",
+    "value": 3
+  },
+  "F9": {
+    "display": "lightgbm",
+    "key": "runner_up_model",
+    "rounding": null,
+    "unit": "",
+    "value": "lightgbm"
+  }
+}

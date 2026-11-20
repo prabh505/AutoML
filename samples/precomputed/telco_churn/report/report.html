@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TabPilot report 01M7X1Y3DY8M8BAP372XZT44GS</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; line-height: 1.5; }
+h1 { margin-bottom: 0.2rem; }
+.meta { color: #555; margin-top: 0; }
+table { border-collapse: collapse; margin: 0.8rem 0; width: 100%; font-size: 0.9rem; }
+caption { text-align: left; font-weight: 600; padding-bottom: 0.3rem; }
+th, td { border: 1px solid #ccc; padding: 0.25rem 0.5rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+th { background: #f2f2f2; }
+.note { background: #f6f8fa; border-left: 3px solid #999; padding: 0.4rem 0.7rem; }
+figure { margin: 1rem 0; }
+figure img { max-width: 100%; }
+figcaption { color: #555; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<h1>TabPilot report</h1>
+<p class="meta">Run 01M7X1Y3DY8M8BAP372XZT44GS · telco_churn.csv · status completed</p>
+<nav>
+<ol>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#dataset">Dataset summary</a></li>
+<li><a href="#data-decisions">Data decisions</a></li>
+<li><a href="#warnings">Data-quality and leakage warnings</a></li>
+<li><a href="#plan">Modeling plan</a></li>
+<li><a href="#preprocessing">Preprocessing decisions</a></li>
+<li><a href="#features">Features</a></li>
+<li><a href="#leaderboard">Leaderboard (cross-validation)</a></li>
+<li><a href="#reflection">Reflection history</a></li>
+<li><a href="#ensemble">Ensemble decision</a></li>
+<li><a href="#selection">Why this model was selected</a></li>
+<li><a href="#independent-test">Independent test (used once, after selection)</a></li>
+<li><a href="#importance">Feature importance and SHAP</a></li>
+<li><a href="#errors">Error analysis</a></li>
+<li><a href="#limitations">Limitations</a></li>
+<li><a href="#reproducibility">Reproducibility information</a></li>
+<li><a href="#narrative">Narrative</a></li>
+</ol>
+</nav>
+
+<section id="summary">
+<h2>1. Summary</h2>
+
+<table>
+
+<thead><tr><th>Item</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Task</td><td>binary</td></tr>
+<tr><td>Target</td><td>churn</td></tr>
+<tr><td>Final model</td><td>linear (0-linear-00160141)</td></tr>
+<tr><td>Primary metric</td><td>roc_auc (maximize)</td></tr>
+<tr><td>CV score (DEV, mean ± std)</td><td>0.7758 ± 0.0274</td></tr>
+<tr><td>Independent test score</td><td>0.8139</td></tr>
+<tr><td>Run status</td><td>completed</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="dataset">
+<h2>2. Dataset summary</h2>
+
+<table>
+
+<thead><tr><th>Item</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>File</td><td>telco_churn.csv</td></tr>
+<tr><td>Format</td><td>csv</td></tr>
+<tr><td>Rows (raw / valid)</td><td>3500 / 3500</td></tr>
+<tr><td>Columns</td><td>10</td></tr>
+<tr><td>Development rows</td><td>2800</td></tr>
+<tr><td>Feature columns</td><td>8</td></tr>
+<tr><td>Duplicate rows</td><td>0</td></tr>
+<tr><td>Class counts (DEV)</td><td>No: 1991, Yes: 809</td></tr>
+<tr><td>Validation</td><td>stratified_kfold, k = 5, repeats = 1, holdout fraction = 0.2</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="data-decisions">
+<h2>3. Data decisions</h2>
+
+<table>
+
+<thead><tr><th>Excluded column</th><th>Normalized name</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td>customerID</td><td>customerid</td><td>identifier_unique_ratio_1.00</td></tr>
+</tbody>
+</table>
+
+
+<table>
+
+<thead><tr><th>Original column name</th><th>Normalized name</th></tr></thead>
+<tbody>
+<tr><td>customerID</td><td>customerid</td></tr>
+<tr><td>SeniorCitizen</td><td>seniorcitizen</td></tr>
+<tr><td>Contract</td><td>contract</td></tr>
+<tr><td>InternetService</td><td>internetservice</td></tr>
+<tr><td>TechSupport</td><td>techsupport</td></tr>
+<tr><td>PaymentMethod</td><td>paymentmethod</td></tr>
+<tr><td>MonthlyCharges</td><td>monthlycharges</td></tr>
+<tr><td>TotalCharges</td><td>totalcharges</td></tr>
+<tr><td>Churn</td><td>churn</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="warnings">
+<h2>4. Data-quality and leakage warnings</h2>
+
+<p>No data-quality or leakage warnings were raised.</p>
+
+
+</section>
+
+<section id="plan">
+<h2>5. Modeling plan</h2>
+
+<p>Plan source: rule-based planner.</p>
+
+
+<table>
+
+<thead><tr><th>Model</th><th>Priority</th><th>Class weight</th><th>Tuning share</th></tr></thead>
+<tbody>
+<tr><td>lightgbm</td><td>1</td><td>none</td><td>0.60</td></tr>
+<tr><td>random_forest</td><td>2</td><td>none</td><td>0.25</td></tr>
+<tr><td>linear</td><td>3</td><td>none</td><td>0.15</td></tr>
+</tbody>
+</table>
+
+
+<p>Validation status: valid.</p>
+
+
+</section>
+
+<section id="preprocessing">
+<h2>6. Preprocessing decisions</h2>
+
+<table>
+
+<thead><tr><th>Decision</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Numeric imputation</td><td>median</td></tr>
+<tr><td>Categorical imputation</td><td>most_frequent</td></tr>
+<tr><td>Missing indicators</td><td>yes</td></tr>
+<tr><td>Low-cardinality encoding</td><td>onehot</td></tr>
+<tr><td>High-cardinality encoding</td><td>frequency</td></tr>
+<tr><td>Target transform</td><td>none</td></tr>
+</tbody>
+</table>
+
+
+<p class="note">Every learned transformation is fitted inside the pipeline on training-fold rows only.</p>
+
+
+</section>
+
+<section id="features">
+<h2>7. Features</h2>
+
+<p>Baseline features: datetime parts, missing-value indicators and rare-category grouping, built inside the pipeline.</p>
+
+
+<p>No LLM-proposed features were used.</p>
+
+
+</section>
+
+<section id="leaderboard">
+<h2>8. Leaderboard (cross-validation)</h2>
+
+<table>
+<caption>Cross-validation on development data (DEV) only</caption>
+<thead><tr><th>Entry</th><th>Model</th><th>Features</th><th>CV mean</th><th>CV std</th><th>Fold scores</th><th>Fit s</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>0-linear-00160141</td><td>linear</td><td>baseline</td><td>0.7758</td><td>0.0274</td><td>0.7428, 0.7524, 0.7972, 0.8056, 0.7808</td><td>0.19</td><td>ok</td></tr>
+<tr><td>0-lightgbm-e70b2bd6</td><td>lightgbm</td><td>baseline</td><td>0.7699</td><td>0.0241</td><td>0.7448, 0.7480, 0.7865, 0.8003, 0.7700</td><td>0.10</td><td>ok</td></tr>
+<tr><td>0-random_forest-cc8a4e2d</td><td>random_forest</td><td>baseline</td><td>0.7654</td><td>0.0291</td><td>0.7343, 0.7386, 0.7931, 0.7959, 0.7653</td><td>0.36</td><td>ok</td></tr>
+</tbody>
+</table>
+
+
+<figure><img src="figures/leaderboard.png" alt="CV mean score with ±std error bars"><figcaption>CV mean score with ±std error bars</figcaption></figure>
+
+
+<figure><img src="figures/fold-scores.png" alt="CV score of every fold"><figcaption>CV score of every fold</figcaption></figure>
+
+
+<table>
+<caption>Threshold metrics on OOF predictions, 0-lightgbm-e70b2bd6</caption>
+<thead><tr><th>Threshold rule</th><th>Threshold</th><th>Accuracy</th><th>F1</th></tr></thead>
+<tbody>
+<tr><td>threshold 0 5</td><td>0.500</td><td>0.7493</td><td>0.4169</td></tr>
+<tr><td>f1 optimal</td><td>0.247</td><td>0.6482</td><td>0.5785</td></tr>
+</tbody>
+</table>
+
+
+<table>
+<caption>Threshold metrics on OOF predictions, 0-linear-00160141</caption>
+<thead><tr><th>Threshold rule</th><th>Threshold</th><th>Accuracy</th><th>F1</th></tr></thead>
+<tbody>
+<tr><td>threshold 0 5</td><td>0.500</td><td>0.7482</td><td>0.4539</td></tr>
+<tr><td>f1 optimal</td><td>0.287</td><td>0.6882</td><td>0.5868</td></tr>
+</tbody>
+</table>
+
+
+<table>
+<caption>Threshold metrics on OOF predictions, 0-random_forest-cc8a4e2d</caption>
+<thead><tr><th>Threshold rule</th><th>Threshold</th><th>Accuracy</th><th>F1</th></tr></thead>
+<tbody>
+<tr><td>threshold 0 5</td><td>0.500</td><td>0.7468</td><td>0.4203</td></tr>
+<tr><td>f1 optimal</td><td>0.280</td><td>0.6629</td><td>0.5767</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="reflection">
+<h2>9. Reflection history</h2>
+
+<p>No reflection rounds were run.</p>
+
+
+</section>
+
+<section id="ensemble">
+<h2>10. Ensemble decision</h2>
+
+<p>Ensemble kept: no. Reason: hill climbing selected a single model</p>
+
+
+<table>
+
+<thead><tr><th>Member</th><th>Weight</th></tr></thead>
+<tbody>
+<tr><td>0-linear-00160141</td><td>1.000</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="selection">
+<h2>11. Why this model was selected</h2>
+
+<p>Rule: max mean CV score; near-ties (0.25 SEM): simpler, fewer features, faster, id. Winner: 0-linear-00160141.</p>
+
+
+<p class="note">Cross-validation scores of the selected model are optimistically biased, because the same folds were used for tuning and selection.</p>
+
+
+<p class="note">3 configurations were compared in total (every model and retrained variant on the leaderboard, including failed and skipped ones). The more configurations are compared, the more optimistic the best score tends to be.</p>
+
+
+<table>
+
+<thead><tr><th>Runner-up</th><th>Mean difference</th><th>Min</th><th>Max</th><th>Folds won</th></tr></thead>
+<tbody>
+<tr><td>0-lightgbm-e70b2bd6</td><td>0.0058</td><td>-0.0019</td><td>0.0108</td><td>4/5</td></tr>
+</tbody>
+</table>
+
+
+<p class="note">Paired fold differences are descriptive: with this few folds they are not a significance test.</p>
+
+
+</section>
+
+<section id="independent-test">
+<h2>12. Independent test (used once, after selection)</h2>
+
+<table>
+
+<thead><tr><th>Model</th><th>roc_auc</th><th>Bootstrap 95% interval</th></tr></thead>
+<tbody>
+<tr><td>Final model</td><td>0.8139</td><td>0.7831 – 0.8483</td></tr>
+<tr><td>Reference baseline (lightgbm)</td><td>0.7740</td><td>—</td></tr>
+</tbody>
+</table>
+
+
+<p class="note">These rows were used once, after the selection was frozen, and never for training, tuning or selection.</p>
+
+
+</section>
+
+<section id="importance">
+<h2>13. Feature importance and SHAP</h2>
+
+<p>Method: shap_linear. Rows explained: 1000.</p>
+
+
+<figure><img src="figures/shap-importance.png" alt="Mean |SHAP| per source column"><figcaption>Mean |SHAP| per source column</figcaption></figure>
+
+
+<figure><img src="figures/shap-beeswarm-1.png" alt="SHAP values"><figcaption>SHAP values</figcaption></figure>
+
+
+<table>
+
+<thead><tr><th>Rank</th><th>Source column</th><th>Importance</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>contract</td><td>0.6113</td></tr>
+<tr><td>2</td><td>tenure</td><td>0.4405</td></tr>
+<tr><td>3</td><td>internetservice</td><td>0.4025</td></tr>
+<tr><td>4</td><td>techsupport</td><td>0.2502</td></tr>
+<tr><td>5</td><td>paymentmethod</td><td>0.1739</td></tr>
+<tr><td>6</td><td>totalcharges</td><td>0.1627</td></tr>
+<tr><td>7</td><td>monthlycharges</td><td>0.0641</td></tr>
+<tr><td>8</td><td>seniorcitizen</td><td>0.0182</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="errors">
+<h2>14. Error analysis</h2>
+
+<p>Overall OOF error rate on DEV: 0.2518.</p>
+
+
+<table>
+
+<thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>Support</th></tr></thead>
+<tbody>
+<tr><td>No</td><td>0.7774</td><td>0.9051</td><td>1991</td></tr>
+<tr><td>Yes</td><td>0.6079</td><td>0.3622</td><td>809</td></tr>
+</tbody>
+</table>
+
+
+<table>
+<caption>Worst segments (categories with at least 30 DEV rows)</caption>
+<thead><tr><th>Column</th><th>Rank</th><th>Category</th><th>Rows</th><th>Error rate</th></tr></thead>
+<tbody>
+<tr><td>contract</td><td>1</td><td>Month-to-month</td><td>1547</td><td>0.3613</td></tr>
+<tr><td>contract</td><td>2</td><td>One year</td><td>557</td><td>0.1311</td></tr>
+<tr><td>contract</td><td>3</td><td>Two year</td><td>696</td><td>0.1049</td></tr>
+<tr><td>internetservice</td><td>1</td><td>Fiber optic</td><td>1245</td><td>0.2699</td></tr>
+<tr><td>internetservice</td><td>2</td><td>No</td><td>647</td><td>0.2396</td></tr>
+<tr><td>internetservice</td><td>3</td><td>DSL</td><td>908</td><td>0.2357</td></tr>
+<tr><td>paymentmethod</td><td>1</td><td>Electronic check</td><td>690</td><td>0.2797</td></tr>
+<tr><td>paymentmethod</td><td>2</td><td>Bank transfer</td><td>711</td><td>0.2518</td></tr>
+<tr><td>paymentmethod</td><td>3</td><td>Mailed check</td><td>714</td><td>0.2409</td></tr>
+<tr><td>paymentmethod</td><td>4</td><td>Credit card</td><td>685</td><td>0.2350</td></tr>
+</tbody>
+</table>
+
+
+<figure><img src="figures/confusion-matrix.png" alt="Confusion matrix (OOF, row-normalized)"><figcaption>Confusion matrix (OOF, row-normalized)</figcaption></figure>
+
+
+<figure><img src="figures/roc-curve.png" alt="ROC curve (OOF)"><figcaption>ROC curve (OOF)</figcaption></figure>
+
+
+<figure><img src="figures/pr-curve.png" alt="Precision–recall (OOF)"><figcaption>Precision–recall (OOF)</figcaption></figure>
+
+
+<figure><img src="figures/reliability.png" alt="Reliability curve (OOF, 10 bins)"><figcaption>Reliability curve (OOF, 10 bins)</figcaption></figure>
+
+
+</section>
+
+<section id="limitations">
+<h2>15. Limitations</h2>
+
+<ul>
+<li>Importance and SHAP values describe how this model uses features, not causal effects in the world.</li>
+<li>Correlated features share or swap importance; a low importance does not mean a feature is irrelevant.</li>
+<li>SHAP values are computed on a sample and on preprocessed features; one-hot columns are aggregated.</li>
+<li>Permutation importance can be misleading with correlated features.</li>
+<li>Cross-validation scores of the selected model are optimistically biased, because the same folds were used for tuning and selection.</li>
+</ul>
+
+
+</section>
+
+<section id="reproducibility">
+<h2>16. Reproducibility information</h2>
+
+<table>
+
+<thead><tr><th>Item</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Run id</td><td>01M7X1Y3DY8M8BAP372XZT44GS</td></tr>
+<tr><td>TabPilot version</td><td>0.1.0</td></tr>
+<tr><td>Execution profile</td><td>hosted</td></tr>
+<tr><td>Split id</td><td>d5c839425a25c65ccf61c2225af713c4c301ff090cf4bab72017f7e666dbb892</td></tr>
+<tr><td>Seeds</td><td>root=42, split=42, model=43, optuna=44, profile=45, explain=46</td></tr>
+<tr><td>Libraries</td><td>catboost 1.2.10, lightgbm 4.7.0, numpy 2.4.6, optuna 5.0.0, pandas 3.0.6, scikit-learn 1.9.1, xgboost 2.1.4</td></tr>
+<tr><td>Time budget (s)</td><td>240</td></tr>
+<tr><td>Elapsed at report (s)</td><td>65.3</td></tr>
+<tr><td>Trials used</td><td>60 of 60</td></tr>
+</tbody>
+</table>
+
+
+</section>
+
+<section id="narrative">
+<h2>17. Narrative</h2>
+
+<p class="note">Template narrative, built deterministically from the facts table. Reason: no LLM provider available.</p>
+
+
+<p>This run predicts `churn` [F2] as a binary [F1] task. TabPilot compared 3 [F8] model types with cross-validation over 5 [F7] folds on the development rows and selected linear [F4] by its roc_auc [F3] score.</p>
+
+
+<p>The selected model&#39;s mean cross-validated score is 0.7758 [F5], with a fold-to-fold standard deviation of 0.0274 [F6]. The runner-up, lightgbm [F9], averaged 0.7699 [F10]; the selected model scored higher on 4 [F12] of 5 [F7] folds. With this few folds the comparison is descriptive, not a significance test. Cross-validated scores of the selected model are optimistic, because the same folds were used to choose it.</p>
+
+
+<p>On the independent test rows, used once after selection, the selected model scored 0.8139 [F13]. The reference baseline, lightgbm [F14], scored 0.7740 [F15]. The 95% [F16] bootstrap interval for the selected model runs from 0.7831 [F17] to 0.8483 [F18].</p>
+
+
+<p>The inputs this model relied on most were `contract` [F23], `tenure` [F24], `internetservice` [F25], `techsupport` [F26] and `paymentmethod` [F27]. Importance describes how this model uses its inputs, not what would happen in the world if a value changed; correlated inputs can share or swap importance.</p>
+
+
+</section>
+
+</body>
+</html>

@@ -1,0 +1,205 @@
+{
+  "F1": {
+    "display": "binary",
+    "key": "task",
+    "rounding": null,
+    "unit": "",
+    "value": "binary"
+  },
+  "F10": {
+    "display": "0.7236",
+    "key": "runner_up_cv_mean",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.7235683876364685
+  },
+  "F11": {
+    "display": "0.0118",
+    "key": "paired_mean_difference",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.011762580155244607
+  },
+  "F12": {
+    "display": "5",
+    "key": "folds_won",
+    "rounding": 0,
+    "unit": "folds",
+    "value": 5
+  },
+  "F13": {
+    "display": "0.7453",
+    "key": "holdout_score",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.7452708571428571
+  },
+  "F14": {
+    "display": "lightgbm",
+    "key": "baseline_model",
+    "rounding": null,
+    "unit": "",
+    "value": "lightgbm"
+  },
+  "F15": {
+    "display": "0.6672",
+    "key": "holdout_baseline_score",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.6672365714285715
+  },
+  "F16": {
+    "display": "95",
+    "key": "ci_level",
+    "rounding": 0,
+    "unit": "%",
+    "value": 95
+  },
+  "F17": {
+    "display": "0.7028",
+    "key": "holdout_ci_low",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.7027967748769167
+  },
+  "F18": {
+    "display": "0.7884",
+    "key": "holdout_ci_high",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.7884231677469165
+  },
+  "F19": {
+    "display": "4000",
+    "key": "n_rows_valid",
+    "rounding": 0,
+    "unit": "rows",
+    "value": 4000
+  },
+  "F2": {
+    "display": "default_payment_next_month",
+    "key": "target",
+    "rounding": null,
+    "unit": "",
+    "value": "default_payment_next_month"
+  },
+  "F20": {
+    "display": "3200",
+    "key": "n_rows_dev",
+    "rounding": 0,
+    "unit": "rows",
+    "value": 3200
+  },
+  "F21": {
+    "display": "14",
+    "key": "n_features",
+    "rounding": 0,
+    "unit": "columns",
+    "value": 14
+  },
+  "F22": {
+    "display": "1",
+    "key": "n_columns_excluded",
+    "rounding": 0,
+    "unit": "columns",
+    "value": 1
+  },
+  "F23": {
+    "display": "pay_2",
+    "key": "top_feature_1",
+    "rounding": null,
+    "unit": "",
+    "value": "pay_2"
+  },
+  "F24": {
+    "display": "pay_1",
+    "key": "top_feature_2",
+    "rounding": null,
+    "unit": "",
+    "value": "pay_1"
+  },
+  "F25": {
+    "display": "limit_bal",
+    "key": "top_feature_3",
+    "rounding": null,
+    "unit": "",
+    "value": "limit_bal"
+  },
+  "F26": {
+    "display": "pay_3",
+    "key": "top_feature_4",
+    "rounding": null,
+    "unit": "",
+    "value": "pay_3"
+  },
+  "F27": {
+    "display": "bill_amt3",
+    "key": "top_feature_5",
+    "rounding": null,
+    "unit": "",
+    "value": "bill_amt3"
+  },
+  "F28": {
+    "display": "240",
+    "key": "time_budget_s",
+    "rounding": 0,
+    "unit": "s",
+    "value": 240
+  },
+  "F29": {
+    "display": "60",
+    "key": "trials_used",
+    "rounding": 0,
+    "unit": "trials",
+    "value": 60
+  },
+  "F3": {
+    "display": "roc_auc",
+    "key": "primary_metric",
+    "rounding": null,
+    "unit": "",
+    "value": "roc_auc"
+  },
+  "F4": {
+    "display": "linear",
+    "key": "final_model",
+    "rounding": null,
+    "unit": "",
+    "value": "linear"
+  },
+  "F5": {
+    "display": "0.7353",
+    "key": "cv_mean",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.735330967791713
+  },
+  "F6": {
+    "display": "0.0118",
+    "key": "cv_std",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.011810454721691142
+  },
+  "F7": {
+    "display": "5",
+    "key": "n_folds",
+    "rounding": 0,
+    "unit": "folds",
+    "value": 5
+  },
+  "F8": {
+    "display": "3",
+    "key": "n_models_compared",
+    "rounding": 0,
+    "unit": "models",
+    "value": 3
+  },
+  "F9": {
+    "display": "random_forest",
+    "key": "runner_up_model",
+    "rounding": null,
+    "unit": "",
+    "value": "random_forest"
+  }
+}

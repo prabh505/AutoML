@@ -1,0 +1,76 @@
+{
+  "facts_ref": "report/facts.json",
+  "run_id": "01M7X1SWPW6ZAN2X27PPRTB98N",
+  "schema_version": "report/1.0",
+  "sections": {
+    "data_decisions": [
+      {
+        "count": 0,
+        "kind": "row_removal",
+        "reason": "target_missing"
+      },
+      {
+        "column": "id",
+        "kind": "column_excluded",
+        "reason": "identifier_integer_unique"
+      }
+    ],
+    "explanations": {
+      "method": "shap_tree",
+      "top_features": [
+        "overallqual",
+        "neighborhood",
+        "grlivarea",
+        "yearbuilt",
+        "lotarea",
+        "garagecars",
+        "saledate",
+        "bedrooms",
+        "fullbath",
+        "poolarea"
+      ]
+    },
+    "holdout": {
+      "baseline": 11882.075132259417,
+      "final": 11581.812587581702,
+      "present": true
+    },
+    "leaderboard_ref": "leaderboard.json",
+    "limitations": [
+      "Importance and SHAP values describe how this model uses features, not causal effects in the world.",
+      "Correlated features share or swap importance; a low importance does not mean a feature is irrelevant.",
+      "SHAP values are computed on a sample and on preprocessed features; one-hot columns are aggregated.",
+      "Permutation importance can be misleading with correlated features.",
+      "Cross-validation scores of the selected model are optimistically biased, because the same folds were used for tuning and selection."
+    ],
+    "narrative": {
+      "fact_check": "passed",
+      "source": "template",
+      "text": "This run predicts `saleprice` [F2] as a regression [F1] task. TabPilot compared 3 [F8] model types with cross-validation over 5 [F7] folds on the development rows and selected lightgbm [F4] by its rmse [F3] score.\n\nThe selected model's mean cross-validated score is 11868.7241 [F5], with a fold-to-fold standard deviation of 677.0062 [F6]. The runner-up, linear [F9], averaged 14879.3234 [F10]; the selected model scored higher on 5 [F12] of 5 [F7] folds. With this few folds the comparison is descriptive, not a significance test. Cross-validated scores of the selected model are optimistic, because the same folds were used to choose it.\n\nOn the independent test rows, used once after selection, the selected model scored 11581.8126 [F13]. The reference baseline, lightgbm [F14], scored 11882.0751 [F15].\n\nThe inputs this model relied on most were `overallqual` [F20], `neighborhood` [F21], `grlivarea` [F22], `yearbuilt` [F23] and `lotarea` [F24]. Importance describes how this model uses its inputs, not what would happen in the world if a value changed; correlated inputs can share or swap importance."
+    },
+    "plan": {
+      "models": [
+        "lightgbm",
+        "random_forest",
+        "linear"
+      ],
+      "source": "rule_based"
+    },
+    "selection": {
+      "rule": "max mean CV score; near-ties (0.25 SEM): simpler, fewer features, faster, id",
+      "winner": "0-lightgbm-6a78bd8f"
+    },
+    "summary": {
+      "cv_mean": 11868.724076766386,
+      "cv_std": 677.0061551365652,
+      "final_model": "lightgbm",
+      "holdout": 11581.812587581702,
+      "primary_metric": "rmse",
+      "target": "saleprice",
+      "task": "regression",
+      "winner": "0-lightgbm-6a78bd8f"
+    },
+    "warnings": []
+  },
+  "status": "completed"
+}

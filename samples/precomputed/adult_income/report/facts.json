@@ -1,0 +1,198 @@
+{
+  "F1": {
+    "display": "binary",
+    "key": "task",
+    "rounding": null,
+    "unit": "",
+    "value": "binary"
+  },
+  "F10": {
+    "display": "0.7667",
+    "key": "runner_up_cv_mean",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.7666848429940949
+  },
+  "F11": {
+    "display": "0.0063",
+    "key": "paired_mean_difference",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.006322324573437621
+  },
+  "F12": {
+    "display": "3",
+    "key": "folds_won",
+    "rounding": 0,
+    "unit": "folds",
+    "value": 3
+  },
+  "F13": {
+    "display": "0.7791",
+    "key": "holdout_score",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.7791498547968441
+  },
+  "F14": {
+    "display": "lightgbm",
+    "key": "baseline_model",
+    "rounding": null,
+    "unit": "",
+    "value": "lightgbm"
+  },
+  "F15": {
+    "display": "0.7547",
+    "key": "holdout_baseline_score",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.7547351648634063
+  },
+  "F16": {
+    "display": "95",
+    "key": "ci_level",
+    "rounding": 0,
+    "unit": "%",
+    "value": 95
+  },
+  "F17": {
+    "display": "0.7477",
+    "key": "holdout_ci_low",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.747745335460498
+  },
+  "F18": {
+    "display": "0.8104",
+    "key": "holdout_ci_high",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.8103792389632778
+  },
+  "F19": {
+    "display": "4000",
+    "key": "n_rows_valid",
+    "rounding": 0,
+    "unit": "rows",
+    "value": 4000
+  },
+  "F2": {
+    "display": "income",
+    "key": "target",
+    "rounding": null,
+    "unit": "",
+    "value": "income"
+  },
+  "F20": {
+    "display": "3200",
+    "key": "n_rows_dev",
+    "rounding": 0,
+    "unit": "rows",
+    "value": 3200
+  },
+  "F21": {
+    "display": "9",
+    "key": "n_features",
+    "rounding": 0,
+    "unit": "columns",
+    "value": 9
+  },
+  "F22": {
+    "display": "education_num",
+    "key": "top_feature_1",
+    "rounding": null,
+    "unit": "",
+    "value": "education_num"
+  },
+  "F23": {
+    "display": "age",
+    "key": "top_feature_2",
+    "rounding": null,
+    "unit": "",
+    "value": "age"
+  },
+  "F24": {
+    "display": "marital_status",
+    "key": "top_feature_3",
+    "rounding": null,
+    "unit": "",
+    "value": "marital_status"
+  },
+  "F25": {
+    "display": "hours_per_week",
+    "key": "top_feature_4",
+    "rounding": null,
+    "unit": "",
+    "value": "hours_per_week"
+  },
+  "F26": {
+    "display": "occupation",
+    "key": "top_feature_5",
+    "rounding": null,
+    "unit": "",
+    "value": "occupation"
+  },
+  "F27": {
+    "display": "240",
+    "key": "time_budget_s",
+    "rounding": 0,
+    "unit": "s",
+    "value": 240
+  },
+  "F28": {
+    "display": "60",
+    "key": "trials_used",
+    "rounding": 0,
+    "unit": "trials",
+    "value": 60
+  },
+  "F3": {
+    "display": "roc_auc",
+    "key": "primary_metric",
+    "rounding": null,
+    "unit": "",
+    "value": "roc_auc"
+  },
+  "F4": {
+    "display": "linear",
+    "key": "final_model",
+    "rounding": null,
+    "unit": "",
+    "value": "linear"
+  },
+  "F5": {
+    "display": "0.7730",
+    "key": "cv_mean",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.7730071675675324
+  },
+  "F6": {
+    "display": "0.0124",
+    "key": "cv_std",
+    "rounding": 4,
+    "unit": "",
+    "value": 0.012437767435838533
+  },
+  "F7": {
+    "display": "5",
+    "key": "n_folds",
+    "rounding": 0,
+    "unit": "folds",
+    "value": 5
+  },
+  "F8": {
+    "display": "3",
+    "key": "n_models_compared",
+    "rounding": 0,
+    "unit": "models",
+    "value": 3
+  },
+  "F9": {
+    "display": "lightgbm",
+    "key": "runner_up_model",
+    "rounding": null,
+    "unit": "",
+    "value": "lightgbm"
+  }
+}

@@ -211,6 +211,22 @@ type = "forbidden"
 source_modules = ["tabpilot_runtime"]
 forbidden_modules = ["tabpilot"]
 
+# P16 scope "Out: business logic (call RunManager and schemas only)": the UI reaches the ML stack
+# only through `runtime` (indirect imports via runtime are allowed).
+[[tool.importlinter.contracts]]
+name = "R7 ui imports only runtime, schemas, config and logging"
+type = "forbidden"
+source_modules = ["tabpilot.ui"]
+forbidden_modules = [
+    "tabpilot.orchestration", "tabpilot.ingestion", "tabpilot.splitting", "tabpilot.profiling",
+    "tabpilot.planning", "tabpilot.llm", "tabpilot.features", "tabpilot.preprocessing",
+    "tabpilot.models", "tabpilot.training", "tabpilot.tuning", "tabpilot.evaluation",
+    "tabpilot.reflection", "tabpilot.ensembling", "tabpilot.explain", "tabpilot.reporting",
+    "tabpilot.export", "tabpilot.resources", "tabpilot.tracking", "tabpilot_runtime",
+    "pandas", "sklearn",
+]
+allow_indirect_imports = true
+
 # schemas depends only on pydantic (PRD §25.2).
 [[tool.importlinter.contracts]]
 name = "R6 schemas imports no other tabpilot module"

@@ -63,8 +63,9 @@ class RunRecorder:
 
     def event(self, stage: Stage, type_: EventType, **data: Any) -> RunEvent:
         """Validate and append one `RunEvent` (§26.10)."""
+        origin = "llm_rationale" if type_ == EventType.LLM_RATIONALE else "system"
         event = RunEvent(run_id=self.run_id, seq=self._seq, ts=self._now(), stage=stage,
-                         type=type_, data=to_jsonable(data))  # fmt: skip
+                         type=type_, data=to_jsonable(data), origin=origin)  # fmt: skip
         self._seq += 1
         self._append("events.jsonl", event)
         return event

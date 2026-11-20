@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-20",
+  "duration_s": 61.9,
+  "llm_mode": "off",
+  "profile": "hosted",
+  "sample_id": "house_prices",
+  "status": "completed",
+  "tabpilot_version": "0.1.0",
+  "time_budget_s": 240
+}
