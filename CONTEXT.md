@@ -76,7 +76,7 @@ Status values: `pending` · `in_progress` · `complete` · `complete_with_issues
 | P13 | Explainability and reporting | §21 | M2 | complete | see `git log --grep '^P13:'` | 2026-10-20 |
 | P14 | Artifact export and reproducibility | §22 | M2 | complete | see `git log --grep '^P14:'` | 2026-10-20 |
 | P15 | Orchestration and run runtime | §13, §28, §6, §7, §24.7 | **Gate B** | complete | see `git log --grep '^P15:'` | 2026-11-07 |
-| P16 | Streamlit user interface | §27, §3.2, §24.5 | **Gate C** | pending | | |
+| P16 | Streamlit user interface | §27, §3.2, §24.5 | **Gate C** | in_progress | | |
 | P17 | Security and privacy hardening audit | §24, §30.3 | M3 | pending | | |
 | P18 | Containerization, CI/CD, performance validation | §34, §29 | M3 | pending | | |
 | P19 | Benchmark harness | §32 | M3 | pending | | |
@@ -91,7 +91,7 @@ Utility prompts (run any time): U1 Independent audit · U2 Course correction · 
 | Gate | After | Pass condition (summary) | Status | Evidence |
 | --- | --- | --- | --- | --- |
 | A | P09 | Rule-based AutoML runs headless via CLI on binary, multiclass, regression fixtures; leakage tests (T-LEAK-01..08) green; leaderboard equals stored results | **passed** 2026-10-20: second U1 re-audit PASS_WITH_FIXES (minor KI-021…024, fixed in U2 #3); the owner said to fix and continue. The owner's own CLI check and the ADR-0004 decision (Q-17) remain open, non-blocking by owner instruction | §16 audit rows; commit 252d38f and the U2 #3 commit |
-| B | P15 | Full agent run (stub LLM and no-LLM) via worker + LangGraph produces a valid bundle; cancel/timeout/cleanup work; T-E2E-01..03, 05 green | **U1 audit FAIL 2026-11-08** (7 major, 10 minor: KI-028…KI-044; needs U2 and a re-audit); owner CLI check still pending (P15 evidence: real-process CLI runs `--llm off` and `--llm stub` on the 3 task fixtures completed with bundles; T-E2E-01..03 and the 54-run T-E2E-05 suite pass) | |
+| B | P15 | Full agent run (stub LLM and no-LLM) via worker + LangGraph produces a valid bundle; cancel/timeout/cleanup work; T-E2E-01..03, 05 green | **passed** 2026-11-19 on the owner's instruction ("continue" after the re-audit PASS_WITH_FIXES 2026-11-08; U1 re-audit 7dde8d8, fixes 9ec4222 + 7dcf571). Still open but non-blocking: the owner's manual CLI check and DEC-040 item (5) | |
 | C | P16 | User can complete the §3.2 journey in the Streamlit app locally; T-UI-01..04 green | not started | |
 | D | P20 | All release gates G-01..G-18 have recorded evidence or an explicit, accepted waiver | not started | |
 
