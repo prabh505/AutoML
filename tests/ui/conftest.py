@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import io
 import re
+import sys
 import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
@@ -90,14 +91,29 @@ class UI:
         return re.sub(r"\\(.)", r"\1", "\n".join(parts))  # undo Markdown escaping
 
 
+@pytest.fixture(autouse=True)
+def restore_main_module() -> Iterator[None]:
+    """AppTest installs its script as `sys.modules["__main__"]` and leaves it there. For
+    `AppTest.from_function` that script is a deleted temp file, and every later `spawn` worker
+    (tests/unit/test_runtime.py) re-imports `__main__` from that path and dies. Restore it.
+    """
+    main = sys.modules.get("__main__")
+    yield
+    if main is not None:
+        sys.modules["__main__"] = main
+
+
 @pytest.fixture
 def make_ui(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., UI]]:
     managers: list[RunManager] = []
 
-    def build(worker: Callable[..., None] | None = None, **kwargs: Any) -> UI:
-        settings = load_settings({"TABPILOT_PROFILE": "local"}).model_copy(
-            update={"data_dir": tmp_path / "data"}
-        )
+    def build(worker: Callable[..., None] | None = None,
+              limits: dict[str, Any] | None = None, **kwargs: Any) -> UI:  # fmt: skip
+        settings = load_settings({"TABPILOT_PROFILE": "local"})
+        update: dict[str, Any] = {"data_dir": tmp_path / "data"}
+        if limits:
+            update["limits"] = settings.limits.model_copy(update=limits)
+        settings = settings.model_copy(update=update)
         extra = {"worker": worker} if worker is not None else {}
         manager = RunManager(tmp_path / "data" / "runs", settings, mode="thread",
                              cancel_grace_s=2.0, term_grace_s=1.0, **extra, **kwargs)  # fmt: skip

@@ -13,6 +13,7 @@ import streamlit as st
 
 from tabpilot.runtime import RunArtifacts
 from tabpilot.schemas import EventType, LeaderboardEntry, RunWarning
+from tabpilot.ui.components.columns import warning_text
 from tabpilot.ui.text import md_escape, quote, size
 
 JOBLIB_WARNING = ("model.joblib is a Python pickle. Loading it runs code, so only load files "
@@ -69,8 +70,9 @@ def summary(art: RunArtifacts, warnings: Sequence[RunWarning]) -> None:
     for text in holdout_lines(art.holdout):
         st.write(text)
     all_warnings = [f"{w.code.value}: {w.message}" for w in warnings]
-    if art.report is not None:
-        all_warnings += list(art.report.sections.warnings)
+    if art.report is not None:  # raw `W-CODE:column` tokens are explained (KI-063)
+        all_warnings += [warning_text(w) if w.startswith("W-") else w
+                         for w in art.report.sections.warnings]  # fmt: skip
     if all_warnings:
         st.markdown("**Warnings**")
         st.markdown("\n".join(f"- {md_escape(w)}" for w in all_warnings))
@@ -90,12 +92,40 @@ def data_profile(art: RunArtifacts, columns: list[dict[str, Any]] | None) -> Non
         st.dataframe(columns, hide_index=True)
 
 
+LLM_UNAVAILABLE = "LLM unavailable — rule-based plan used"  # US-F2 wording
+
+
+def plan_source_text(art: RunArtifacts, source: object) -> str:
+    """LLM plan, rule-based by choice, or the US-F2 fallback with its reason (KI-061)."""
+    if source == "llm":
+        return "LLM planner (validated)"
+    llm = art.experiment.get("config", {}).get("llm", {})
+    if not llm.get("enabled"):
+        return "rule-based plan (No LLM was selected)"
+    reasons = [str(e.data.get("reason", "")) for e in art.events
+               if e.type == EventType.PLANNER_FALLBACK and e.data.get("reason")]  # fmt: skip
+    return LLM_UNAVAILABLE + (f" ({reasons[0]})" if reasons else "")
+
+
+def figure_caption(art: RunArtifacts, caption: str) -> str:
+    """Figure caption with its key numbers as a text alternative (§27.5, KI-063)."""
+    expl = art.report.sections.explanations if art.report else None
+    lowered = caption.lower()
+    if expl is not None and expl.top_features and any(
+            k in lowered for k in ("shap", "importance", "permutation")):  # fmt: skip
+        return f"{caption} — top features: {', '.join(expl.top_features[:5])}"
+    entry = selected_entry(art)
+    if entry is not None and entry.mean is not None:
+        return (f"{caption} — selected model, cross-validated {entry.metric.name.value} "
+                f"{entry.mean:.4f} ± {(entry.std or 0.0):.4f}")  # fmt: skip
+    return caption
+
+
 def plan(art: RunArtifacts) -> None:
     source = art.experiment.get("plan_source") or (
         art.report.sections.plan.get("source") if art.report else None
     )
-    st.write("Plan source: " + ("LLM planner (validated)" if source == "llm"
-                                else "rule-based plan (no LLM)"))  # fmt: skip
+    st.write("Plan source: " + plan_source_text(art, source))
     for event in art.events:
         if event.type == EventType.LLM_RATIONALE:
             source = md_escape(event.data.get("source", ""))
@@ -123,7 +153,8 @@ def explainability(art: RunArtifacts) -> None:
     if not art.figures:
         st.info("No charts were produced for this run.")
     for fig in art.figures:
-        st.image(str(fig.path), caption=fig.caption, alt=fig.caption)
+        text = figure_caption(art, fig.caption)
+        st.image(str(fig.path), caption=text, alt=text)
 
 
 def report(art: RunArtifacts) -> None:

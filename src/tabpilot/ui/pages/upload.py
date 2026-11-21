@@ -18,6 +18,7 @@ from tabpilot.schemas import ExecutionProfileName
 from tabpilot.ui import errors, services
 from tabpilot.ui import state as sk
 from tabpilot.ui.components.status import demo_banner
+from tabpilot.ui.rerun import BUSY_TEXT, active_run
 from tabpilot.ui.text import md_escape
 
 EXTENSIONS = ["csv", "tsv", "txt", "parquet"]
@@ -32,7 +33,7 @@ def _accept(validate: Any, label: str) -> None:
     """Run one validation under the §27.3 loading state and move on to Configure."""
     state = st.session_state
     started = time.monotonic()
-    with st.spinner("Reading file…"):
+    with st.spinner("Reading file…", show_time=True):
         try:
             upload = validate()
         except Exception as exc:  # every failure is shown as an E-code message, no trace
@@ -41,7 +42,10 @@ def _accept(validate: Any, label: str) -> None:
     old = state.get(sk.UPLOAD_ID)
     if old and old != upload.run_id and not state.get(sk.RUN_ID):
         services.manager().discard_upload(old)  # a replaced, never-started upload
-    sk.reset_choices(state)
+    if state.pop(sk.RERUN, None):
+        state.pop(sk.TARGET_INFO, None)  # keep the choices; re-validate the target (KI-056)
+    else:
+        sk.reset_choices(state)
     state[sk.UPLOAD_ID] = upload.run_id
     state[sk.DISPLAY_NAME] = upload.display_name
     state[sk.NOTICE] = {"kind": "success",
@@ -59,6 +63,10 @@ def render() -> None:
     st.write("Upload a table, pick what to predict, and get a validated model, a report and "
              "runnable code. Or start with one of the samples below.")  # fmt: skip
     demo_banner()
+    if active_run(state):  # KI-057: never orphan a running analysis
+        st.warning(BUSY_TEXT, icon=":material/hourglass_top:")
+        st.button("Go to the Run page", on_click=sk.go, args=(state, "Run"), key="to_run")
+        return
 
     limits = settings.limits
     hint = (f"Up to {limits.max_rows:,} rows and {limits.max_columns} columns on the "

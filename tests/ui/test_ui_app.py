@@ -7,13 +7,16 @@ one of the controlled workers from `tests/helpers/fake_workers.py`.
 from __future__ import annotations
 
 import io
+import re
 import zipfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 import pytest
+import streamlit
 from streamlit.testing.v1 import AppTest
 from tests.helpers.fake_workers import polite, quick_fail
 from tests.ui.conftest import UI
@@ -21,6 +24,7 @@ from tests.ui.conftest import UI
 from tabpilot.llm.cache import canonical
 from tabpilot.llm.stub import StubProvider
 from tabpilot.runtime.slots import acquire_slot
+from tabpilot.schemas import EventType, RunEvent, Stage
 from tabpilot.ui import state as sk
 from tabpilot.ui.components.status import STEPS, steps
 from tabpilot.ui.pages.run import partial_leaderboard
@@ -198,10 +202,9 @@ def test_T_UI_04_error_states_render(make_ui: Any) -> None:
     constant = _csv(pd.DataFrame({"x": range(100), "y": ["same"] * 100}))
     _upload(ui, constant, "const.csv")
     assert ui.page() == "Configure"
-    options = ui.at.selectbox(key=sk.TARGET).options
-    if "y" in options:  # a constant column is excluded at ingestion; if offered, it must fail
-        ui.at.selectbox(key=sk.TARGET).set_value("y").run()
-        assert "E-TARGET-CONSTANT" in ui.texts()
+    # a constant column is excluded at ingestion, so it is never offered as a target (the
+    # E-TARGET inline error itself is driven in test_U2_KI_060)
+    assert "y" not in ui.at.selectbox(key=sk.TARGET).options
     # a failed run shows its E-code message and what completed
     _upload(ui, (FIXTURES / "binary_basic.csv").read_bytes(), "binary_basic.csv")
     ui.at.selectbox(key=sk.TARGET).set_value("Churn").run()
@@ -312,3 +315,137 @@ def test_sample_card_starts_configure_with_target(make_ui: Any) -> None:
     assert ui.page() == "Configure"
     assert ui.at.selectbox(key=sk.TARGET).value == "land_cover"
     assert ui.at.selectbox(key=sk.METRIC).value == "log_loss"
+
+
+# ------------------------------------------------------------------ U2 fixes (KI-056…KI-063)
+def test_U2_KI_056_rerun_with_changes_reloads_sample_and_keeps_choices(make_ui: Any) -> None:
+    """§3.2 stage 7: a re-run keeps every choice, gets a new id, and uses the changed setting."""
+    ui = make_ui()
+    ui.run()
+    ui.at.button(key="sample_land_cover").click().run()
+    ui.at.radio(key=sk.LLM_MODE).set_value("off").run()
+    ui.at.slider(key=sk.BUDGET).set_value(600).run()
+    _start_and_finish(ui)
+    assert ui.page() == "Results"
+    first = ui.at.session_state[sk.RUN_ID]
+    ui.at.button(key="rerun").click().run()
+    assert ui.page() == "Configure"
+    assert ui.at.session_state[sk.UPLOAD_ID] != first
+    assert ui.at.selectbox(key=sk.TARGET).value == "land_cover"
+    assert ui.at.radio(key=sk.LLM_MODE).value == "off"
+    assert ui.at.slider(key=sk.BUDGET).value == 600
+    ui.at.slider(key=sk.BUDGET).set_value(630).run()
+    _start_and_finish(ui)
+    second = ui.at.session_state[sk.RUN_ID]
+    assert second != first
+    assert ui.manager.run_config(second).time_budget_s == 630
+    assert ui.manager.run_config(first).time_budget_s == 600
+
+
+def test_U2_KI_056_rerun_own_file_asks_for_it_again(make_ui: Any) -> None:
+    ui = make_ui()
+    _configure_basic(ui)
+    _start_and_finish(ui)
+    first = ui.at.session_state[sk.RUN_ID]
+    # Configure for the finished run offers the re-run instead of a Start that reopens it
+    ui.at.session_state[sk.PAGE] = "Configure"
+    ui.run()
+    assert not [b for b in ui.at.button if b.key == "start"]
+    ui.at.button(key="rerun_configure").click().run()
+    assert ui.page() == "Upload"
+    assert "Upload the file again" in ui.texts()
+    ui.upload.put((FIXTURES / "binary_basic.csv").read_bytes(), "binary_basic.csv")
+    ui.run()
+    assert ui.page() == "Configure"
+    assert ui.at.session_state[sk.UPLOAD_ID] != first
+    assert ui.at.selectbox(key=sk.TARGET).value == "Churn"
+    assert ui.at.radio(key=sk.LLM_MODE).value == "stub"
+    assert not ui.at.button(key="start").disabled
+    assert not ui.manager.can_start(first)
+
+
+def test_U2_KI_057_no_new_data_while_a_run_is_active(make_ui: Any) -> None:
+    ui = make_ui(worker=polite)
+    _configure_basic(ui)
+    ui.at.button(key="start").click().run()
+    run_id = ui.at.session_state[sk.RUN_ID]
+    _upload(ui, (FIXTURES / "binary_basic.csv").read_bytes(), "other.csv")
+    assert ui.page() == "Upload"
+    assert ui.at.session_state[sk.RUN_ID] == run_id
+    assert "An analysis is running" in ui.texts()
+    assert not [b for b in ui.at.button if (b.key or "").startswith("sample_")]
+    ui.manager.cancel(run_id)
+
+
+def test_U2_KI_058_hostile_rationale_and_name_are_escaped(make_ui: Any) -> None:
+    """The raw Markdown sent to Streamlit holds the escaped form, never a live link."""
+    hostile = "[click](http://evil.test) <img src=x onerror=alert(1)> **bold**"
+    event = RunEvent(run_id="01J00000000000000000000000", seq=0, ts=datetime.now(UTC),
+                     stage=Stage.PLAN, type=EventType.LLM_RATIONALE, origin="llm_rationale",
+                     data={"source": "plan", "text": hostile})  # fmt: skip
+    log = AppTest.from_function(_render_log, args=([event.model_dump_json()],))
+    log.run()
+    raw = [i.value for i in log.info]
+    assert len(raw) == 1
+    assert "\\[click\\]\\(http" in raw[0]
+    for live in (r"(?<!\\)\[click(?<!\\)\]", r"(?<!\\)<img", r"(?<!\\)\*(?<!\\)\*bold"):
+        assert not re.search(live, raw[0]), live  # every markup character is escaped
+    ui = make_ui()
+    _upload(ui, (FIXTURES / "binary_basic.csv").read_bytes(), "a[b](e.test)*x*.csv")
+    shown = "\n".join(str(m.value) for m in ui.at.markdown)
+    assert "a\\[b\\]\\(e\\.test\\)\\*x\\*\\.csv" in shown  # the display name, escaped
+    assert not re.search(r"(?<!\\)\[b(?<!\\)\]", shown)
+
+
+def test_U2_KI_059_polling_stops_when_the_run_ends(make_ui: Any,
+                                                   monkeypatch: pytest.MonkeyPatch) -> None:  # fmt: skip
+    """§27.5: the Run fragment polls every second while running and not after the end."""
+    seen: list[Any] = []
+    real = streamlit.fragment
+
+    def spy(func: Any = None, **kwargs: Any) -> Any:
+        seen.append(kwargs.get("run_every"))
+        return real(func, **kwargs)
+
+    monkeypatch.setattr(streamlit, "fragment", spy)
+    ui = make_ui(worker=polite)
+    _configure_basic(ui)
+    ui.at.button(key="start").click().run()
+    assert seen
+    assert seen[-1] == 1.0
+    ui.manager.cancel(ui.at.session_state[sk.RUN_ID])
+    ui.run()
+    assert seen[-1] is None
+
+
+def test_U2_KI_060_target_error_infeasible_and_partial_states(make_ui: Any) -> None:
+    n = 120
+    data = _csv(pd.DataFrame({"x": np.arange(n) % 7, "y": ["a"] * 60 + ["b"] * 59 + ["c"]}))
+    ui = make_ui()
+    _upload(ui, data, "tiny_class.csv")
+    ui.at.selectbox(key=sk.TARGET).set_value("y").run()
+    errors_shown = "\n".join(e.value for e in ui.at.error)
+    assert "E\\-TARGET\\-CLASS\\-TOO\\-SMALL" in errors_shown
+    assert ui.at.button(key="start").disabled
+    infeasible = make_ui(limits={"rss_soft_fraction_of_ram": 1e-6,
+                                 "rss_hard_fraction_of_ram": 2e-6})  # fmt: skip
+    _configure_basic(infeasible)
+    assert "E-RESOURCE-INFEASIBLE" in infeasible.texts()
+    assert infeasible.at.button(key="start").disabled
+    banner = AppTest.from_function(_render_banner)
+    banner.run()
+    assert [w.value for w in banner.warning] == [
+        "Stopped at time budget after train_candidates; results are valid but limited"
+    ]
+
+
+def _render_banner() -> None:
+    from tabpilot.schemas import FinalResult, RunResult  # noqa: PLC0415 - AppTest source
+    from tabpilot.schemas.experiment import HoldoutResult  # noqa: PLC0415
+    from tabpilot.ui.pages.results import banner  # noqa: PLC0415
+
+    final = FinalResult(selected_entry_id="0-linear",
+                        holdout=HoldoutResult(present=False, reason="small data"))  # fmt: skip
+    banner(RunResult(run_id="01J00000000000000000000000", status="completed_partial",
+                     duration_s=10.0, stopped_after_stage="train_candidates",
+                     final=final))  # fmt: skip

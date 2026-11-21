@@ -19,6 +19,7 @@ from tabpilot.ui.components import columns, run_settings, target
 from tabpilot.ui.components.status import slot_wait_text
 from tabpilot.ui.config import draft
 from tabpilot.ui.precomputed import available_samples
+from tabpilot.ui.rerun import start_rerun
 from tabpilot.ui.text import md_escape
 
 
@@ -88,6 +89,11 @@ def render() -> None:
         st.info("Your file is no longer on the server (it was deleted after the idle time). "
                 "Please upload it again.")  # fmt: skip
         return
+    if not manager.can_start(upload_id):  # KI-057/KI-056: a started run's id is never reused
+        st.info("This file was used by your last analysis and deleted afterwards. Use “Re-run "
+                "with changes” to keep your settings and load the data again.")  # fmt: skip
+        st.button("Re-run with changes", on_click=start_rerun, key="rerun_configure")
+        return
     meta = upload.metadata
     st.markdown(f"**{md_escape(upload.display_name)}** — {meta.n_rows_raw:,} rows, "
                 f"{meta.n_columns} columns")  # fmt: skip
@@ -111,11 +117,19 @@ def render() -> None:
     run_settings.budget_slider()
     run_settings.llm_settings()
 
+    start_section(upload_id)
+
+
+def start_section(upload_id: str) -> None:
+    """Feasibility summary, inspector, Start/Retry, wait state and "Delete my data now"."""
+    state = st.session_state
     current = draft(state, services.settings(), run_settings.available_names())
     feasible = True
     if current.config is not None:
         try:
-            feasible = run_settings.feasibility(manager.estimate(upload_id, current.config))
+            feasible = run_settings.feasibility(
+                services.manager().estimate(upload_id, current.config)
+            )
         except Exception as exc:
             errors.show(errors.describe(exc))
             feasible = False

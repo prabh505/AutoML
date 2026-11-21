@@ -32,11 +32,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, BinaryIO
 
+import pandas as pd
 import psutil
 from ulid import ULID
 
 from tabpilot.config import Settings
-from tabpilot.ingestion import accept_upload, load_dataset, validate_target
+from tabpilot.ingestion import LoadedDataset, accept_upload, load_dataset, validate_target
 from tabpilot.ingestion.overrides import check_override
 from tabpilot.ingestion.samples import sample, sample_path
 from tabpilot.ingestion.task import detect_task, positive_label
@@ -78,6 +79,7 @@ HARD_KILL_FACTOR = 1.3
 POLL_S = 0.2
 PREVIEW_TIMEOUT_S = 120.0
 PREVIEW_ROWS = 20  # §27.1 Configure page preview
+TYPED_COPY = "typed.parquet"  # per-upload typed frame: one-column reads for target/override checks
 Mode = str  # "process" | "thread"
 
 __all__ = [
@@ -204,6 +206,7 @@ class RunManager:
         self._previews: dict[tuple[str, str], str] = {}
         self._uploads: dict[str, UploadValidation] = {}
         self._rows: dict[str, list[dict[str, str]]] = {}
+        self._parse: dict[str, Any] = {}
         self._estimates: dict[tuple[str, str], FeasibilityReport] = {}
         root.mkdir(parents=True, exist_ok=True, mode=0o700)
 
@@ -227,7 +230,41 @@ class RunManager:
         self._rows[stored.run_id] = [{originals.get(str(k), str(k)): str(v) for k, v in row.items()}
                                      for row in head.to_dict("records")]  # fmt: skip
         self._uploads[stored.run_id] = upload
+        self._parse[stored.run_id] = loaded.parse_report
+        self._write_typed(stored.run_id, loaded.frame)
         return upload
+
+    def _write_typed(self, run_id: str, frame: Any) -> None:
+        """KI-062: keep the typed frame next to the raw upload (same directory, deleted with the
+        input after export), so §27.2 task detection reads one column instead of re-parsing.
+        A frame Parquet cannot hold is skipped; reads then fall back to a full parse.
+        """
+        path = self.run_dir(run_id) / "input" / TYPED_COPY
+        try:
+            frame.to_parquet(path, index=False)
+        except Exception as exc:
+            log.warning("typed_copy_skipped", error_class=type(exc).__name__)
+            path.unlink(missing_ok=True)
+
+    def _columns(self, run_id: str, columns: list[str]) -> Any:
+        """A `LoadedDataset` view holding only `columns`, read from the typed copy when present."""
+        upload = self._uploads.get(run_id)
+        path = self.run_dir(run_id) / "input" / TYPED_COPY
+        if upload is None or run_id not in self._parse or not path.is_file():
+            return self._loaded(run_id)
+        try:
+            frame = pd.read_parquet(path, columns=columns)
+        except Exception as exc:
+            log.warning("typed_copy_unreadable", error_class=type(exc).__name__)
+            return self._loaded(run_id)
+        return LoadedDataset(frame=frame, metadata=upload.metadata,
+                             parse_report=self._parse[run_id])  # fmt: skip
+
+    def _column_name(self, run_id: str, name: str) -> str | None:
+        """Normalized name of `name` (original or normalized), from the cached metadata."""
+        upload = self._uploads.get(run_id)
+        columns = upload.metadata.columns if upload else self._loaded(run_id).metadata.columns
+        return next((c.name for c in columns if name in (c.original, c.name)), None)
 
     def validate_sample(self, sample_id: str) -> UploadValidation:
         """FR-ING-06: a bundled sample goes through the same upload path as a user file."""
@@ -267,11 +304,10 @@ class RunManager:
 
         Raises the E-TARGET-* `TabPilotError` for an invalid target.
         """
-        loaded = self._loaded(run_id)
-        column = next((c.name for c in loaded.metadata.columns if target in (c.original, c.name)),
-                      None)  # fmt: skip
+        column = self._column_name(run_id, target)
         if column is None:
             raise ValueError(f"target column {target!r} is not in the file")
+        loaded = self._columns(run_id, [column])
         values = loaded.frame[column].dropna()
         detection = detect_task(values)
         chosen = task or detection.task
@@ -286,11 +322,21 @@ class RunManager:
 
     def check_override(self, run_id: str, column: str, semantic_type: SemanticType) -> str | None:
         """FR-ING-04 Val: why `column` cannot be read as `semantic_type` (None when it can)."""
-        loaded = self._loaded(run_id)
-        info = next((c for c in loaded.metadata.columns if column in (c.original, c.name)), None)
-        if info is None:
+        name = self._column_name(run_id, column)
+        if name is None:
             raise ValueError(f"column {column!r} is not in the file")
-        return check_override(info.original, loaded.frame[info.name], semantic_type)
+        loaded = self._columns(run_id, [name])
+        info = next(c for c in loaded.metadata.columns if c.name == name)
+        return check_override(info.original, loaded.frame[name], semantic_type)
+
+    def can_start(self, run_id: str) -> bool:
+        """True when `run_id` is an upload that has not been started and still has its stored
+        file. A started run's input is deleted after export, so changed settings need a new
+        upload (KI-056: the UI offers "Re-run with changes" instead of reusing the id).
+        """
+        if run_id in self._runs:
+            return False
+        return bool(sorted((self.run_dir(run_id) / "input").glob("raw.*")))
 
     def slot_notice(self) -> SlotNotice | None:
         """None when a slot is free; else the §27.3 wait notice (estimate from runs we own)."""
@@ -316,9 +362,10 @@ class RunManager:
         """§28.2: the §8.8 feasibility estimate for `cfg`; pure, cached by (run id, config)."""
         key = (run_id, hashlib.sha256(cfg.model_dump_json().encode()).hexdigest())
         if key not in self._estimates:
-            loaded = self._loaded(run_id)
+            upload = self._uploads.get(run_id)
+            metadata = upload.metadata if upload else self._loaded(run_id).metadata
             total_mb = psutil.virtual_memory().total / 2**20
-            self._estimates[key] = estimate_feasibility(loaded.metadata, cfg, self.settings,
+            self._estimates[key] = estimate_feasibility(metadata, cfg, self.settings,
                                                         total_mb)  # fmt: skip
         return self._estimates[key]
 
@@ -648,6 +695,7 @@ class RunManager:
     def _forget(self, run_id: str) -> None:
         self._uploads.pop(run_id, None)
         self._rows.pop(run_id, None)
+        self._parse.pop(run_id, None)
         for cache in (self._previews, self._estimates):
             for key in [k for k in cache if k[0] == run_id]:
                 del cache[key]

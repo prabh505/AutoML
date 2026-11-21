@@ -30,6 +30,7 @@ from tabpilot.schemas import (
     MetricName,
     ProviderName,
     RunConfig,
+    RunEvent,
     SemanticType,
     Stage,
     TabPilotError,
@@ -37,6 +38,8 @@ from tabpilot.schemas import (
 )
 from tabpilot.tracking.records import RunRecorder
 from tabpilot.ui import state as sk
+from tabpilot.ui.components.columns import warning_text
+from tabpilot.ui.components.outputs import figure_caption, plan_source_text
 from tabpilot.ui.config import draft, needs_consent
 from tabpilot.ui.text import duration, md_escape, quote, size
 
@@ -373,3 +376,56 @@ def test_rule_based_runs_emit_no_rationale(tmp_path: Path) -> None:
     manager.delete(upload.run_id)
     assert manager.artifacts(upload.run_id) is None
     assert np.isfinite(art.leaderboard[0].mean or 0.0)
+
+
+# ------------------------------------------------------------------ U2 (KI-061…KI-063)
+def _art(tmp_path: Path, experiment: dict[str, Any], events: list[Any]) -> Any:
+    (tmp_path / "records").mkdir(parents=True)
+    (tmp_path / "leaderboard.json").write_text("[]")
+    (tmp_path / "records" / "experiment.json").write_text(json.dumps(experiment))
+    (tmp_path / "records" / "events.jsonl").write_text(
+        "".join(e.model_dump_json() + "\n" for e in events)
+    )
+    return read_artifacts(tmp_path)
+
+
+def test_U2_KI_061_llm_fallback_is_named_on_the_plan_tab(tmp_path: Path) -> None:
+    """US-F2: "LLM unavailable — rule-based plan used" when an LLM was chosen but failed."""
+    fallback = RunEvent(run_id="01J00000000000000000000000", seq=0, ts=datetime.now(UTC),
+                        stage=Stage.PLAN, type=EventType.PLANNER_FALLBACK,
+                        data={"reason": "all providers failed"})  # fmt: skip
+    failed = _art(tmp_path / "a", {"config": {"llm": {"enabled": True}}}, [fallback])
+    assert plan_source_text(failed, "rule_based") == (
+        "LLM unavailable — rule-based plan used (all providers failed)"
+    )
+    off = _art(tmp_path / "b", {"config": {"llm": {"enabled": False}}}, [])
+    assert plan_source_text(off, "rule_based") == "rule-based plan (No LLM was selected)"
+    assert plan_source_text(off, "llm") == "LLM planner (validated)"
+
+
+def test_U2_KI_062_target_check_reads_the_typed_copy(manager: RunManager) -> None:
+    """§27.2 < 2 s: target and override checks read one column of the typed copy, not the raw
+    file (proved by corrupting the raw file after validation)."""
+    with (FIXTURES / "binary_basic.csv").open("rb") as fh:
+        upload = manager.validate_upload(fh, "b.csv")
+    raw = next((manager.run_dir(upload.run_id) / "input").glob("raw.*"))
+    assert (raw.parent / "typed.parquet").is_file()
+    raw.write_bytes(b"\x00garbage")
+    choice = manager.check_target(upload.run_id, "Churn")
+    assert choice.task == Task.BINARY
+    assert manager.check_override(upload.run_id, "Region", SemanticType.CATEGORICAL) is None
+    assert manager.can_start(upload.run_id)
+
+
+def test_U2_KI_063_captions_and_warnings_carry_meaning() -> None:
+    base = ROOT / "samples" / "precomputed" / "passengers"
+    art = read_artifacts(base)
+    assert art is not None
+    importance = next(f for f in art.figures if "importance" in f.caption.lower())
+    assert "top features:" in figure_caption(art, importance.caption)
+    other = next(f for f in art.figures if "importance" not in f.caption.lower()
+                 and "shap" not in f.caption.lower())  # fmt: skip
+    assert "cross-validated" in figure_caption(art, other.caption)
+    assert warning_text("W-HIGH-MISSING:cabin_deck") == (
+        "W-HIGH-MISSING — many missing values (cabin_deck)"
+    )

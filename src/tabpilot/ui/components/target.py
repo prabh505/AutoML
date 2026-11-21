@@ -54,11 +54,12 @@ def _info(choice: Any) -> dict[str, Any]:
     }  # fmt: skip
 
 
-def _check(task: Task | None) -> None:
+def _check(task: Task | None, *, keep_metric: bool = False) -> None:
     """Validate the selected target under `task` and store primitives only."""
     state = st.session_state
     target = state.get(sk.TARGET)
-    for key in (sk.METRIC, sk.CONFIRM_MISSING, sk.INSPECT):
+    for key in (sk.CONFIRM_MISSING, sk.INSPECT) if keep_metric else (
+            sk.METRIC, sk.CONFIRM_MISSING, sk.INSPECT):  # fmt: skip
         state.pop(key, None)
     if not target:
         state.pop(sk.TARGET_INFO, None)
@@ -101,6 +102,9 @@ def target_section(meta: DatasetMetadata, default: str | None) -> None:
     if state.get(sk.TARGET) is not None and state[sk.TARGET] not in options:
         for key in (sk.TARGET, sk.TARGET_INFO, sk.TASK, sk.METRIC):
             state.pop(key, None)  # the column was excluded by an override
+    if state.get(sk.TARGET) in options and not state.get(sk.TARGET_INFO):
+        choice = state.get(sk.TASK)  # a re-run keeps the target, task and metric (KI-056)
+        _check(Task(choice) if choice else None, keep_metric=True)
     if sk.TARGET not in state and default in options:
         state[sk.TARGET] = default
         _check(None)

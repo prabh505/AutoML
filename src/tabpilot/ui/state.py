@@ -40,6 +40,7 @@ NOTICE = "notice"  # {"kind": "success"|"info"|"warning", "text": str}
 ERROR = "error"  # {"code": str|None, "message": str}
 UPLOAD_TOKEN = "upload_token"  # noqa: S105 - not a secret; id of the uploader file already validated
 NEWEST_FIRST = "newest_first"
+RERUN = "rerun"  # "Re-run with changes": keep the choices for the next upload (KI-056)
 
 # Widget-backed choices that must survive page changes (Streamlit drops the state of widgets
 # that were not drawn in a run unless the key is re-assigned).
