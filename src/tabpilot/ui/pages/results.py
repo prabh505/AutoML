@@ -15,7 +15,7 @@ from tabpilot.ui import errors, precomputed, services
 from tabpilot.ui import state as sk
 from tabpilot.ui.components import leaderboard, outputs
 from tabpilot.ui.components.columns import effective
-from tabpilot.ui.rerun import start_rerun
+from tabpilot.ui.rerun import RERUN_HELP, start_rerun
 from tabpilot.ui.text import duration, md_escape
 
 TABS = ("Summary", "Data profile", "Plan", "Leaderboard", "Explainability", "Report",
@@ -117,6 +117,5 @@ def render() -> None:
         columns = effective(upload.metadata, state.get(sk.OVERRIDES, {}))
     except UnknownRunError:
         pass
-    st.button("Re-run with changes", on_click=start_rerun, key="rerun",
-              help="Keeps your settings; the data is loaded again for the new run.")  # fmt: skip
+    st.button("Re-run with changes", on_click=start_rerun, key="rerun", help=RERUN_HELP)
     tabs(art, list(result.warnings), columns, deletable=True)

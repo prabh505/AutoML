@@ -450,6 +450,7 @@ class RunManager:
         with self._lock:
             if cfg.run_id in self._runs:
                 return cfg.run_id
+            self._check_overrides(cfg)
             self.check_config(cfg)
             directory = run_dir or self.run_dir(cfg.run_id)
             source = input_path or self._stored_input(directory)
@@ -466,6 +467,22 @@ class RunManager:
                                        name=f"run-{cfg.run_id[-6:]}")  # fmt: skip
         run.monitor.start()
         return cfg.run_id
+
+    def _check_overrides(self, cfg: RunConfig) -> None:
+        """FR-ING-04 Val at start (KI-066): every type override of an upload this manager
+        validated must still parse, so a bad override is a clear `InvalidConfigError` instead of
+        a worker failure (E-WORKER-LOST).
+        """
+        if cfg.run_id not in self._uploads:
+            return
+        for override in cfg.column_overrides:
+            if override.semantic_type is None:
+                continue
+            if self._column_name(cfg.run_id, override.column) is None:
+                raise InvalidConfigError(f"column {override.column!r} is not in the file")
+            problem = self.check_override(cfg.run_id, override.column, override.semantic_type)
+            if problem:
+                raise InvalidConfigError(problem)
 
     @staticmethod
     def _stored_input(directory: Path) -> Path:

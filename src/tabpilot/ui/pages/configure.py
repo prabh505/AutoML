@@ -19,7 +19,7 @@ from tabpilot.ui.components import columns, run_settings, target
 from tabpilot.ui.components.status import slot_wait_text
 from tabpilot.ui.config import draft
 from tabpilot.ui.precomputed import available_samples
-from tabpilot.ui.rerun import start_rerun
+from tabpilot.ui.rerun import BUSY_TEXT, RERUN_HELP, active_run, start_rerun
 from tabpilot.ui.text import md_escape
 
 
@@ -89,10 +89,15 @@ def render() -> None:
         st.info("Your file is no longer on the server (it was deleted after the idle time). "
                 "Please upload it again.")  # fmt: skip
         return
+    if active_run(state):  # KI-065: a running analysis is never offered for a re-run
+        st.warning(BUSY_TEXT, icon=":material/hourglass_top:")
+        st.button("Go to the Run page", on_click=sk.go, args=(state, "Run"), key="to_run_cfg")
+        return
     if not manager.can_start(upload_id):  # KI-057/KI-056: a started run's id is never reused
         st.info("This file was used by your last analysis and deleted afterwards. Use “Re-run "
                 "with changes” to keep your settings and load the data again.")  # fmt: skip
-        st.button("Re-run with changes", on_click=start_rerun, key="rerun_configure")
+        st.button("Re-run with changes", on_click=start_rerun, key="rerun_configure",
+                  help=RERUN_HELP)  # fmt: skip
         return
     meta = upload.metadata
     st.markdown(f"**{md_escape(upload.display_name)}** — {meta.n_rows_raw:,} rows, "

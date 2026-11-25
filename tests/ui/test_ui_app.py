@@ -449,3 +449,102 @@ def _render_banner() -> None:
     banner(RunResult(run_id="01J00000000000000000000000", status="completed_partial",
                      duration_s=10.0, stopped_after_stage="train_candidates",
                      final=final))  # fmt: skip
+
+
+# ------------------------------------------------------------------ U2b (KI-065…KI-068)
+def test_U2b_KI_065_configure_never_offers_a_running_run_for_rerun(make_ui: Any) -> None:
+    ui = make_ui(worker=polite)
+    _configure_basic(ui)
+    ui.at.button(key="start").click().run()
+    run_id = ui.at.session_state[sk.RUN_ID]
+    ui.at.session_state[sk.PAGE] = "Configure"
+    ui.run()
+    assert "An analysis is running" in ui.texts()
+    assert not [b for b in ui.at.button if b.key in ("rerun_configure", "start")]
+    ui.at.button(key="to_run_cfg").click().run()
+    assert ui.page() == "Run"
+    assert ui.at.session_state[sk.RUN_ID] == run_id
+    ui.manager.cancel(run_id)
+
+
+def _x_file(values: list[str]) -> bytes:
+    n = len(values)
+    return _csv(pd.DataFrame({"x": values, "z": np.arange(n) % 5,
+                              "y": (["a", "b"] * n)[:n]}))  # fmt: skip
+
+
+def test_U2b_KI_066_rerun_rechecks_kept_overrides(make_ui: Any) -> None:
+    """A kept override that no longer parses on the re-uploaded file is removed with a notice."""
+    ui = make_ui()
+    _upload(ui, _x_file([str(i) for i in range(120)]), "first.csv")
+    ui.at.selectbox(key="ov_column").set_value("x").run()
+    ui.at.selectbox(key="ov_type").set_value("numeric").run()
+    next(b for b in ui.at.button if b.label == "Apply override").click().run()
+    assert ui.at.session_state[sk.OVERRIDES] == {"x": {"semantic_type": "numeric", "role": None}}
+    ui.at.selectbox(key=sk.TARGET).set_value("y").run()
+    ui.at.radio(key=sk.LLM_MODE).set_value("off").run()
+    _start_and_finish(ui)
+    ui.at.button(key="rerun").click().run()
+    assert ui.page() == "Upload"
+    ui.upload.put(_x_file([f"word{i}" for i in range(120)]), "second.csv")
+    ui.run()
+    assert ui.page() == "Configure"
+    assert ui.at.session_state[sk.OVERRIDES] == {}
+    assert "Column changes that no longer fit the new file were removed" in ui.texts()
+    assert "must parse" in ui.texts()
+
+
+def test_U2b_KI_067_rerun_deletes_the_previous_run(make_ui: Any) -> None:
+    """§24.7: the previous run's files do not outlive the session's access to them."""
+    ui = make_ui()
+    ui.run()
+    ui.at.button(key="sample_land_cover").click().run()
+    ui.at.radio(key=sk.LLM_MODE).set_value("off").run()
+    ui.at.slider(key=sk.BUDGET).set_value(600).run()
+    _start_and_finish(ui)
+    first = ui.at.session_state[sk.RUN_ID]
+    assert ui.manager.run_dir(first).exists()
+    assert "deleted" in ui.at.button(key="rerun").help
+    ui.at.button(key="rerun").click().run()
+    assert not ui.manager.run_dir(first).exists()
+    assert ui.page() == "Configure"
+
+
+def test_U2b_KI_068_results_page_shows_captions_and_explained_warnings(make_ui: Any) -> None:
+    """The Results page itself (not only the helpers) carries key numbers and explanations."""
+    ui = make_ui()
+    ui.at.session_state[sk.PAGE] = "Results"
+    ui.at.session_state[sk.VIEW_SAMPLE] = "passengers"
+    ui.run()
+    assert not ui.at.exception
+    captions = [img.proto.imgs[0].caption for img in ui.at.get("image")]
+    assert any("top features:" in c for c in captions)
+    assert any("cross-validated" in c for c in captions)
+    assert all(c == img.proto.imgs[0].alt for c, img in zip(captions, ui.at.get("image"),
+                                                            strict=True))  # fmt: skip
+    assert "W-HIGH-MISSING — many missing values (cabin_deck)" in ui.texts()
+
+
+def _call_rerun(run_id: str) -> None:
+    import streamlit as st  # noqa: PLC0415 - AppTest runs this source alone
+
+    from tabpilot.ui import state as keys  # noqa: PLC0415
+    from tabpilot.ui.rerun import start_rerun  # noqa: PLC0415
+
+    st.session_state[keys.RUN_ID] = run_id
+    start_rerun()
+    st.text(f"run_id={st.session_state.get(keys.RUN_ID)} page={st.session_state.get(keys.PAGE)}")
+
+
+def test_U2b_KI_065_start_rerun_never_drops_a_running_run(make_ui: Any) -> None:
+    """Defense in depth: even if called, the re-run keeps (and does not delete) a running run."""
+    ui = make_ui(worker=polite)
+    _configure_basic(ui)
+    ui.at.button(key="start").click().run()
+    run_id = ui.at.session_state[sk.RUN_ID]
+    probe = AppTest.from_function(_call_rerun, args=(run_id,))
+    probe.run()
+    assert not probe.exception
+    assert [t.value for t in probe.text] == [f"run_id={run_id} page=Run"]
+    assert ui.manager.status(run_id).state == "running"
+    ui.manager.cancel(run_id)

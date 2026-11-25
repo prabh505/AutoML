@@ -14,7 +14,7 @@ from typing import Any
 import streamlit as st
 
 from tabpilot.runtime.catalog import samples
-from tabpilot.schemas import ExecutionProfileName
+from tabpilot.schemas import ExecutionProfileName, SemanticType
 from tabpilot.ui import errors, services
 from tabpilot.ui import state as sk
 from tabpilot.ui.components.status import demo_banner
@@ -27,6 +27,28 @@ PRIVACY_NOTE = (
     "the demo, or when you click “Delete my data now”. Nothing is sent to an LLM unless you "
     "agree to it on the next page, and raw rows are never sent."
 )
+
+
+def recheck_overrides(state: Any, upload_id: str) -> list[str]:
+    """KI-066: a re-run keeps the column overrides, so each is checked again (FR-ING-04) on the
+    new file; overrides for missing columns or values that no longer parse are removed.
+    """
+    manager = services.manager()
+    names = {c.name for c in manager.upload_info(upload_id).metadata.columns}
+    kept: dict[str, Any] = {}
+    dropped: list[str] = []
+    for column, o in state.get(sk.OVERRIDES, {}).items():
+        if column not in names:
+            dropped.append(f"{column}: not in the new file")
+            continue
+        stype = o.get("semantic_type")
+        problem = manager.check_override(upload_id, column, SemanticType(stype)) if stype else None
+        if problem:
+            dropped.append(problem)
+        else:
+            kept[column] = o
+    state[sk.OVERRIDES] = kept
+    return dropped
 
 
 def _accept(validate: Any, label: str) -> None:
@@ -42,12 +64,19 @@ def _accept(validate: Any, label: str) -> None:
     old = state.get(sk.UPLOAD_ID)
     if old and old != upload.run_id and not state.get(sk.RUN_ID):
         services.manager().discard_upload(old)  # a replaced, never-started upload
+    dropped: list[str] = []
     if state.pop(sk.RERUN, None):
         state.pop(sk.TARGET_INFO, None)  # keep the choices; re-validate the target (KI-056)
+        dropped = recheck_overrides(state, upload.run_id)
     else:
         sk.reset_choices(state)
     state[sk.UPLOAD_ID] = upload.run_id
     state[sk.DISPLAY_NAME] = upload.display_name
+    if dropped:
+        state[sk.NOTICE] = {"kind": "warning", "text": "Column changes that no longer fit the "
+                            "new file were removed: " + "; ".join(dropped)}  # fmt: skip
+        sk.go(state, "Configure")
+        st.rerun()
     state[sk.NOTICE] = {"kind": "success",
                        "text": f"{label} read in {time.monotonic() - started:.1f} s: "
                                f"{upload.metadata.n_rows_raw:,} rows, "

@@ -21,10 +21,11 @@ from tabpilot.config import load_settings
 from tabpilot.ingestion.overrides import check_override
 from tabpilot.ingestion.samples import sample_bytes, sample_path, samples, sha256
 from tabpilot.orchestration.context import WorkerOptions
-from tabpilot.runtime import RunManager, UnknownRunError, read_artifacts
+from tabpilot.runtime import InvalidConfigError, RunManager, UnknownRunError, read_artifacts
 from tabpilot.runtime.catalog import metric_direction, metric_options, provider_options
 from tabpilot.runtime.slots import acquire_slot
 from tabpilot.schemas import (
+    ColumnOverride,
     ErrorCode,
     EventType,
     MetricName,
@@ -429,3 +430,18 @@ def test_U2_KI_063_captions_and_warnings_carry_meaning() -> None:
     assert warning_text("W-HIGH-MISSING:cabin_deck") == (
         "W-HIGH-MISSING — many missing values (cabin_deck)"
     )
+
+
+def test_U2b_KI_066_start_refuses_an_override_that_does_not_parse(manager: RunManager) -> None:
+    """FR-ING-04 Val at start: a bad override is an `InvalidConfigError`, not a worker failure."""
+    with (FIXTURES / "quality_issues.csv").open("rb") as fh:
+        upload = manager.validate_upload(fh, "q.csv")
+    choice = manager.check_target(upload.run_id, "outcome")
+    cfg = RunConfig(run_id=upload.run_id, target=choice.column, task=choice.task,
+                    positive_label=choice.positive_label, primary_metric=MetricName.ROC_AUC,
+                    time_budget_s=600, llm_mode="off", execution_profile=manager.settings.profile,
+                    column_overrides=[ColumnOverride(column="free_text",
+                                                     semantic_type=SemanticType.NUMERIC)])  # fmt: skip
+    with pytest.raises(InvalidConfigError, match="must parse"):
+        manager.start(cfg)
+    assert upload.run_id not in [*manager._runs]

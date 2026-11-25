@@ -8,6 +8,7 @@ re-validated on the new file.
 
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 import streamlit as st
@@ -17,9 +18,14 @@ from tabpilot.ui import state as sk
 
 RERUN_FILE_TEXT = (
     "Upload the file again (the same one or a changed one): your settings are kept. The "
-    "previous copy was deleted after the run to protect your data."
+    "previous run's files were deleted to protect your data."
 )
-RERUN_SAMPLE_TEXT = "Sample reloaded with your settings. Change what you like, then start again."
+RERUN_SAMPLE_TEXT = (
+    "Sample reloaded with your settings; the previous run's files were deleted. Change what you "
+    "like, then start again."
+)
+RERUN_HELP = ("Keeps your settings and loads the data again. The previous run's files (report, "
+              "bundle) are deleted: download what you need first.")  # fmt: skip
 BUSY_TEXT = ("An analysis is running. Wait for it to finish or cancel it on the Run page before "
              "choosing new data.")  # fmt: skip
 
@@ -36,8 +42,18 @@ def active_run(state: Any) -> str | None:
 
 
 def start_rerun() -> None:
-    """Callback: keep the choices, drop the finished run's ids, and load the data again."""
+    """Callback: keep the choices, delete the finished run (KI-067: its files would otherwise
+    become unreachable for "Delete my data now"), and load the data again. A running run is
+    never dropped (KI-065): the user is sent to the Run page instead.
+    """
     state = st.session_state
+    if active_run(state):
+        sk.go(state, "Run")
+        return
+    old = state.get(sk.RUN_ID)
+    if old:
+        with contextlib.suppress(KeyError):  # already gone (deleted or swept)
+            services.manager().delete(old)
     sample_id = state.get(sk.SAMPLE_ID)
     for key in (sk.RUN_ID, sk.UPLOAD_ID, sk.DISPLAY_NAME, sk.WAITING, sk.ERROR, sk.INSPECT,
                 sk.TARGET_INFO):  # fmt: skip
